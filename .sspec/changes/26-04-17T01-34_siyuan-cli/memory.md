@@ -1,47 +1,31 @@
-# Memory: siyuan-cli
-
-**Updated**: <!-- ISO timestamp, minute precision -->
-
-## Git Baseline (Immutable)
-<!-- Captured during `sspec change new` before any change files are written.
-This section records the root change starting point in git and MUST NOT be edited or refreshed later. -->
-
-- Captured: before change file creation
-- Repository: `H:/SrcCode/playground/siyuan-cli`
-- Branch: `main`
-- HEAD: `930092b08948d8a2a7d646560d4c12a561446a4d`
-- Worktree: `dirty`
-- Status Snapshot: raw `git status --short --branch` output
-
-```text
-## main
-A  .sspec/requests/26-04-16T19-04_do-this-project.md
-A  tsconfig.json
-```
-
-## Coordination
-<!-- 子 change 状态总览。状态变更时 MUST 更新。
-这是 root change 协调总览，`change status` 直接读取此表。 -->
-
-| Phase | Sub-Change | Status | Blocker |
-|-------|------------|--------|---------|
-| Phase 1 | (pending) | ⏳ | — |
+# Memory · siyuan-cli (Root)
 
 ## State
-<!-- 当前协调焦点 — 下一步推进哪个 phase -->
+
+Design phase. P1 sub-change created, spec.md + design.md written. Pending @align gate before planning/implementation.
 
 ## Key Files
-<!-- 跨 phase 的关键文件/文档
-- `changes/<sub-name>/` — what this sub-change covers
-- `path/file` — what it contains, why it matters -->
+
+- `reference/siyuan-cli-design/` — 完整预设计文档（9章 v2版），所有架构决策的原始出处
+- `reference/siyuan-cli-design/skeleton/src/core/schema.ts` — 全局类型锚，P1 落库时直接复制
 
 ## Knowledge
-<!-- 跨 change 决策和依赖。
-Types: CoordinationDecision, Dependency, CrossChangeFinding, Constraint, Gotcha
-格式：- [timestamp] [Type] content
-项目级发现 → ALSO append to project.md Notes。 -->
+
+- [2026-04-17T01:36] [Decision] 包名 `siyuan-cli`（无 scope），入口命令 `siyuan`
+- [2026-04-17T01:36] [Decision] 未决议 Q1-Q9 全部采纳 reference/siyuan-cli-design/09-open-questions.md 的推荐方案
+- [2026-04-17T01:36] [Decision] 设计文档 mv 至 root change reference/，spec/design 只写增量信息
+- [2026-04-17T01:36] [Constraint] P1 的 SiyuanClient 接口冻结后 P2/P3 不得修改签名（破坏性变更需 @align）
+- [2026-04-17T01:36] [Constraint] Tool 必须通过 ctx.callEndpoint 调用 kernel，不得绕过权限引擎
 
 ## Milestones
-<!-- 每 session 一行；新记录直接追加
-CLI 会把最后一条有效 bullet 视为 latest milestone
-- [ISO timestamp] 一句话概要 -->
+
+- [2026-04-17T01:36] Design: root change 创建，P1 sub-change spec+design 完成，等待 @align
+
+## Coordination
+
+| Sub-change | Phase | Status | Deliverable |
+|------------|-------|--------|-------------|
+| 26-04-17T01-36_p1-foundation | P1: Foundation | ⏳ PLANNING | M0 骨架 + M1 Workspace 管理 |
+| (TBD) | P2: API Layer | ⏳ pending | M2 API直通 + M3 权限引擎 |
+| (TBD) | P3: Tool + Skill | ⏳ pending | M4 Tool层 + M5 Skill管理 |
+| (TBD) | P4: Polish | ⏳ pending | M6 补齐API + M7 稳定化 |
