@@ -1,0 +1,88 @@
+# ===== SYSTEM FILES ===== #
+*.exe
+*.dll
+*.zip
+*.tar.gz
+*.rar
+*.log
+*.tmp
+*.bak
+*.pptx
+*.docx
+*.xlsx
+*.pdf
+*.lnk
+
+# Images | Remove if not needed
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+
+# ===== DIRECTORIES ===== #
+.DS_Store
+.idea/
+.vs/
+.vscode/
+
+# ===== Python ===== #
+# Byte-compiled / optimized / DLL files
+**/__pycache__/**
+*.py[codz]
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+eggs/
+.eggs/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Environments
+.env
+.envrc
+.venv
+env/
+venv/
+
+# Ruff
+.ruff_cache/
+
+# ===== Node.js ===== #
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Build outputs
+dist/
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===== Rust ===== #
+target/
+Cargo.lock
+
+# ===== Go ===== #
+*.exe
+*.test
+*.out
+vendor/
+
