@@ -24,6 +24,8 @@ P1 完成。P2 实现完成，进入 review。
 
 - [2026-04-17T01:49] Implement P1: 全部实现完成，M0+M1 验证通过，等待 review
 - [2026-04-17T02:22] Implement P2: API layer + permission engine + 22 endpoint schemas 完成，等待 review
+- [2026-04-17T02:29] Test P2: 尝试真实联调 `127.0.0.1:6806` 失败（timeout）；当前环境未发现该默认端口监听
+- [2026-04-17T02:31] Test P2: 改用用户提供的 `127.0.0.1:5795` 成功完成真实联调，证明 `workspace verify`、`api system.version`、`api query.sql` 在真实思源内核上可用
 
 ## Coordination
 

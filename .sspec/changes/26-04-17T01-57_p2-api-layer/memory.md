@@ -32,3 +32,5 @@ REVIEW. P2 实现完成，等待用户 review。
 - [2026-04-17T02:22] Implement: 22 个 endpoint schema + registry + permission + argv + api command 完成
 - [2026-04-17T02:26] Polish: `api` 从手动分发重构为动态 subcommands，恢复 `siyuan api <id> --help`
 - [2026-04-17T02:26] Verify: `pnpm build` ✅, `api list`=22条 ✅, `api describe query.sql` ✅, `api query.sql --help` ✅, `api query.sql "SELECT 1" --dry-run` ✅
+- [2026-04-17T02:29] Test: 尝试对 `http://127.0.0.1:6806` 做真实 API 联调；结果为 timeout，当前本机未发现 6806/6807/6808 监听
+- [2026-04-17T02:31] Test: 按用户提示改用 `http://127.0.0.1:5795`，真实 CLI 联调通过：`workspace verify` ✅, `api system.version` ✅, `api query.sql \"SELECT 1 AS n\"` ✅
