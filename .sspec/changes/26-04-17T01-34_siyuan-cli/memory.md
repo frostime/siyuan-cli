@@ -19,13 +19,13 @@ Design phase. P1 sub-change created, spec.md + design.md written. Pending @align
 
 ## Milestones
 
-- [2026-04-17T01:36] Design: root change 创建，P1 sub-change spec+design 完成，等待 @align
+- [2026-04-17T01:49] Implement P1: 全部实现完成，M0+M1 验证通过，等待 review
 
 ## Coordination
 
 | Sub-change | Phase | Status | Deliverable |
 |------------|-------|--------|-------------|
-| 26-04-17T01-36_p1-foundation | P1: Foundation | ⏳ PLANNING | M0 骨架 + M1 Workspace 管理 |
+| 26-04-17T01-36_p1-foundation | P1: Foundation | 🚧 REVIEW | M0 骨架 + M1 Workspace 管理 |
 | (TBD) | P2: API Layer | ⏳ pending | M2 API直通 + M3 权限引擎 |
 | (TBD) | P3: Tool + Skill | ⏳ pending | M4 Tool层 + M5 Skill管理 |
 | (TBD) | P4: Polish | ⏳ pending | M6 补齐API + M7 稳定化 |

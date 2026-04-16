@@ -521,7 +521,13 @@ CLI exit code 约定：
 
 ~= 22 个。骨架 `src/apis/` 预置 6 个作为参考模板，其余 Agent 按模板扩展即可。
 
+官方公开 API，参考 https://github.com/siyuan-note/siyuan/blob/master/API.md
+
 ## 9. Schema 迁移：从 siyuan-sdk 拷贝
+
+可以暂时不做；但也可以参考 siyuan-sdk 内置的 schema
+
+见: `temp/siyuan-sdk/schemas`
 
 `scripts/sync-sdk-schemas.ts`：
 
