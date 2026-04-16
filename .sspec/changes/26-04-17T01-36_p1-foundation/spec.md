@@ -1,6 +1,6 @@
 ---
 name: p1-foundation
-status: PLANNING
+status: DONE
 change-type: single
 created: 2026-04-17 01:36:00
 reference:

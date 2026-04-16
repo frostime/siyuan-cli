@@ -44,9 +44,10 @@ updated: ""
 | Phase | Sub-Change | Status | Deliverable |
 |-------|------------|--------|-------------|
 | P1: Foundation | 26-04-17T01-36_p1-foundation | 🚧 REVIEW | M0 骨架 + M1 Workspace |
-| P2: API Layer | (TBD) | ⏳ pending | M2 API直通 + M3 权限引擎 |
+| P2: API Layer | 26-04-17T01-57_p2-api-layer | 🚧 REVIEW | M2 API直通 + M3 权限引擎 |
 | P3: Tool + Skill | (TBD) | ⏳ pending | M4 Tool层 + M5 Skill管理 |
 | P4: Polish | (TBD) | ⏳ pending | M6 补齐API + M7 稳定化 |
 
 **Recent**:
 - [2026-04-17] P1 实现完成，等待 review
+- [2026-04-17] P2 实现完成，等待 review

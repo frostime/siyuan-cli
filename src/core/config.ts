@@ -10,15 +10,31 @@ import { CliError, ExitCode } from "../utils/errors.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+export interface PermissionConfig {
+  api?: {
+    disabled?: string[];
+    enabled?: string[];
+  };
+  content?: {
+    notebooks?: { deny?: string[]; allow?: string[] };
+    paths?: { deny?: string[]; allow?: string[] };
+  };
+  guardWrite?: boolean;
+}
+
 export interface WorkspaceEntry {
   baseUrl: string;
   token?: string;
+  permission?: PermissionConfig;
 }
 
 export interface AppConfig {
   schemaVersion: number;
   current: string;
   workspaces: Record<string, WorkspaceEntry>;
+  defaults?: {
+    permission?: PermissionConfig;
+  };
   api?: {
     disabled?: string[];
   };
@@ -56,6 +72,7 @@ export function loadConfig(configPath?: string): AppConfig {
       schemaVersion: parsed.schemaVersion ?? SCHEMA_VERSION,
       current: parsed.current ?? "",
       workspaces: parsed.workspaces ?? {},
+      ...(parsed.defaults ? { defaults: parsed.defaults } : {}),
       ...(parsed.api ? { api: parsed.api } : {}),
     };
   } catch (e) {
