@@ -7,6 +7,7 @@ import { schema as notebookLsNotebooks } from "./notebook/lsNotebooks.js";
 import { schema as notebookCreateNotebook } from "./notebook/createNotebook.js";
 import { schema as filetreeListDocsByPath } from "./filetree/listDocsByPath.js";
 import { schema as filetreeCreateDocWithMd } from "./filetree/createDocWithMd.js";
+import { schema as filetreeCreateDailyNote } from "./filetree/createDailyNote.js";
 import { schema as filetreeRenameDoc } from "./filetree/renameDoc.js";
 import { schema as filetreeRemoveDoc } from "./filetree/removeDoc.js";
 import { schema as filetreeGetHPathByID } from "./filetree/getHPathByID.js";
@@ -31,6 +32,7 @@ const schemas = [
   notebookCreateNotebook,
   filetreeListDocsByPath,
   filetreeCreateDocWithMd,
+  filetreeCreateDailyNote,
   filetreeRenameDoc,
   filetreeRemoveDoc,
   filetreeGetHPathByID,

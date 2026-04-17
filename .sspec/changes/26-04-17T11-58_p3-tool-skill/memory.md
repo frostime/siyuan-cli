@@ -18,9 +18,13 @@ REVIEW. P3 实现完成，等待用户 review。
 - [2026-04-17T12:12] [Decision] `tool` 命令与 `api` 一样采用动态 subcommands，并通过 `showUsage` 输出 schema-based help
 - [2026-04-17T12:13] [Decision] builtin skill 目录采用 `skills/siyuan-cli/`，安装目标先支持 `~/.agents/skills/` 与 `custom`
 - [2026-04-17T12:14] [Decision] `append-content` 的 `--dry-run` 通过底层 endpoint dry-run 预览，不实际写入
+- [2026-04-17T12:33] [Review-Feedback] 用户指出 `append-content` / `list-dailynote` 逻辑不符合参考实现；已对照 `sy-f-misc` 修正
+- [2026-04-17T12:33] [Decision] `append-content` 现在在 `dailynote` 模式下会调用 `filetree.createDailyNote` 获取/创建今日日记，再调用 `block.appendBlock`
+- [2026-04-17T12:33] [Decision] `list-dailynote` 改为参考实现风格：支持 `atDate` / `beforeDate` / `afterDate` / `notebookId`，默认查询当天
 
 ## Milestones
 
 - [2026-04-17T11:58] Plan: P3 change created, ready for implementation
 - [2026-04-17T12:14] Implement: tool runtime / 4 MVP tools / skill runtime / builtin skill content 完成
 - [2026-04-17T12:15] Verify: `tool list` ✅, `tool list-doc-tree --help` ✅, `tool resolve-path --id <real-id>` ✅, `tool list-dailynote` ✅, `skill list` ✅, `skill read siyuan-cli` ✅, `skill install siyuan-cli --dry-run` ✅, `skill install siyuan-cli --force` ✅, `pnpm typecheck` ✅, `pnpm build` ✅
+- [2026-04-17T12:34] Verify-Fix: `tool list-dailynote --atDate 2026-04-17` ✅, `tool append-content --targetType document --dry-run` ✅, `tool append-content --targetType dailynote --dry-run` ✅

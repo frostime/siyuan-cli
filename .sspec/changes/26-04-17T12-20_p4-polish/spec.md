@@ -1,6 +1,6 @@
 ---
 name: p4-polish
-status: IMPLEMENTING
+status: DONE
 change-type: single
 created: 2026-04-17 12:20:00
 reference:

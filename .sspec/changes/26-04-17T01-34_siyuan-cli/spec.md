@@ -1,6 +1,6 @@
 ---
 name: siyuan-cli
-status: PLANNING
+status: DONE
 change-type: root
 created: 2026-04-17 01:34:45
 reference:
@@ -13,6 +13,15 @@ reference:
 - source: .sspec/changes/26-04-17T01-36_p1-foundation
   type: sub-change
   note: "Phase 1: Foundation (M0 skeleton + M1 workspace)"
+- source: .sspec/changes/26-04-17T01-57_p2-api-layer
+  type: sub-change
+  note: "Phase 2: API Layer (M2 API + M3 permission)"
+- source: .sspec/changes/26-04-17T11-58_p3-tool-skill
+  type: sub-change
+  note: "Phase 3: Tool + Skill (M4 tools + M5 skills)"
+- source: .sspec/changes/26-04-17T12-20_p4-polish
+  type: sub-change
+  note: "Phase 4: Polish (tokenSource + skill polish + api debug)"
 ---
 
 # siyuan-cli · Root Coordinator
@@ -45,9 +54,9 @@ Agent 在操作思源笔记时，只能通过原始 HTTP API 调用，缺乏：
 | Phase | Goal | Depends On | Sub-change |
 |-------|------|-----------|------------|
 | P1: Foundation | M0+M1：骨架 + Workspace 管理可用 | — | 26-04-17T01-36_p1-foundation |
-| P2: API Layer | M2+M3：API 直通 + 权限引擎 | P1 | TBD |
+| P2: API Layer | M2+M3：API 直通 + 权限引擎 | P1 | 26-04-17T01-57_p2-api-layer |
 | P3: Tool + Skill | M4+M5：Tool 层 + Skill 管理 | P2 | 26-04-17T11-58_p3-tool-skill |
-| P4: Polish | M6+M7：补齐 API + 稳定化 | P3 | TBD |
+| P4: Polish | M6+M7：补齐 API + 稳定化 | P3 | 26-04-17T12-20_p4-polish |
 
 **Coordination Notes**：
 - `src/core/schema.ts` 是全局类型锚，P1 定稿后 P2/P3 只 import，不重复定义
