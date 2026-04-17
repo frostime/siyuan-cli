@@ -4,17 +4,17 @@ status: DONE
 change-type: single
 created: 2026-04-17 01:57:00
 reference:
-- source: .sspec/changes/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/04-module-api.md
+- source: .sspec/changes/archive/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/04-module-api.md
   type: doc
   note: EndpointSchema 规范、argv→payload 映射、--help 生成、endpoint 清单
-- source: .sspec/changes/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/07-module-permission.md
+- source: .sspec/changes/archive/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/07-module-permission.md
   type: doc
   note: 三段论权限架构（Rules / Engine / Extractor）
-- source: .sspec/changes/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/skeleton/src/core/schema.ts
+- source: .sspec/changes/archive/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/skeleton/src/core/schema.ts
   type: code
   note: EndpointSchema / GuardSpec 类型定义（已落库）
+archived: '2026-04-18T01:18:47'
 ---
-
 # P2: API Layer
 
 ## Problem Statement

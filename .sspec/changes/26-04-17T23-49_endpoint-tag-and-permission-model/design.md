@@ -423,6 +423,7 @@ class ToolDisabledError extends CliError {
 ```
 
 `not found` 与 `permission denied` 必须区分，避免 agent 误判原因。
+`EndpointDisabledError` / `ToolDisabledError` 属于策略层错误，放在同一 taxonomy 中统一定义，但不属于 resolver 专属错误。
 
 ---
 
@@ -545,6 +546,14 @@ workspace.read.paths.deny  -> reject file.getFile / file.readDir on matching pat
 workspace.write.paths.deny -> reject file.putFile / file.removeFile / file.renameFile on matching paths
 ```
 
+```text
+read and write scopes are independent
+read operation   -> check content.read / workspace.read only
+write operation  -> check content.write / workspace.write only
+```
+
+`content.read.*` 不隐式推出 `content.write.*`，反之亦然。`workspace` 规则同理。`可写不可读` 与 `可读不可写` 都是合法配置。
+
 ### 5.2 Alpha migration rule
 
 ```text
@@ -564,6 +573,7 @@ P1 只引入最小必要复杂度：
 ```text
 tools.allow/deny        -> hard boundary
 ctx.callEndpoint(...)   -> inherits full endpoint guard chain
+endpoint deny           -> wins over tool allow
 ```
 
 不在 P1 引入 ToolCapability enforcement。若后续需要 capability，可作为声明模型另开 sub-change。

@@ -4,20 +4,20 @@ status: DONE
 change-type: single
 created: 2026-04-17 01:36:00
 reference:
-- source: .sspec/changes/26-04-17T01-34_siyuan-cli
+- source: .sspec/changes/archive/26-04-17T01-34_siyuan-cli
   type: root-change
   note: Root coordinator
-- source: .sspec/changes/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/02-architecture.md
+- source: .sspec/changes/archive/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/02-architecture.md
   type: doc
   note: 分层架构 + 目录结构
-- source: .sspec/changes/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/03-module-workspace.md
+- source: .sspec/changes/archive/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/03-module-workspace.md
   type: doc
   note: Workspace 模块设计
-- source: .sspec/changes/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/skeleton
+- source: .sspec/changes/archive/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/skeleton
   type: doc
   note: 骨架代码（schema.ts / package.json / tsconfig.json / bin/siyuan.mjs）
+archived: '2026-04-18T01:18:45'
 ---
-
 # P1: Foundation
 
 ## Problem Statement

@@ -48,9 +48,10 @@ reference:
 
 ### Coordination Notes
 
-- **P1 定稿后共享契约冻结**：`src/core/schema.ts`、`src/core/guard.ts`、`src/core/permission.ts`、`src/core/config.ts` 的接口在 P2 开始前冻结。P2/P3 只能消费，不得临时回改。
+- **P1 定稿后共享契约冻结**：`src/core/schema.ts`、`src/core/guard.ts`、`src/core/permission.ts`、`src/core/config.ts` 的接口在 P2 开始前冻结。P2/P3 只能消费。
+- **P2 发现契约缺口时回到 P1 修订**：若 demo 暴露共享契约缺口，必须回到 P1 sub-change 追加修订并重新冻结，随后再继续 P2/P3。P2 不定义临时字段或私有扩展。
 - **P2 是机制验收 phase**：只选 3 个代表性 endpoint，避免在机制未稳时批量迁移 60+ schema 文件。
-- **P3 是 rollout，不是再设计**：剩余 endpoints 的迁移以套用既定契约为主，但每个 endpoint 仍需逐个审视 payloadTargets / response guard，不能机械替换。
+- **P3 是 rollout phase**：剩余 endpoints 的迁移以套用既定契约为主，但每个 endpoint 仍需逐个审视 payloadTargets / response guard。P3 至少更新 `README.md` 与 config examples；更大范围的 docs sweep 可另行组织。
 - **alpha 阶段不做旧配置兼容迁移**：config 形状变化时允许直接 bump schemaVersion，并要求删除旧配置重建。
 
 ### Locked Decisions for Sub-changes

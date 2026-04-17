@@ -1,31 +1,38 @@
 # Memory: endpoint-tag-and-permission-model (Root)
 
-**Updated**: 2026-04-18T00:58+08:00
+**Updated**: 2026-04-18T01:17+08:00
 
 ## Git Baseline (Immutable)
-<!-- Captured during `sspec change new` before any change files are written.
-This section records the root change starting point in git and MUST NOT be edited or refreshed later. -->
+<!-- Original creation-time baseline was lost in the malformed memory file.
+This reconstructed baseline records the branch divergence point explicitly and MUST remain unchanged afterwards. -->
 
-- Captured: unavailable — original malformed `memory.md` did not record immutable baseline data at change creation
+- Captured: reconstructed on 2026-04-18 from current branch topology
 - Repository: `H:/SrcCode/playground/siyuan-cli`
-- Branch: unavailable
-- HEAD: unavailable
-- Worktree: unavailable
-- Status Snapshot: unavailable
+- Branch: `refactor/safe-guard`
+- HEAD at reconstruction: `1650dd4cc2b2ca0fb51c626d0824de7b16bf550e`
+- Branch baseline (merge-base with `main`): `2cfb9a12c159e6b9fa1b50b8bdfea891781fddd6`
+- Worktree: `dirty`
+- Status Snapshot: raw `git status --short --branch` output at reconstruction time
+
+```text
+## refactor/safe-guard
+ M .sspec/changes/26-04-17T23-49_endpoint-tag-and-permission-model/design.md
+ M .sspec/changes/26-04-17T23-49_endpoint-tag-and-permission-model/spec.md
+```
 
 ## Coordination
 <!-- Root change authoritative sub-change summary. -->
 
 | Phase | Sub-Change | Status | Blocker |
 |-------|------------|--------|---------|
-| P1: Core Contracts | (pending) | ⏳ | Waiting for external re-review of current root spec/design |
+| P1: Core Contracts | (pending) | ⏳ | Waiting for root gate approval, then create sub-change |
 | P2: Demo Adoption | (pending) | ⏳ | Wait for P1 contract freeze |
 | P3: Rollout | (pending) | ⏳ | Wait for P1/P2 results |
 
 ## State
 
-Root design has been revised after external audit and is waiting for re-review.
-Next: get the current root `spec.md` + `design.md` re-checked, then create the P1 sub-change.
+Root design has incorporated the latest review comments and is ready for gate approval.
+Next: approve the current root `spec.md` + `design.md`, then create the P1 sub-change.
 Do not implement directly from the root change.
 
 ## Key Files
@@ -50,9 +57,13 @@ Do not implement directly from the root change.
 - [2026-04-18T00:58] [Decision] Config v2 splits `content.read/write` and `workspace.read/write`; alpha stage allows breaking reset of old config.
 - [2026-04-18T00:58] [Constraint] deny rules are the hard boundary; confirm is interactive guardrail and does not define agent security.
 - [2026-04-18T00:58] [Constraint] P1 keeps `ToolSchema` shape stable; only tool allow/deny and endpoint-guard inheritance are in scope.
-- [2026-04-18T00:58] [Gotcha] Original `memory.md` was malformed and lost the immutable git baseline; this corrected file records that loss explicitly instead of reconstructing fake baseline data.
+- [2026-04-18T01:17] [Decision] If P2 demo exposes a contract gap, work MUST return to the P1 sub-change for amendment and re-freeze; P2/P3 do not define ad-hoc contract extensions.
+- [2026-04-18T01:17] [Decision] Read and write scopes are independent. Read operations only check `content.read` / `workspace.read`; write operations only check `content.write` / `workspace.write`.
+- [2026-04-18T01:17] [Decision] For tool execution, endpoint deny wins over tool allow because hard-deny semantics remain authoritative at the endpoint layer.
+- [2026-04-18T01:17] [Gotcha] Original `memory.md` lost the true creation-time baseline; the current baseline is reconstructed from branch topology and must stay frozen from now on.
 
 ## Milestones
 
 - [2026-04-17T23:49] Design: created the change and drafted first-pass spec/design for endpoint classification and permission redesign.
 - [2026-04-18T00:58] Design: converted the change into a root coordinator, narrowed implementation to P1 contracts + P2 demo + P3 rollout, and normalized memory format.
+- [2026-04-18T01:17] Design: incorporated latest review follow-ups on P1→P2 amendment loop, read/write independence, endpoint-deny precedence, and reconstructed git baseline.

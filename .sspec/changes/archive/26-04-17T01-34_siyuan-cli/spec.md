@@ -7,23 +7,23 @@ reference:
 - source: .sspec/requests/26-04-16T19-04_do-this-project.md
   type: request
   note: Original request
-- source: .sspec/changes/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design
+- source: .sspec/changes/archive/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design
   type: doc
   note: Pre-design documents (v2, 9 chapters + skeleton code)
-- source: .sspec/changes/26-04-17T01-36_p1-foundation
+- source: .sspec/changes/archive/26-04-17T01-36_p1-foundation
   type: sub-change
-  note: "Phase 1: Foundation (M0 skeleton + M1 workspace)"
-- source: .sspec/changes/26-04-17T01-57_p2-api-layer
+  note: 'Phase 1: Foundation (M0 skeleton + M1 workspace)'
+- source: .sspec/changes/archive/26-04-17T01-57_p2-api-layer
   type: sub-change
-  note: "Phase 2: API Layer (M2 API + M3 permission)"
-- source: .sspec/changes/26-04-17T11-58_p3-tool-skill
+  note: 'Phase 2: API Layer (M2 API + M3 permission)'
+- source: .sspec/changes/archive/26-04-17T11-58_p3-tool-skill
   type: sub-change
-  note: "Phase 3: Tool + Skill (M4 tools + M5 skills)"
-- source: .sspec/changes/26-04-17T12-20_p4-polish
+  note: 'Phase 3: Tool + Skill (M4 tools + M5 skills)'
+- source: .sspec/changes/archive/26-04-17T12-20_p4-polish
   type: sub-change
-  note: "Phase 4: Polish (tokenSource + skill polish + api debug)"
+  note: 'Phase 4: Polish (tokenSource + skill polish + api debug)'
+archived: '2026-04-18T01:18:53'
 ---
-
 # siyuan-cli · Root Coordinator
 
 ## Problem Statement
