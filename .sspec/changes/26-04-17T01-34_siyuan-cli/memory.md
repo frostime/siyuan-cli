@@ -19,6 +19,7 @@ P1 完成。P2 实现完成，进入 review。
 - [2026-04-17T02:08] [Decision] endpoint identity 始终以真实 kernel 为准；若 reference 设计文档与 SDK schema 冲突，实现以真实 endpoint 命名落库并写 revision
 - [2026-04-17T02:08] [Decision] P2 中 filetree 写操作采用 `filetree.renameDoc` / `filetree.removeDoc`，对应替换 reference 中的 `renameDocByID` / `removeDocByID`
 - [2026-04-17T02:25] [Decision] 为恢复 Agent-first 自发现体验，P2 的 `api` 命令改为动态 subcommands，并通过自定义 `showUsage` 恢复 `siyuan api <id> --help`
+- [2026-04-17T02:42] [Decision] 配置路径统一采用 `~/.config/siyuan-cli/config.yaml`，包括 Windows；`%APPDATA%` 仅保留为 legacy migration source
 
 ## Milestones
 

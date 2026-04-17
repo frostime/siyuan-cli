@@ -2,8 +2,8 @@
  * Config file management for siyuan-cli.
  * Format: ~/.config/siyuan-cli/config.yaml (see design.md §1)
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync, chmodSync } from "node:fs";
-import { dirname } from "pathe";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, chmodSync, copyFileSync, unlinkSync } from "node:fs";
+import { dirname, join } from "pathe";
 import { parse, stringify } from "yaml";
 import { getConfigPath } from "../utils/paths.js";
 import { CliError, ExitCode } from "../utils/errors.js";
@@ -58,8 +58,26 @@ function defaultConfig(): AppConfig {
 
 // ─── Load / Save ─────────────────────────────────────────────────────────────
 
+function migrateLegacyWindowsConfig(targetPath: string): void {
+  const appdata = process.env["APPDATA"];
+  if (!appdata) return;
+
+  const legacyPath = join(appdata, "siyuan-cli", "config.yaml");
+  if (legacyPath === targetPath) return;
+  if (!existsSync(legacyPath) || existsSync(targetPath)) return;
+
+  mkdirSync(dirname(targetPath), { recursive: true });
+  copyFileSync(legacyPath, targetPath);
+  try {
+    unlinkSync(legacyPath);
+  } catch {
+    // keep legacy copy if deletion fails
+  }
+}
+
 export function loadConfig(configPath?: string): AppConfig {
   const path = configPath ?? getConfigPath();
+  migrateLegacyWindowsConfig(path);
 
   if (!existsSync(path)) {
     return defaultConfig();
@@ -87,6 +105,7 @@ export function loadConfig(configPath?: string): AppConfig {
 
 export function saveConfig(config: AppConfig, configPath?: string): void {
   const path = configPath ?? getConfigPath();
+  migrateLegacyWindowsConfig(path);
   const dir = dirname(path);
 
   mkdirSync(dir, { recursive: true });

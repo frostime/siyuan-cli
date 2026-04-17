@@ -1,4 +1,4 @@
-import { defineCommand, runMain, showUsage, type CommandDef } from "citty";
+import { defineCommand, runMain, showUsage } from "citty";
 import { workspaceCommand } from "./commands/workspace.js";
 import { apiCommand } from "./commands/api.js";
 import { buildEndpointHelp } from "./core/argv.js";
@@ -16,7 +16,7 @@ const main = defineCommand({
   },
 });
 
-async function customShowUsage(cmd: CommandDef, parent?: CommandDef): Promise<void> {
+async function customShowUsage<T extends Record<string, unknown>>(cmd: any, parent?: any): Promise<void> {
   const meta = typeof cmd.meta === "function" ? await cmd.meta() : await cmd.meta;
   const parentMeta = parent ? (typeof parent.meta === "function" ? await parent.meta() : await parent.meta) : undefined;
 
