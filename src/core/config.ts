@@ -3,6 +3,7 @@
  * Format: ~/.config/siyuan-cli/config.yaml (see design.md §1)
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync, chmodSync, copyFileSync, unlinkSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { dirname, join } from "pathe";
 import { parse, stringify } from "yaml";
 import { getConfigPath } from "../utils/paths.js";
@@ -22,9 +23,15 @@ export interface PermissionConfig {
   guardWrite?: boolean;
 }
 
+export interface TokenSource {
+  type: "env" | "file" | "command";
+  value: string;
+}
+
 export interface WorkspaceEntry {
   baseUrl: string;
   token?: string;
+  tokenSource?: TokenSource;
   permission?: PermissionConfig;
 }
 
@@ -42,6 +49,7 @@ export interface AppConfig {
 
 export interface ResolvedWorkspace extends WorkspaceEntry {
   name: string;
+  token?: string;
 }
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
@@ -130,6 +138,20 @@ export interface WorkspaceOverrides {
   token?: string;      // --token (ad-hoc)
 }
 
+function resolveTokenSource(source?: TokenSource): string | undefined {
+  if (!source) return undefined;
+  if (source.type === "env") {
+    return process.env[source.value];
+  }
+  if (source.type === "file") {
+    return readFileSync(source.value, "utf-8").split(/\r?\n/, 1)[0]?.trim();
+  }
+  if (source.type === "command") {
+    return execSync(source.value, { encoding: "utf-8" }).trim();
+  }
+  return undefined;
+}
+
 /**
  * Resolve the active workspace from:
  *   1. --baseUrl (ad-hoc, no name)
@@ -174,9 +196,12 @@ export function resolveWorkspace(
     );
   }
 
+  const token = overrides.token ?? process.env["SIYUAN_CLI_TOKEN"] ?? resolveTokenSource(entry.tokenSource) ?? entry.token;
+
   return {
     name,
     baseUrl: entry.baseUrl,
-    ...(overrides.token ? { token: overrides.token } : entry.token ? { token: entry.token } : {}),
+    ...(token ? { token } : {}),
+    ...(entry.tokenSource ? { tokenSource: entry.tokenSource } : {}),
   };
 }

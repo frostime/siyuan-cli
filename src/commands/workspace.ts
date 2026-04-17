@@ -3,7 +3,7 @@
  * See design.md §5 for output formats.
  */
 import { defineCommand } from "citty";
-import { loadConfig, saveConfig, resolveWorkspace } from "../core/config.js";
+import { loadConfig, saveConfig, resolveWorkspace, type WorkspaceEntry } from "../core/config.js";
 import { SiyuanClient } from "../core/client.js";
 import { CliError, ExitCode, fatalError, toCliError } from "../utils/errors.js";
 
@@ -43,6 +43,18 @@ const addCommand = defineCommand({
       description: "Authentication token (optional)",
       alias: "t",
     },
+    "token-env": {
+      type: "string",
+      description: "Read token from environment variable",
+    },
+    "token-file": {
+      type: "string",
+      description: "Read token from file (first line)",
+    },
+    "token-command": {
+      type: "string",
+      description: "Read token from command stdout",
+    },
     "set-current": {
       type: "boolean",
       description: "Set this workspace as the current active workspace",
@@ -71,14 +83,24 @@ const addCommand = defineCommand({
         );
       }
 
-      const entry = {
+      const tokenModes = [args.token ? 1 : 0, args["token-env"] ? 1 : 0, args["token-file"] ? 1 : 0, args["token-command"] ? 1 : 0].reduce((a, b) => a + b, 0);
+      if (tokenModes > 1) {
+        throw new CliError(ExitCode.CONFIG, "TOKEN_MODE_CONFLICT", "Use only one of --token / --token-env / --token-file / --token-command.");
+      }
+
+      const entry: WorkspaceEntry = {
         baseUrl: args.url,
         ...(args.token ? { token: args.token } : {}),
+        ...(args["token-env"] ? { tokenSource: { type: "env" as const, value: args["token-env"] } } : {}),
+        ...(args["token-file"] ? { tokenSource: { type: "file" as const, value: args["token-file"] } } : {}),
+        ...(args["token-command"] ? { tokenSource: { type: "command" as const, value: args["token-command"] } } : {}),
       };
 
       // Verify connectivity unless skipped
       if (!args["skip-verify"]) {
-        const client = new SiyuanClient(entry);
+        const verifyConfig = { ...config, workspaces: { ...config.workspaces, [args.name]: entry }, current: args.name };
+        const resolved = resolveWorkspace(verifyConfig, { workspace: args.name });
+        const client = new SiyuanClient(resolved);
         const ping = await client.ping();
         if (!ping.ok) {
           throw new CliError(
@@ -102,7 +124,8 @@ const addCommand = defineCommand({
       out({
         added: args.name,
         baseUrl: args.url,
-        hasToken: !!args.token,
+        hasToken: !!args.token || !!entry.tokenSource,
+        tokenSource: entry.tokenSource ?? null,
         isCurrent: config.current === args.name,
       });
     }),
@@ -121,7 +144,8 @@ const listCommand = defineCommand({
       const workspaces = Object.entries(config.workspaces).map(([name, ws]) => ({
         name,
         baseUrl: ws.baseUrl,
-        hasToken: !!ws.token,
+        hasToken: !!ws.token || !!ws.tokenSource,
+        tokenSource: ws.tokenSource ?? null,
         isCurrent: name === config.current,
       }));
       out({ current: config.current, workspaces });
@@ -255,7 +279,8 @@ const showCommand = defineCommand({
         name: resolved.name,
         baseUrl: ws.baseUrl,
         isCurrent: resolved.name === config.current,
-        token: args["reveal-token"] ? (ws.token ?? null) : ws.token ? "[hidden]" : null,
+        token: args["reveal-token"] ? (resolved.token ?? null) : (ws.token || ws.tokenSource) ? "[hidden]" : null,
+        tokenSource: ws.tokenSource ?? null,
       });
     }),
 });

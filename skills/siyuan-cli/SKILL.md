@@ -17,6 +17,14 @@ Use the `siyuan` command to interact with the user's SiYuan kernel.
 siyuan workspace add main --url http://127.0.0.1:6806 [--token <token>]
 ```
 
+## Runtime values
+
+- CLI version: `{{cli_version}}`
+- Current workspace: `{{workspace}}`
+- Base URL: `{{base_url}}`
+- CLI path: `{{cli_path}}`
+- Today: `{{today}}`
+
 ## Common commands
 
 ### Verify kernel

@@ -2,7 +2,7 @@
 
 ## State
 
-P1、P2 已完成。P3 实现完成，进入 review。
+P1、P2、P3 已完成。P4 实现完成，进入 review。
 
 ## Key Files
 
@@ -30,6 +30,8 @@ P1、P2 已完成。P3 实现完成，进入 review。
 - [2026-04-17T02:44] Review: 用户接受 P1/P2，phase 状态推进到 DONE，开始 P3
 - [2026-04-17T11:58] Plan P3: 创建 `26-04-17T11-58_p3-tool-skill`，spec/design/tasks 已初始化
 - [2026-04-17T12:15] Implement P3: tool runtime、4 个 MVP tools、skill runtime、builtin skill 内容完成，等待 review
+- [2026-04-17T12:18] Review: 用户接受继续推进，P3 标记 DONE，开始 P4
+- [2026-04-17T12:28] Implement P4: tokenSource、skill polish、api debug preview 完成，等待 review
 
 ## Coordination
 
@@ -37,5 +39,5 @@ P1、P2 已完成。P3 实现完成，进入 review。
 |------------|-------|--------|-------------|
 | 26-04-17T01-36_p1-foundation | P1: Foundation | ✅ DONE | M0 骨架 + M1 Workspace 管理 |
 | 26-04-17T01-57_p2-api-layer | P2: API Layer | ✅ DONE | M2 API直通 + M3 权限引擎 |
-| 26-04-17T11-58_p3-tool-skill | P3: Tool + Skill | 🚧 REVIEW | M4 Tool层 + M5 Skill管理 |
-| (TBD) | P4: Polish | ⏳ pending | M6 补齐API + M7 稳定化 |
+| 26-04-17T11-58_p3-tool-skill | P3: Tool + Skill | ✅ DONE | M4 Tool层 + M5 Skill管理 |
+| 26-04-17T12-20_p4-polish | P4: Polish | 🚧 REVIEW | M6 补齐API + M7 稳定化 |

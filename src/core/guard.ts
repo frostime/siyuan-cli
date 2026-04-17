@@ -156,8 +156,14 @@ export interface ExecuteOptions {
   debug?: boolean;
 }
 
+function debugPreview(schema: EndpointSchema, payload: unknown): void {
+  const body = JSON.stringify(payload);
+  const curl = `curl -X POST <baseUrl>${schema.endpoint} -H "Content-Type: application/json" --data ${JSON.stringify(body)}`;
+  process.stderr.write(JSON.stringify({ debug: { endpoint: schema.endpoint, payload, curl } }) + "\n");
+}
+
 export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
-  const { schema, payload, client, engine, dryRun, yes } = opts;
+  const { schema, payload, client, engine, dryRun, yes, debug } = opts;
   const { id } = await import("./schema.js").then((m) => m.deriveEndpointId(schema.endpoint));
 
   // 1. Endpoint-level permission
@@ -167,6 +173,9 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
   applyPayloadGuard(schema, payload, engine);
 
   // 3. Dry-run
+  if (debug) {
+    debugPreview(schema, payload);
+  }
   if (dryRun) {
     return { dryRun: true, endpoint: schema.endpoint, payload };
   }

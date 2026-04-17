@@ -1,7 +1,8 @@
-import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, resolve } from "pathe";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { dirname, extname, join, resolve } from "pathe";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
+import { loadConfig, resolveWorkspace } from "./config.js";
 
 export interface SkillEntry {
   name: string;
@@ -52,18 +53,56 @@ export function readSkill(rel: string): string {
 }
 
 function skillInstallTarget(name: string, target = "agents", dest?: string): string {
+  if (target === "agents") return join(homedir(), ".agents", "skills", name);
+  if (target === "claude") return join(homedir(), ".claude", "skills", name);
+  if (target === "claude-project") return join(process.cwd(), ".claude", "skills", name);
   if (target === "custom") {
     if (!dest) throw new Error("--dest is required when --target custom.");
     return join(dest, name);
   }
-  return join(homedir(), ".agents", "skills", name);
+  throw new Error(`Unsupported target: ${target}`);
+}
+
+function templateVars() {
+  let workspace = "";
+  let baseUrl = "";
+  try {
+    const cfg = loadConfig();
+    const ws = resolveWorkspace(cfg, {});
+    workspace = ws.name;
+    baseUrl = ws.baseUrl;
+  } catch {}
+  return {
+    "{{cli_version}}": "0.1.0",
+    "{{workspace}}": workspace,
+    "{{base_url}}": baseUrl,
+    "{{cli_path}}": join(process.cwd(), "bin", "siyuan.mjs"),
+    "{{today}}": new Date().toISOString().slice(0, 10),
+  };
+}
+
+function applyTemplates(dir: string): void {
+  const vars = templateVars();
+  const exts = new Set([".md", ".txt", ".yaml", ".yml", ".json", ".sh"]);
+  const walk = (p: string) => {
+    for (const name of readdirSync(p, { withFileTypes: true })) {
+      const child = join(p, name.name);
+      if (name.isDirectory()) walk(child);
+      else if (exts.has(extname(name.name))) {
+        let text = readFileSync(child, "utf-8");
+        for (const [k, v] of Object.entries(vars)) text = text.replaceAll(k, v);
+        writeFileSync(child, text, "utf-8");
+      }
+    }
+  };
+  walk(dir);
 }
 
 export function installSkill(name: string, opts: { target?: string; dest?: string; force?: boolean; dryRun?: boolean }) {
   const entry = listBuiltinSkills().find((s) => s.name === name);
   if (!entry) throw new Error(`Skill "${name}" not found.`);
   const targetDir = skillInstallTarget(name, opts.target, opts.dest);
-  const operations = [{ op: "copy", from: entry.path, to: targetDir }];
+  const operations = [{ op: "copy", from: entry.path, to: targetDir }, { op: "template", target: targetDir }];
   if (opts.dryRun) {
     return { target: targetDir, operations, dryRun: true };
   }
@@ -72,5 +111,15 @@ export function installSkill(name: string, opts: { target?: string; dest?: strin
   }
   mkdirSync(dirname(targetDir), { recursive: true });
   cpSync(entry.path, targetDir, { recursive: true, force: !!opts.force });
+  applyTemplates(targetDir);
   return { target: targetDir, files: readdirSync(targetDir), dryRun: false };
+}
+
+export function uninstallSkill(name: string, opts: { target?: string; dest?: string }) {
+  const targetDir = skillInstallTarget(name, opts.target, opts.dest);
+  if (!existsSync(targetDir)) {
+    throw new Error(`Target does not exist: ${targetDir}`);
+  }
+  rmSync(targetDir, { recursive: true, force: true });
+  return { removed: targetDir };
 }

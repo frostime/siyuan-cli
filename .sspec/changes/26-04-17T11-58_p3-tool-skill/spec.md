@@ -1,6 +1,6 @@
 ---
 name: p3-tool-skill
-status: PLANNING
+status: DONE
 change-type: single
 created: 2026-04-17 11:58:00
 reference:
