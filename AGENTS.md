@@ -1,3 +1,5 @@
+关于 SiYuan 本身的规范，参考: src/docs/*.md
+
 <!-- SSPEC:START -->
 # .sspec Agent Protocol
 
