@@ -1,5 +1,7 @@
 关于 SiYuan 本身的规范，参考: src/docs/*.md
 
+CLI 内部文档、提示应当使用英文。
+
 <!-- SSPEC:START -->
 # .sspec Agent Protocol
 

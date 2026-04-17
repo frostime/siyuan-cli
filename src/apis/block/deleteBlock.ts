@@ -2,7 +2,7 @@ import type { EndpointSchema } from "../../core/schema.js";
 
 export const schema: EndpointSchema = {
   endpoint: "/api/block/deleteBlock",
-  summary: "删除块",
+  summary: "Delete block",
   payload: {
     type: "object",
     required: ["id"],

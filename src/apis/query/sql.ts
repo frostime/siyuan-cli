@@ -2,14 +2,14 @@ import type { EndpointSchema } from "../../core/schema.js";
 
 export const schema: EndpointSchema = {
   endpoint: "/api/query/sql",
-  summary: "通过 SQL 查询思源数据库",
-  description: "执行任意 SQL 查询。CLI 权限层默认将结果按 path/notebook 过滤。",
+  summary: "Query SiYuan database via SQL",
+  description: "Execute SQL `select` queries. The CLI permission layer filters results by path/notebook by default.",
   payload: {
     type: "object",
     required: ["stmt"],
     additionalProperties: false,
     properties: {
-      stmt: { type: "string", description: "SQL 查询语句" },
+      stmt: { type: "string", description: "SQL query statement" },
     },
   },
   tags: ["read", "query"],

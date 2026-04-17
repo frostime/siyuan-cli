@@ -2,13 +2,13 @@ import type { EndpointSchema } from "../../core/schema.js";
 
 export const schema: EndpointSchema = {
   endpoint: "/api/notebook/createNotebook",
-  summary: "创建新笔记本",
+  summary: "Create a new notebook",
   payload: {
     type: "object",
     required: ["name"],
     additionalProperties: false,
     properties: {
-      name: { type: "string", description: "笔记本名称" },
+      name: { type: "string", description: "Notebook name" },
     },
   },
   tags: ["write", "mutation"],

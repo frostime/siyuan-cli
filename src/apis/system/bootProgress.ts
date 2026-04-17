@@ -1,7 +1,7 @@
 import type { EndpointSchema } from "../../core/schema.js";
 export const schema: EndpointSchema = {
   endpoint: "/api/system/bootProgress",
-  summary: "获取思源启动进度（Docker 场景常用）",
+  summary: "Get SiYuan boot progress (commonly used in Docker scenarios)",
   payload: { type: "object", properties: {} },
   tags: ["read"],
 };

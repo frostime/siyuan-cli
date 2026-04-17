@@ -2,7 +2,7 @@ import type { EndpointSchema } from "../../core/schema.js";
 
 export const schema: EndpointSchema = {
   endpoint: "/api/asset/upload",
-  summary: "上传资源文件",
+  summary: "Upload assets",
   payload: {
     type: "object",
     required: ["file[]"],
@@ -10,12 +10,12 @@ export const schema: EndpointSchema = {
     properties: {
       "file[]": {
         type: "array",
-        description: "要上传的本地文件路径（可多个）",
+        description: "Local file paths to upload (multiple allowed)",
         items: { type: "string" },
       },
       assetsDirPath: {
         type: "string",
-        description: "资源保存目录",
+        description: "Asset save directory",
         default: "/assets/",
       },
     },

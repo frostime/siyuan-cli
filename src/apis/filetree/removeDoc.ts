@@ -2,7 +2,7 @@ import type { EndpointSchema } from "../../core/schema.js";
 
 export const schema: EndpointSchema = {
   endpoint: "/api/filetree/removeDoc",
-  summary: "删除文档",
+  summary: "Remove document",
   payload: {
     type: "object",
     required: ["notebook", "path"],

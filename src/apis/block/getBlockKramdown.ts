@@ -2,7 +2,7 @@ import type { EndpointSchema } from "../../core/schema.js";
 
 export const schema: EndpointSchema = {
   endpoint: "/api/block/getBlockKramdown",
-  summary: "获取块的 Kramdown 内容",
+  summary: "Get block Kramdown content",
   payload: {
     type: "object",
     required: ["id"],

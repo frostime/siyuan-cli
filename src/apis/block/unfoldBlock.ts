@@ -1,0 +1,16 @@
+import type { EndpointSchema } from "../../core/schema.js";
+
+export const schema: EndpointSchema = {
+  endpoint: "/api/block/unfoldBlock",
+  summary: "Unfold a block",
+  payload: {
+    type: "object",
+    required: ["id"],
+    additionalProperties: false,
+    properties: {
+      id: { type: "string", description: "Block ID", pattern: "^\\d{14}-[0-9a-z]{7}$" },
+    },
+  },
+  tags: ["write", "mutation"],
+  guard: { payload: { id: "id" } },
+};

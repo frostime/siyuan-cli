@@ -2,7 +2,7 @@ import type { EndpointSchema } from "../../core/schema.js";
 
 export const schema: EndpointSchema = {
   endpoint: "/api/filetree/renameDoc",
-  summary: "重命名文档",
+  summary: "Rename document",
   payload: {
     type: "object",
     required: ["notebook", "path", "title"],
