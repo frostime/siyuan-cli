@@ -1,7 +1,7 @@
 ---
 name: endpoint-tag-and-permission-model
 status: PLANNING
-change-type: single
+change-type: root
 created: 2026-04-17T23:49:57
 reference:
   - source: ".sspec/changes/26-04-17T22-09_api-coverage-and-translation"
@@ -9,71 +9,67 @@ reference:
     note: "Follow-up: 在 API 覆盖基础上重构语义模型与权限基础设施"
 ---
 
-# endpoint-tag-and-permission-model
+# endpoint-tag-and-permission-model · Root Coordinator
 
 ## Problem Statement
 
-当前 `EndpointTag` 系统存在三类独立缺陷，彼此叠加导致安全模型无法真正闭合：
+当前 endpoint 语义与权限基础设施存在三个层级错位的问题，已经影响到安全边界的真实性与后续扩展的可维护性：
 
-**缺陷 A — 语义混轴**  
-`"read" | "write" | "mutation" | "dangerous" | "upload" | "query"` 把 effect / risk / mechanism / action 四种语义维度混在单一数组里。`write` 与 `mutation` 边界模糊，`dangerous` 与其他 tag 不同轴，导致 tag 同时承担「CLI 过滤」「确认触发」「dry-run 判断」三个互相纠缠的职责。
+- **语义真源缺失**：`EndpointTag` 把 effect / risk / mechanism / action 混在同一数组里，下游消费者（CLI 列表、dry-run、确认逻辑）各自读取不同 tag 子集，无法共享统一判断依据。
+- **payload guard 失效**：当前 `guard.payload` 在多字段同 kind 场景下会互相覆盖；更严重的是 `id` 从未解析成 `{notebook, path}`，所以所有“只传 id”的写操作都绕过了 path-prefix 级写范围限制。
+- **权限表达力不足**：`PermissionConfig.content` 读写不分离，无法表达“可读不可写”的 notebook/path；`/api/file/*` 缺少独立 workspace 规则；tool 粒度缺少显式 allow/deny。
 
-**缺陷 B — Guard 参数映射失效**  
-`guard.payload: Record<string, GuardFieldKind>` 有两个根本性问题：
-1. 多个同 kind 字段（如 `moveBlock` 的 `id`/`previousID`/`parentID`）在 `applyPayloadGuard()` 中写入同一个 `item` slot，互相覆盖，只有最后一个被实际检查。
-2. payload 中 `id` 类型字段从未被解析成 `{notebook, path}`，而 `checkDeny()` 检查的正是 `path` 和 `notebook`。结论：所有"只有 id"的写操作（`updateBlock`、`deleteBlock`、`moveBlock`、`removeDocByID` 等）**path-prefix 级写范围限制实际上无效**。
-
-**缺陷 C — Permission config 读写不分离**  
-`PermissionConfig.content` 只有单一规则集，同时控制读和写。无法表达「可以读某笔记本但不能写」的场景。缺少 workspace 文件路径级规则（`/api/file/*`）和 tool 粒度的 allow/deny。
+在 alpha 阶段，这类问题适合通过 breaking redesign 一次理顺。当前没有用户迁移成本，旧配置可直接删除重建。
 
 ## Proposed Solution
 
-### Approach
+### Overall Approach
 
-用三层正交基础设施替代当前单一 tag 数组：
+本 root change 不再试图在一个变更里同时完成“核心机制重构”和“全部 endpoint 批量迁移”。
 
-**层 1 — Classification（语义标签）**  
-schema 作者填结构化字段 `classification: { mode, surface, scope, operation? }`，registry 注册时自动派生 `tags[]`、`risk` 摘要字符串、`requiresConfirmation` 布尔值。`mode` 直接映射到权限配置的读/写方向，使语义标签和安全策略共享同一份词表。
+改为三阶段推进：
 
-**层 2 — Guard（参数映射）**  
-`guard.payload` 从 `Record<string, GuardFieldKind>` 改为 `payloadTargets: Array<{field, kind, access, when?}>`，每个字段独立一条，解决多字段覆盖问题，并明确每个字段的读/写方向。`kind: "id"` 时在 guard 执行阶段调用 `resolveContentId(id)` → `{notebook, path}`，使 path-prefix 写范围限制真正落地。response 侧保持现有两套机制（声明式 `response` + 命令式 `filterResponse`），接口不变。
+1. **先冻结核心契约**：classification、payloadTargets、bulk id resolver、config v2、error taxonomy、confirm 语义、global endpoint 约束。
+2. **再用 3 个代表性 API 做 demo**：验证 content multi-id write、global read filter、workspace write 三种核心路径。
+3. **最后做批量 rollout**：按 API group 分批迁移剩余 endpoints/tools/docs/tests。
 
-**层 3 — Permission config（安全策略）**  
-`PermissionConfig.content` 拆为 `content.read` / `content.write` 两段，分别配置 notebook 和 path 规则。新增 `workspace.read` / `workspace.write`（控制 `/api/file/*`）。新增 `tools` 粒度 allow/deny。`confirm` 改为可配置策略，基于 classification 矩阵推导确认需求。
+本 root 的设计约束有两条：
 
-### Key Change
+- **deny 是硬边界**，通过 endpoint/tool/content/workspace 规则强制执行。
+- **confirm 是交互保险**，主要服务人类 CLI；在 agent 场景中通常会被 `--yes` 显式放行，因此不作为安全边界。
 
-**Type A: Classification Type System**  
-新增 `EndpointClassification` 接口及相关枚举类型。`EndpointSchema` 新增 `classification` 字段，`tags` 字段变为 registry 派生的只读视图，schema 文件不再手写 `tags`。
+### Phase Overview
 
-**Type B: Guard payloadTargets**  
-`GuardSpec.payload` 改名为 `payloadTargets`，类型从 `Record<string, GuardFieldKind>` 改为 `PayloadTargetSpec[]`。`applyPayloadGuard()` 改为逐条处理，每条独立调 `checkDeny()`。
+| Phase | Goal | Depends On | Sub-change |
+|-------|------|-----------|------------|
+| P1: Core Contracts | 冻结 classification / guard / permission / config / error 的共享契约 | — | TBD after gate |
+| P2: Demo Adoption | 迁移 `block.moveBlock`、`query.sql`、`file.putFile`，验证三条核心执行路径 | P1 | TBD after gate |
+| P3: Rollout | 分批迁移剩余 `src/apis/**`、`src/tools/**`，补齐 docs/tests | P1, P2 | TBD after gate |
 
-**Type C: ID Resolver**  
-`PermissionEngine` 新增 `resolveContentId(id: string): Promise<{notebook: string; path: string}>`，内部用 `query.sql` raw call，单次调用内缓存。Guard 执行时对 `kind: "id"` 字段触发此解析。
+### Coordination Notes
 
-**Type D: Permission Config Read/Write Split**  
-`PermissionConfig` 结构重组：`content` 拆为 `content.read` / `content.write`，新增 `workspace.read` / `workspace.write` 和 `tools`。配置 schema version bump（或保持兼容迁移）。
+- **P1 定稿后共享契约冻结**：`src/core/schema.ts`、`src/core/guard.ts`、`src/core/permission.ts`、`src/core/config.ts` 的接口在 P2 开始前冻结。P2/P3 只能消费，不得临时回改。
+- **P2 是机制验收 phase**：只选 3 个代表性 endpoint，避免在机制未稳时批量迁移 60+ schema 文件。
+- **P3 是 rollout，不是再设计**：剩余 endpoints 的迁移以套用既定契约为主，但每个 endpoint 仍需逐个审视 payloadTargets / response guard，不能机械替换。
+- **alpha 阶段不做旧配置兼容迁移**：config 形状变化时允许直接 bump schemaVersion，并要求删除旧配置重建。
 
-**Type E: Tool Capability**  
-`ToolSchema` 新增 `capability?: ToolCapability`，声明 tool 可读/写的 surface 集合。tool allow/deny 通过 `tools` 配置控制，tool 内部每次 `callEndpoint()` 继续走完整 guard 链路（双层）。
+### Locked Decisions for Sub-changes
 
-**Type F: API Schema Migration**  
-所有 `src/apis/**/*.ts` 文件：`tags` 改为 `classification`，`guard.payload` 改为 `guard.payloadTargets`。重点修复：`insertBlock`（补 payloadTargets）、`moveBlock`（三字段全部独立条目）、`file.putFile`（surface: workspace）、`system.exit`（surface: runtime）、`network.forwardProxy`（surface: network）。
+**Contract A: Classification is the single source of truth**  
+endpoint schema 作者只手写 `classification`；`tags`、`risk`、`requiresConfirmation` 由 registry 派生。
 
-### Scope Summary
+**Contract B: Payload guard checks each target independently**  
+`payloadTargets[]` 是 endpoint 输入权限映射的唯一声明形式。每一条独立检查，不再把多个字段压进单个 `{id,path,notebook}` slot。
 
-| File | Change |
-|---|---|
-| `src/core/schema.ts` | 新增 `EndpointClassification`、`PayloadTargetSpec`、`ToolCapability` 类型；`GuardSpec.payload` → `payloadTargets`；`EndpointSchema` 新增 `classification` 字段 |
-| `src/core/config.ts` | `PermissionConfig` 重组：content 读写分离，新增 workspace、tools 段 |
-| `src/core/permission.ts` | `PermissionEngine` 新增 `resolveContentId()`、`checkTool()`；`requiresConfirmation()` 改为读 classification |
-| `src/core/guard.ts` | `applyPayloadGuard()` 改为逐条处理 `payloadTargets`；触发 id resolver；接口改为 async |
-| `src/core/registry.ts` | 注册时调用 `deriveClassificationMeta()` 派生 tags / risk / requiresConfirmation |
-| `src/apis/**/*.ts`（全部，约 60 个文件） | `tags` → `classification`；`guard.payload` → `guard.payloadTargets` |
-| `src/tools/*.ts`（4 个文件） | 新增 `capability` 字段 |
-| `src/commands/api.ts` | `isWriteEndpoint()` 改为读 `classification.mode` |
+**Contract C: ID-based access must resolve to notebook/path before policy check**  
+`kind: "id"` 必须经过 resolver 转成 `{notebook, path}`，随后再落到 `content.read/write` 规则。
+
+**Contract D: Global read endpoints rely on response guard**  
+`query.sql`、`fullTextSearchBlock` 这类 `scope: "global"` 的 read endpoint 无法在 payload 阶段做资源级授权，必须在 response guard 阶段过滤。
+
+**Contract E: Tool security stays simple in v1**  
+当前 root 只引入 `tools.allow/deny` 与 endpoint guard 继承，不在 P1 引入额外 ToolCapability enforcement 模型。
 
 ### Design Reference
 
-→ 详细技术设计见 [design.md](./design.md)
+完整根设计、共享接口、phase 边界、非目标与验收矩阵见 [design.md](./design.md)

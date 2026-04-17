@@ -1,66 +1,58 @@
----
-change: "endpoint-tag-and-permission-model"
-updated: 2026-04-17T23:49:41+08:00
----
+# Memory: endpoint-tag-and-permission-model (Root)
 
-# Memory: endpoint-tag-and-permission-model
+**Updated**: 2026-04-18T00:58+08:00
+
+## Git Baseline (Immutable)
+<!-- Captured during `sspec change new` before any change files are written.
+This section records the root change starting point in git and MUST NOT be edited or refreshed later. -->
+
+- Captured: unavailable — original malformed `memory.md` did not record immutable baseline data at change creation
+- Repository: `H:/SrcCode/playground/siyuan-cli`
+- Branch: unavailable
+- HEAD: unavailable
+- Worktree: unavailable
+- Status Snapshot: unavailable
+
+## Coordination
+<!-- Root change authoritative sub-change summary. -->
+
+| Phase | Sub-Change | Status | Blocker |
+|-------|------------|--------|---------|
+| P1: Core Contracts | (pending) | ⏳ | Waiting for external re-review of current root spec/design |
+| P2: Demo Adoption | (pending) | ⏳ | Wait for P1 contract freeze |
+| P3: Rollout | (pending) | ⏳ | Wait for P1/P2 results |
 
 ## State
 
-**Phase**: Design — @align gate（等待用户确认 spec + design）
+Root design has been revised after external audit and is waiting for re-review.
+Next: get the current root `spec.md` + `design.md` re-checked, then create the P1 sub-change.
+Do not implement directly from the root change.
 
-**Last action**: spec.md + design.md 填写完毕，送专家审查
+## Key Files
 
-## Milestones
-
-- [x] Clarify：完整讨论问题现状、需求逻辑、设计方向（~12 轮对话）
-- [x] Design：spec.md + design.md 完成
-- [ ] @align gate：待用户确认
-- [ ] Plan
-- [ ] Implement
-- [ ] Review
+- `.sspec/changes/26-04-17T23-49_endpoint-tag-and-permission-model/spec.md` — root phase split, locked decisions, root scope boundary
+- `.sspec/changes/26-04-17T23-49_endpoint-tag-and-permission-model/design.md` — shared contracts for classification, guard, resolver, config v2, and phase boundaries
+- `.sspec/changes/26-04-17T23-49_endpoint-tag-and-permission-model/tasks.md` — root milestones only; sub-changes will hold file-level tasks
+- `src/core/schema.ts` — type anchor for `EndpointSchema`, classification, guard contracts
+- `src/core/guard.ts` — payload/response enforcement path to be redesigned in P1
+- `src/core/permission.ts` — policy engine and content-id resolver anchor
+- `src/core/config.ts` — config v2 shape anchor
 
 ## Knowledge
 
-### 已确认决策
+- [2026-04-17T23:49] [Decision] This redesign is driven first by payload guard bug B; tag semantics cleanup follows from establishing a single source of truth.
+- [2026-04-18T00:58] [VitalFinding] External ClaudeAudit confirmed bug B as real and severe, and recommended demo-first rollout rather than one-shot migration.
+- [2026-04-18T00:58] [Decision] This change now acts as a root coordinator: P1 shared contracts, P2 demo endpoints, P3 rollout.
+- [2026-04-18T00:58] [Decision] `classification` is the authored truth; tags/risk/requiresConfirmation are registry-derived.
+- [2026-04-18T00:58] [Decision] `payloadTargets[]` replaces the old payload record; each target is checked independently.
+- [2026-04-18T00:58] [Decision] `kind: "id"` must resolve to `{ notebook, path }` via bulk SQL resolver before policy check.
+- [2026-04-18T00:58] [Decision] `mode=read` + `scope=global` endpoints must define response guard or `filterResponse`.
+- [2026-04-18T00:58] [Decision] Config v2 splits `content.read/write` and `workspace.read/write`; alpha stage allows breaking reset of old config.
+- [2026-04-18T00:58] [Constraint] deny rules are the hard boundary; confirm is interactive guardrail and does not define agent security.
+- [2026-04-18T00:58] [Constraint] P1 keeps `ToolSchema` shape stable; only tool allow/deny and endpoint-guard inheritance are in scope.
+- [2026-04-18T00:58] [Gotcha] Original `memory.md` was malformed and lost the immutable git baseline; this corrected file records that loss explicitly instead of reconstructing fake baseline data.
 
-**D1. profiles.agent 去掉**  
-权限系统无法区分调用者身份，权限配置按资源能力建模，不做 human/agent 分层。
+## Milestones
 
-**D2. Classification 必填三字段 + 一个选填**  
-`mode` / `surface` / `scope` 必填，`operation` 选填。  
-`risk` / `tags` / `requiresConfirmation` 全部派生，schema 作者不手写。
-
-**D3. payloadTargets 数组替代 payload Record**  
-每个字段独立一条，解决多字段覆盖问题（moveBlock bug）。  
-`access: "read" | "write"` 明确每个字段的访问方向。
-
-**D4. id resolver 用 SQL raw query**  
-`SELECT box, path FROM blocks WHERE id = ? LIMIT 1`  
-绕过 endpoint guard 直接调内核，单次调用内缓存。已确认（用户拍板）。
-
-**D5. insertBlock / moveBlock 中所有 ID 字段均按 write 检查（从严）**  
-已确认（用户拍板）。
-
-**D6. content read/write 分离配置**  
-`content.read` / `content.write` 分别配置 notebook 和 path 规则。  
-新增 `workspace.read` / `workspace.write`（控制 `/api/file/*`）。
-
-**D7. path 规则主键用 SiYuan `path`（ID-based，稳定）**  
-不用 `hpath`。
-
-**D8. Tool 双层权限检查**  
-入口做 tool allow/deny，内部每次 `callEndpoint()` 继续走完整 guard 链路。
-
-**D9. SQL response filter v1 保持现状**  
-v1 继续走 response filter，subquery rewriting 作为 v2 可选优化。
-
-**D10. guard 执行接口改为 async**  
-因 id resolver 是异步 SQL 查询，`applyPayloadGuard()` 和 `executeEndpoint()` 变为 async。
-
-### 设计中的开放点（未堵死，留给实现阶段决定）
-
-- `getBlockKramdown` / `getBlockDOM` 的 response 是单个字符串，不可作为 items 过滤；  
-  v1 只做 payload 检查（guard id → checkDeny path），内容本身不 filter。
-- `confirm` 策略的默认值矩阵，可能在 plan 阶段进一步细化。
-- tool `inputRefs`（条件激活的 payloadTargets）是否进 v1，待 plan 时决定。
+- [2026-04-17T23:49] Design: created the change and drafted first-pass spec/design for endpoint classification and permission redesign.
+- [2026-04-18T00:58] Design: converted the change into a root coordinator, narrowed implementation to P1 contracts + P2 demo + P3 rollout, and normalized memory format.

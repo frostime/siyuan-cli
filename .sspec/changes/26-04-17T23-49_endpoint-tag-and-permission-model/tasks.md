@@ -1,45 +1,45 @@
 ---
 change: "endpoint-tag-and-permission-model"
-updated: ""
+change-type: root
+updated: 2026-04-18T00:00:00+08:00
 ---
 
-# Tasks
+# Milestones
 
 ## Legend
-`[ ]` Todo | `[x]` Done
+`[ ]` Todo | `[x]` Done (sub-change completed + verified)
 
-## Tasks
-<!-- @REPLACE -->
+## Milestones
 
-<!-- @RULE: Organize by phases. Each task <2h, independently testable.
-Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
+### Phase 1: Core Contracts ⏳
+- [ ] Sub-change created and linked
+- [ ] Sub-change completed and verified
+**Deliverable**: classification / payloadTargets / config v2 / resolver / error taxonomy / confirm semantics 定稿并实现
+**Sub-change**: TBD after gate
 
-### Phase 1: <name> ⏳
-- [ ] Task description `path/file.py`
-- [ ] Task description `path/file.py`
-**Verification**: <how to verify this phase>
+### Phase 2: Demo Adoption ⏳
+- [ ] Sub-change created and linked
+- [ ] Sub-change completed and verified
+**Deliverable**: `block.moveBlock`、`query.sql`、`file.putFile` 三个 demo endpoint 在新模型下可运行并通过验证
+**Sub-change**: TBD after gate
 
-### Feedback Tasks (→ [NNN-description](./revisions/NNN-description.md))
-Use this section for review/feedback tasks that still belong to the current change.
-
-If accepted feedback changes scope/design:
-- **Pre-gate** (spec not yet approved): update `spec.md` / `design.md` directly, then add tasks here.
-- **Post-gate** (design baseline locked): create `revisions/NNN-*.md` FIRST, then update this section. Do NOT edit `spec.md` / `design.md`.
-
-The section header MUST link the corresponding revision file (relative path).
-If the work belongs in a new follow-up or replacement change, the agent MUST NOT put it here unless the user has first approved that direction via `@align`.
--->
+### Phase 3: Rollout ⏳
+- [ ] Sub-change created and linked
+- [ ] Sub-change completed and verified
+**Deliverable**: 分批迁移剩余 endpoint/tool/docs/tests，形成稳定的 v2 权限语义模型
+**Sub-change**: TBD after gate
 
 ---
 
 ## Progress
-<!-- @REPLACE -->
 
 **Overall**: 0%
 
-| Phase | Progress | Status |
-|-------|----------|--------|
-| Phase 1 | 0% | ⏳ |
+| Phase | Sub-Change | Status | Deliverable |
+|-------|------------|--------|-------------|
+| P1: Core Contracts | TBD | ⏳ | 共享契约定稿 + 实现 |
+| P2: Demo Adoption | TBD | ⏳ | 3 个代表性 endpoint 验证 |
+| P3: Rollout | TBD | ⏳ | 批量迁移与文档完善 |
 
 **Recent**:
-- (none yet)
+- [2026-04-18] Root change scope 收缩为“机制层 + demo + rollout”三阶段
