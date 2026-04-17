@@ -11,14 +11,19 @@ import { CliError, ExitCode } from "../utils/errors.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+export type NotebookID = string; // siyuan notebook id
+export type BlockID = string; // siyuan block id
+export type BlockPath = string; // /<parent_id>/<child_id>/... (siyuan block path)
+export type BlockHPath = string; // /ParentDoc/ChildBlock/ (siyuan block hpath)
+
 export interface PermissionConfig {
   api?: {
     disabled?: string[];
     enabled?: string[];
   };
   content?: {
-    notebooks?: { deny?: string[]; allow?: string[] };
-    paths?: { deny?: string[]; allow?: string[] };
+    notebooks?: { deny?: NotebookID[]; allow?: NotebookID[] };
+    paths?: { deny?: BlockPath[]; allow?: BlockPath[] };
   };
   guardWrite?: boolean;
 }

@@ -12,8 +12,8 @@
     "isolatedModules": true,
     "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
-    "declaration": true,
-    "sourceMap": true,
+    "declaration": false,
+    "sourceMap": false,
     "outDir": "./dist",
     "rootDir": "./src"
   },

@@ -11,7 +11,7 @@ import "./tools/index.js";
 const main = defineCommand({
   meta: {
     name: "siyuan",
-    version: "0.1.0",
+    version: "0.2.0",
     description: "Agent-first CLI for SiYuan Note",
   },
   subCommands: {
