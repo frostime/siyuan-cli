@@ -21,9 +21,13 @@ P1 Core Contracts
   └─ error taxonomy
 
 P2 Demo Adoption
-  ├─ block.moveBlock    (content write + multi-id payload guard)
-  ├─ query.sql          (global read + response filtering)
-  └─ file.putFile       (workspace write)
+  ├─ block.moveBlock         (content write + multi-id payload guard)
+  ├─ block.getBlockKramdown  (content read + single-id guard)
+  ├─ query.sql               (global read + response filtering)
+  ├─ file.getFile            (workspace read)
+  ├─ file.putFile            (workspace write)
+  ├─ system.exit             (runtime invoke + critical override)
+  └─ notification.pushMsg    (runtime invoke + safe override)
 
 P3 Rollout
   ├─ remaining src/apis/** migration
@@ -609,10 +613,14 @@ Runtime authorization still flows through ctx.callEndpoint(...).
 | Demo endpoint | Why it matters | Validates |
 |---|---|---|
 | `block.moveBlock` | 当前多 id 覆盖 bug 最直接样本 | payloadTargets 多字段逐条检查 + batch resolver helper |
+| `block.getBlockKramdown` | 单 id content read 样本 | read 路径下的 resolver + payload guard |
 | `query.sql` | global read 无法做 payload 授权 | response guard 是唯一硬路径 |
-| `file.putFile` | 最危险的 workspace 写入口 | `workspace.write.paths` 与 `workspace-path` 区分 |
+| `file.getFile` | workspace read 样本 | `workspace.read.paths` 与 `workspace-path` |
+| `file.putFile` | 最危险的 workspace 写入口 | `workspace.write.paths` 与 `workspace-path` |
+| `system.exit` | runtime 高风险 invoke | `riskOverride: critical` |
+| `notification.pushMsg` | runtime 低风险 invoke | `riskOverride: safe` |
 
-这三个 demo 覆盖了最核心、最容易出安全事故的三条链路。P2 验收通过后，P3 再做全量迁移。
+这些 demo 共同覆盖了 content read/write、global read、workspace read/write、runtime invoke 两端风险。P2 验收通过后，P3 再做全量迁移。
 
 ---
 

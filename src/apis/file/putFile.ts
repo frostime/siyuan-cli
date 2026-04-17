@@ -14,5 +14,15 @@ export const schema: EndpointSchema = {
       modTime: { type: "integer", description: "File modification timestamp" },
     },
   },
-  tags: ["write", "mutation"],
+  classification: {
+    mode: "write",
+    surface: "workspace",
+    scope: "single",
+    operation: "update",
+  },
+  guard: {
+    payloadTargets: [
+      { field: "path", kind: "workspace-path", access: "write" },
+    ],
+  },
 };

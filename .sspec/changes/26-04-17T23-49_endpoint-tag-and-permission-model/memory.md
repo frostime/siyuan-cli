@@ -1,6 +1,6 @@
 # Memory: endpoint-tag-and-permission-model (Root)
 
-**Updated**: 2026-04-18T02:18+08:00
+**Updated**: 2026-04-18T02:33+08:00
 
 ## Git Baseline (Immutable)
 <!-- Original creation-time baseline was lost in the malformed memory file.
@@ -26,13 +26,13 @@ This reconstructed baseline records the branch divergence point explicitly and M
 | Phase | Sub-Change | Status | Blocker |
 |-------|------------|--------|---------|
 | P1: Core Contracts | `26-04-18T01-28_p1-core-contracts` | ✅ DONE | — |
-| P2: Demo Adoption | (pending) | ⏳ | Ready to create sub-change |
+| P2: Demo Adoption | `26-04-18T02-23_p2-demo-adoption` | 🚧 REVIEW | Waiting for P2 implementation review |
 | P3: Rollout | (pending) | ⏳ | Wait for P2 results |
 
 ## State
 
-P1 is done.
-Next: create the P2 demo adoption sub-change and migrate `block.moveBlock`, `query.sql`, and `file.putFile`.
+P2 sub-change has been implemented and is now in review.
+Next: review `26-04-18T02-23_p2-demo-adoption`; if accepted, mark P2 done and open P3 rollout.
 Do not implement directly from the root change.
 
 ## Key Files
@@ -65,6 +65,9 @@ Do not implement directly from the root change.
 - [2026-04-18T01:39] [CoordinationDecision] P1 has finished implementation and validation; root is waiting for P1 review before opening P2.
 - [2026-04-18T02:10] [CoordinationDecision] P1 completed revision 001 (contract hardening + tests); ready to close.
 - [2026-04-18T02:18] [CoordinationDecision] P1 review passed and the phase is closed; root may open P2.
+- [2026-04-18T02:23] [CoordinationDecision] P2 sub-change created as `26-04-18T02-23_p2-demo-adoption`.
+- [2026-04-18T02:33] [CoordinationDecision] P2 implemented seven representative endpoint migrations and is ready for review.
+- [2026-04-18T03:00] [CoordinationDecision] P2 revision 001 recorded the 3→7 demo expansion and strengthened validation from metadata-only checks to guard-path tests.
 
 ## Milestones
 
@@ -74,3 +77,6 @@ Do not implement directly from the root change.
 - [2026-04-18T01:29] Coordination: created P1 sub-change `26-04-18T01-28_p1-core-contracts` and drafted its first-pass spec/design.
 - [2026-04-18T01:39] Coordination: P1 implementation finished, validated locally, and moved to review.
 - [2026-04-18T02:18] Coordination: P1 review accepted; root advanced to P2-ready state.
+- [2026-04-18T02:23] Coordination: created P2 sub-change `26-04-18T02-23_p2-demo-adoption`.
+- [2026-04-18T02:33] Coordination: P2 implementation finished, validated locally, and moved to review.
+- [2026-04-18T03:00] Coordination: P2 review follow-up completed; root docs and P2 tests now reflect actual 7-endpoint scope.

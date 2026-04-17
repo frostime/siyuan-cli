@@ -30,7 +30,7 @@ reference:
 改为三阶段推进：
 
 1. **先冻结核心契约**：classification、payloadTargets、bulk id resolver、config v2、error taxonomy、confirm 语义、global endpoint 约束。
-2. **再用 3 个代表性 API 做 demo**：验证 content multi-id write、global read filter、workspace write 三种核心路径。
+2. **再用代表性 API 组做 demo**：验证 content multi-id write、content single-id read、global read filter、workspace read/write、runtime invoke 高低风险两端。
 3. **最后做批量 rollout**：按 API group 分批迁移剩余 endpoints/tools/docs/tests。
 
 本 root 的设计约束有两条：
@@ -43,14 +43,14 @@ reference:
 | Phase | Goal | Depends On | Sub-change |
 |-------|------|-----------|------------|
 | P1: Core Contracts | 冻结 classification / guard / permission / config / error 的共享契约 | — | TBD after gate |
-| P2: Demo Adoption | 迁移 `block.moveBlock`、`query.sql`、`file.putFile`，验证三条核心执行路径 | P1 | TBD after gate |
+| P2: Demo Adoption | 迁移 7 个代表性 endpoint（content read/write、global read、workspace read/write、runtime invoke），验证冻结契约在真实 schema 上的执行路径 | P1 | TBD after gate |
 | P3: Rollout | 分批迁移剩余 `src/apis/**`、`src/tools/**`，补齐 docs/tests | P1, P2 | TBD after gate |
 
 ### Coordination Notes
 
 - **P1 定稿后共享契约冻结**：`src/core/schema.ts`、`src/core/guard.ts`、`src/core/permission.ts`、`src/core/config.ts` 的接口在 P2 开始前冻结。P2/P3 只能消费。
 - **P2 发现契约缺口时回到 P1 修订**：若 demo 暴露共享契约缺口，必须回到 P1 sub-change 追加修订并重新冻结，随后再继续 P2/P3。P2 不定义临时字段或私有扩展。
-- **P2 是机制验收 phase**：只选 3 个代表性 endpoint，避免在机制未稳时批量迁移 60+ schema 文件。
+- **P2 是机制验收 phase**：只选少量代表性 endpoint 形成类别覆盖，避免在机制未稳时批量迁移 60+ schema 文件。
 - **P3 是 rollout phase**：剩余 endpoints 的迁移以套用既定契约为主，但每个 endpoint 仍需逐个审视 payloadTargets / response guard。P3 至少更新 `README.md` 与 config examples；更大范围的 docs sweep 可另行组织。
 - **alpha 阶段不做旧配置兼容迁移**：config 形状变化时允许直接 bump schemaVersion，并要求删除旧配置重建。
 

@@ -12,7 +12,12 @@ export const schema: EndpointSchema = {
       stmt: { type: "string", description: "SQL query statement" },
     },
   },
-  tags: ["read", "query"],
+  classification: {
+    mode: "read",
+    surface: "content",
+    scope: "global",
+    operation: "query",
+  },
   cli: {
     primary: "stmt",
     aliases: { stmt: "s" },
@@ -26,9 +31,21 @@ export const schema: EndpointSchema = {
     ],
   },
   guard: {
-    response: {
-      itemsAt: "data[*]",
-      fieldMap: { id: "id", path: "path", notebook: "box" },
+    filterResponse: (response, engine) => {
+      const rows = Array.isArray(response) ? response : [];
+      const { kept, removed, reasons } = engine.filterItems(rows, (row) => {
+        const r = row as Record<string, unknown>;
+        return {
+          id: typeof r.id === "string" ? r.id : undefined,
+          path: typeof r.path === "string" ? r.path : undefined,
+          notebook: typeof r.box === "string" ? r.box : undefined,
+        };
+      });
+      if (removed > 0) {
+        const summary = Object.entries(reasons).map(([r, n]) => `${n}x: ${r}`).join("; ");
+        process.stderr.write(JSON.stringify({ warning: "CONTENT_FILTERED", removed, reasons: summary }) + "\n");
+      }
+      return kept;
     },
   },
 };

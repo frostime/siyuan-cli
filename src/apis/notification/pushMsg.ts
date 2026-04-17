@@ -12,7 +12,13 @@ export const schema: EndpointSchema = {
       timeout: { type: "integer", description: "Display duration (milliseconds)" },
     },
   },
-  tags: ["write"],
+  classification: {
+    mode: "invoke",
+    surface: "runtime",
+    scope: "single",
+    operation: "control",
+    riskOverride: "safe",
+  },
   cli: {
     primary: "msg",
     allowSource: { msg: ["literal", "file", "stdin"] },
