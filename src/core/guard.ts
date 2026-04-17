@@ -2,7 +2,12 @@
  * Schema guard execution — payload checking + response filtering.
  * See reference/siyuan-cli-design/07-module-permission.md §4-5.
  */
-import type { EndpointSchema, PermissionEngineLike, GuardFieldKind } from "./schema.js";
+import {
+  deriveEndpointId,
+  type EndpointSchema,
+  type PermissionEngineLike,
+  type GuardFieldKind,
+} from "./schema.js";
 import { ContentAccessDeniedError, ConfirmationRequiredError, type PermissionEngine } from "./permission.js";
 import type { SiyuanClient } from "./client.js";
 
@@ -162,9 +167,14 @@ function debugPreview(schema: EndpointSchema, payload: unknown): void {
   process.stderr.write(JSON.stringify({ debug: { endpoint: schema.endpoint, payload, curl } }) + "\n");
 }
 
+function isWriteEndpoint(schema: EndpointSchema): boolean {
+  const tags = schema.tags ?? [];
+  return tags.includes("write") || tags.includes("mutation") || tags.includes("dangerous") || tags.includes("upload");
+}
+
 export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
   const { schema, payload, client, engine, dryRun, yes, debug } = opts;
-  const { id } = await import("./schema.js").then((m) => m.deriveEndpointId(schema.endpoint));
+  const { id } = deriveEndpointId(schema.endpoint);
 
   // 1. Endpoint-level permission
   engine.checkEndpoint(id);
@@ -176,7 +186,7 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
   if (debug) {
     debugPreview(schema, payload);
   }
-  if (dryRun) {
+  if (dryRun && isWriteEndpoint(schema)) {
     return { dryRun: true, endpoint: schema.endpoint, payload };
   }
 

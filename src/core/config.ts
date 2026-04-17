@@ -76,6 +76,9 @@ function migrateLegacyWindowsConfig(targetPath: string): void {
 
   mkdirSync(dirname(targetPath), { recursive: true });
   copyFileSync(legacyPath, targetPath);
+  process.stderr.write(
+    JSON.stringify({ notice: "CONFIG_MIGRATED", from: legacyPath, to: targetPath }) + "\n",
+  );
   try {
     unlinkSync(legacyPath);
   } catch {

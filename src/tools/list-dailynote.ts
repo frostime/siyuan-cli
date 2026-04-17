@@ -67,8 +67,19 @@ export const tool: ToolSchema = {
     stmt += " ORDER BY created DESC LIMIT 200";
 
     const rows = await ctx.callEndpoint<DailyRow[]>("query.sql", { stmt });
+    let skippedUnparseable = 0;
     const filtered = rows.filter((r) => {
-      const created = new Date(r.created.slice(0, 4) + "-" + r.created.slice(4, 6) + "-" + r.created.slice(6, 8) + "T" + r.created.slice(8, 10) + ":" + r.created.slice(10, 12) + ":" + r.created.slice(12, 14));
+      const s = typeof r.created === "string" ? r.created : "";
+      if (s.length < 14) {
+        skippedUnparseable++;
+        return false;
+      }
+      const iso = `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T${s.slice(8, 10)}:${s.slice(10, 12)}:${s.slice(12, 14)}`;
+      const created = new Date(iso);
+      if (Number.isNaN(created.getTime())) {
+        skippedUnparseable++;
+        return false;
+      }
       if (before && created > before) return false;
       if (after && created < after) return false;
       return true;
@@ -83,6 +94,9 @@ export const tool: ToolSchema = {
       details: {
         entries: filtered.map((r) => ({ id: r.id, notebook: r.box, hpath: r.hpath, path: r.path, created: r.created })),
       },
+      warnings: skippedUnparseable > 0
+        ? [`skipped ${skippedUnparseable} row(s) with unparseable 'created' field`]
+        : undefined,
     };
   },
 };

@@ -23,12 +23,13 @@ export const tool: ToolSchema = {
     if ((hpath ? 1 : 0) + (id ? 1 : 0) !== 1) {
       throw new Error("Exactly one of --hpath or --id is required.");
     }
+    // SiYuan's /api/query/sql takes a literal SQL string (no placeholders).
+    // Build the query directly, escaping only single quotes per SQLite rules.
+    const value = (hpath ?? id)!.replace(/'/g, "''");
     const stmt = hpath
-      ? "SELECT id, box, path, hpath FROM blocks WHERE type='d' AND hpath = ?"
-      : "SELECT id, box, path, hpath FROM blocks WHERE id = ?";
-    const rows = await ctx.callEndpoint<Array<{ id: string; box: string; path: string; hpath: string }>>("query.sql", {
-      stmt: stmt.replace("?", `'${(hpath ?? id)?.replace(/'/g, "''")}'`),
-    });
+      ? `SELECT id, box, path, hpath FROM blocks WHERE type='d' AND hpath = '${value}'`
+      : `SELECT id, box, path, hpath FROM blocks WHERE id = '${value}'`;
+    const rows = await ctx.callEndpoint<Array<{ id: string; box: string; path: string; hpath: string }>>("query.sql", { stmt });
     const matches = rows.map((r) => ({ id: r.id, notebook: r.box, path: r.path, hpath: r.hpath }));
     const content = matches.length
       ? `找到 ${matches.length} 个匹配：\n` + matches.map((m) => `- ${m.path} (hpath=${m.hpath}, id=${m.id})`).join("\n")

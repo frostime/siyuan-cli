@@ -4,7 +4,10 @@ type Row = { id: string; box: string; path: string; hpath: string; content?: str
 
 type Node = { id: string; title: string; hpath: string; children: Node[] };
 
-function buildTree(rows: Row[], rootPath: string, depth: number): Node[] {
+function buildTree(rows: Row[], rootKey: string, depth: number): Node[] {
+  // `rootKey` is the childMap key to start walking from:
+  //   - notebook mode: ""            (SiYuan's blocks.path is notebook-relative)
+  //   - doc mode     : "/<doc-id>"   (root doc's path minus ".sy")
   const byPath = new Map(rows.map((r) => [r.path, r]));
   const childMap = new Map<string, Row[]>();
   for (const row of rows) {
@@ -22,7 +25,7 @@ function buildTree(rows: Row[], rootPath: string, depth: number): Node[] {
       children: walk(r.path.replace(/\.sy$/, ""), level + 1),
     }));
   }
-  return walk(rootPath.replace(/\.sy$/, ""), 1);
+  return walk(rootKey, 1);
 }
 
 function render(nodes: Node[], indent = 0): string[] {
@@ -54,23 +57,28 @@ export const tool: ToolSchema = {
       stmt: `SELECT id, box, path, hpath FROM blocks WHERE id = '${entry.replace(/'/g, "''")}' LIMIT 1`,
     });
     let rows: Row[];
-    let rootPath: string;
+    let rootPath: string;       // for display / details only
+    let rootKey: string;        // childMap key to start walking from
     let rootTitle: string;
     if (rootRows.length > 0) {
       const root = rootRows[0]!;
       rootPath = root.path;
+      rootKey = root.path.replace(/\.sy$/, "");
       rootTitle = root.hpath.split("/").filter(Boolean).at(-1) ?? root.id;
       rows = await ctx.callEndpoint<Row[]>("query.sql", {
         stmt: `SELECT id, box, path, hpath FROM blocks WHERE type='d' AND box = '${root.box}' AND (path = '${root.path.replace(/'/g, "''")}' OR path LIKE '${root.path.replace(/'/g, "''").replace(/\.sy$/, "")}/%') ORDER BY path ASC`,
       });
     } else {
-      rootPath = `/${entry}`;
+      // Notebook mode: SiYuan's blocks.path is notebook-relative, so top-level
+      // docs live under childMap[""], not childMap[`/${entry}`].
+      rootPath = "/";
+      rootKey = "";
       rootTitle = entry;
       rows = await ctx.callEndpoint<Row[]>("query.sql", {
         stmt: `SELECT id, box, path, hpath FROM blocks WHERE type='d' AND box = '${entry.replace(/'/g, "''")}' ORDER BY path ASC`,
       });
     }
-    const tree = buildTree(rows, rootPath, depth ?? 2);
+    const tree = buildTree(rows, rootKey, depth ?? 2);
     const content = `# 文档树：${rootTitle}\n\n` + render(tree).join("\n");
     return { content, details: { root: { id: entry, path: rootPath, title: rootTitle }, tree, stats: { nodeCount: rows.length } } };
   },

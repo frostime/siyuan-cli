@@ -51,6 +51,11 @@ export function describeEndpoint(id: string): void {
   out({ ...entry, schema: serializable });
 }
 
+function isWriteEndpoint(entry: RegisteredEndpoint): boolean {
+  const tags = entry.schema.tags ?? [];
+  return tags.includes("write") || tags.includes("mutation") || tags.includes("dangerous") || tags.includes("upload");
+}
+
 async function callEndpoint(
   entry: RegisteredEndpoint,
   rawArgs: Record<string, unknown>,
@@ -65,7 +70,7 @@ async function callEndpoint(
   });
 
   const config = loadConfig(rawArgs["config"] as string | undefined);
-  if (rawArgs["dry-run"]) {
+  if (rawArgs["dry-run"] && isWriteEndpoint(entry)) {
     out({ dryRun: true, endpoint: schema.endpoint, payload });
     return;
   }

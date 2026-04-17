@@ -23,8 +23,16 @@ function readStdin(): string {
   if (stdinConsumed) {
     throw new CliError(ExitCode.GENERAL, "STDIN_CONFLICT", "@stdin can only be used once per invocation.");
   }
+  if (process.stdin.isTTY) {
+    throw new CliError(
+      ExitCode.GENERAL,
+      "STDIN_IS_TTY",
+      "@stdin requested but stdin is a terminal (nothing is piped in).",
+      "Pipe a value via `command | siyuan ...` or use @file:<path> instead.",
+    );
+  }
   stdinConsumed = true;
-  return readFileSync(process.stdin.fd, "utf-8").trim();
+  return readFileSync(process.stdin.fd, "utf-8");
 }
 
 function resolveInputSource(
@@ -36,7 +44,7 @@ function resolveInputSource(
   if (value.startsWith("@file:") && allowedSources.includes("file")) {
     const filePath = resolve(value.slice("@file:".length));
     try {
-      return readFileSync(filePath, "utf-8").trim();
+      return readFileSync(filePath, "utf-8");
     } catch {
       throw new CliError(ExitCode.GENERAL, "FILE_READ_ERROR", `Cannot read file for --${field}: ${filePath}`);
     }

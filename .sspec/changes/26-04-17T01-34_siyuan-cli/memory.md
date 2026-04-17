@@ -21,6 +21,7 @@ DONE. P1–P4 全部完成。
 - [2026-04-17T02:25] [Decision] 为恢复 Agent-first 自发现体验，P2 的 `api` 命令改为动态 subcommands，并通过自定义 `showUsage` 恢复 `siyuan api <id> --help`
 - [2026-04-17T02:42] [Decision] 配置路径统一采用 `~/.config/siyuan-cli/config.yaml`，包括 Windows；`%APPDATA%` 仅保留为 legacy migration source
 - [2026-04-17T12:34] [Review-Feedback] P3 的 `append-content` / `list-dailynote` 曾与参考实现不一致；已对齐 `sy-f-misc` 逻辑，并补加 `filetree.createDailyNote` endpoint
+- [2026-04-17T12:56] [Correction] dry-run 语义修正：仅写操作预演；读操作带 `--dry-run` 仍执行真实读取，避免 tool 链路因中间读操作返回预览对象而失效
 
 ## Milestones
 
@@ -34,6 +35,7 @@ DONE. P1–P4 全部完成。
 - [2026-04-17T12:18] Review: 用户接受继续推进，P3 标记 DONE，开始 P4
 - [2026-04-17T12:28] Implement P4: tokenSource、skill polish、api debug preview 完成，等待 review
 - [2026-04-17T12:34] Review-Fix P3: 修正 `append-content` 与 `list-dailynote`，并完成回归验证
+- [2026-04-17T12:56] Review-Fix P4: 全面修复 dry-run 相关回归并完成回归测试
 - [2026-04-17T12:36] Review: 用户接受收尾，P4 标记 DONE，root change 标记 DONE
 
 ## Coordination
