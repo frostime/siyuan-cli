@@ -1,6 +1,6 @@
 ---
 name: p2-api-layer
-status: IMPLEMENTING
+status: DONE
 change-type: single
 created: 2026-04-17 01:57:00
 reference:

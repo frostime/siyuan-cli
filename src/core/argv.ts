@@ -137,13 +137,19 @@ export function parsePayload(opts: ParsePayloadOptions): Record<string, unknown>
       base[field] = rawVal.map((v) => resolveInputSource(field, String(v), allowedSources));
     } else if (typeof rawVal === "string") {
       const resolved = resolveInputSource(field, rawVal, allowedSources);
-      // Auto-parse JSON for object/array typed fields
+      // Auto-parse based on declared type
       if (propSchema.type === "object" || propSchema.type === "array") {
         try {
           base[field] = JSON.parse(resolved);
         } catch {
           base[field] = resolved;
         }
+      } else if (propSchema.type === "integer") {
+        base[field] = Number.parseInt(resolved, 10);
+      } else if (propSchema.type === "number") {
+        base[field] = Number(resolved);
+      } else if (propSchema.type === "boolean") {
+        base[field] = resolved === "true";
       } else {
         base[field] = resolved;
       }

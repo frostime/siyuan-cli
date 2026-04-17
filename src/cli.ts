@@ -1,8 +1,12 @@
 import { defineCommand, runMain, showUsage } from "citty";
 import { workspaceCommand } from "./commands/workspace.js";
 import { apiCommand } from "./commands/api.js";
+import { toolCommand } from "./commands/tool.js";
+import { skillCommand } from "./commands/skill.js";
 import { buildEndpointHelp } from "./core/argv.js";
 import { registry } from "./core/registry.js";
+import { buildToolHelp, toolRegistry } from "./core/tools.js";
+import "./tools/index.js";
 
 const main = defineCommand({
   meta: {
@@ -13,6 +17,8 @@ const main = defineCommand({
   subCommands: {
     workspace: workspaceCommand,
     api: apiCommand,
+    tool: toolCommand,
+    skill: skillCommand,
   },
 });
 
@@ -25,6 +31,15 @@ async function customShowUsage<T extends Record<string, unknown>>(cmd: any, pare
     const entry = registry.get(meta.name);
     if (entry) {
       process.stdout.write(buildEndpointHelp(entry) + "\n");
+      return;
+    }
+  }
+
+  // Detect `siyuan tool <tool-id> --help`
+  if (parentMeta?.name === "tool" && meta?.name) {
+    const tool = toolRegistry.get(meta.name);
+    if (tool) {
+      process.stdout.write(buildToolHelp(tool) + "\n");
       return;
     }
   }

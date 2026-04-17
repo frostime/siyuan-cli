@@ -46,7 +46,7 @@ Agent 在操作思源笔记时，只能通过原始 HTTP API 调用，缺乏：
 |-------|------|-----------|------------|
 | P1: Foundation | M0+M1：骨架 + Workspace 管理可用 | — | 26-04-17T01-36_p1-foundation |
 | P2: API Layer | M2+M3：API 直通 + 权限引擎 | P1 | TBD |
-| P3: Tool + Skill | M4+M5：Tool 层 + Skill 管理 | P2 | TBD |
+| P3: Tool + Skill | M4+M5：Tool 层 + Skill 管理 | P2 | 26-04-17T11-58_p3-tool-skill |
 | P4: Polish | M6+M7：补齐 API + 稳定化 | P3 | TBD |
 
 **Coordination Notes**：
