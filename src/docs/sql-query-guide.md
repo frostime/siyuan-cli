@@ -1,87 +1,94 @@
 ---
 title: SQL Query Guide
 slug: sql-query-guide
-summary: High-value SQL guidance for querying SiYuan blocks, refs, and attributes.
+summary: High-value SQL guidance for querying SiYuan blocks, refs, attributes, assets, and inline spans.
 ---
 
 # SQL Query Guide
 
-SiYuan stores note data in SQLite. The most important tables are:
+SiYuan maintains a runtime SQLite database. For agents, the most important tables are not just three, but at least these five:
 
 - `blocks`
 - `refs`
 - `attributes`
-
-Full reference:
-- https://docs.siyuan-note.club/zh-Hans/reference/database/table.html
-- SQL CheatSheet: https://ld246.com/article/1739546865001
+- `assets`
+- `spans`
 
 ## Core rule
 
-Only `select *` SQL is supported by SiYuan.
-If `LIMIT` is not explicitly specified, an default of `limit 64` will be taken by SiYuan backend.
+For agent usage, **treat SQL as a read-only query interface**:
 
-## `blocks` table
+- write `SELECT` queries only
+- always specify `LIMIT` explicitly
+- narrow scope early with `root_id`, `box`, and `type`
+- avoid broad fuzzy scans without scope constraints
 
-Important fields:
+## 1. `blocks` table
 
-| Field | Description | Example value |
-|------|------|--------|
-| `id` | Unique block ID | 20241016135347-zlrn2cz |
-| `type` | Block type | d, h, p, l, c, t, m, b, s, av ... (see table below) |
-| `subtype` | Subtype | h1-h6, u, o, t, NOTE, TIP, etc. (see table below) |
-| `content` | Plain text content | Document title or block text |
-| `markdown` | Markdown source | Full formatted content |
-| `box` | Notebook ID | 20210808180117-czj9bvb |
-| `root_id` | Root document ID | Same as the document block id |
-| `path` | ID path | /20241020123921-0bdt86h/20240331203024-9vpgge9.sy |
-| `hpath` | Name path | /Inbox/My Documents |
-| `created` | Creation time | 20241016135347 |
-| `updated` | Update time | 20241016140000 |
-| `ial` | Block inline attrubute list | {: id="20210104091228-d0rzbmm" updated="20210604222535"} |
+`blocks` is the core table. Most content retrieval starts here.
 
-### Type and Subtype values
+### High-value fields
 
-- `d` Document
-- `h` Heading
-  - `h1`–`h6` Heading 1–6
-- `p` Paragraph
-- `l` List
-  - `u` Unordered List
-  - `o` Ordered List
-  - `t` Task List
-- `i` ListItem
-- `c` Code
-- `m` Math
-- `t` Table
-- `b` Blockquote
-- `s` SuperBlock
-- `html` HTML
-- `query_embed` Embed
-- `av` Attribute View
-- `widget` Widget
-- `iframe` IFrame
-- `tb` Thematic Break
-- `audio` Audio
-- `video` Video
-- `callout` Callout
-  - `NOTE` Note
-  - `TIP` Tip
-  - `IMPORTANT` Important
-  - `WARNING` Warning
-  - `CAUTION` Caution
+| Field | Description |
+|------|------|
+| `id` | block ID |
+| `parent_id` | parent block ID |
+| `root_id` | owning document block ID |
+| `box` | notebook ID |
+| `path` | ID-based path of the containing document |
+| `hpath` | human-readable path of the containing document |
+| `type` | primary block type |
+| `subtype` | subtype |
+| `content` | plain text with Markdown formatting removed |
+| `markdown` | full Markdown source |
+| `tag` | tag text |
+| `ial` | inline attribute list |
+| `sort` | sibling sort weight |
+| `created` | creation time |
+| `updated` | update time |
 
-### Example queries
+## 2. Most common query patterns
 
-Find documents by keyword:
+### 2.1 Find documents by title or document name
 
 ```sql
 SELECT * FROM blocks
-WHERE type='d' AND content LIKE '%keyword%'
+WHERE type='d'
+  AND content LIKE '%keyword%'
+ORDER BY updated DESC
 LIMIT 32
 ```
 
-Recent documents:
+### 2.2 List all blocks inside a document
+
+```sql
+SELECT * FROM blocks
+WHERE root_id = '<document-id>'
+ORDER BY sort ASC
+LIMIT 128
+```
+
+### 2.3 List the direct children of a block
+
+```sql
+SELECT * FROM blocks
+WHERE parent_id = '<block-id>'
+ORDER BY sort ASC
+LIMIT 64
+```
+
+### 2.4 Find specific block types inside a document
+
+```sql
+SELECT * FROM blocks
+WHERE root_id = '<document-id>'
+  AND type = 'h'
+  AND subtype = 'h2'
+ORDER BY sort ASC
+LIMIT 32
+```
+
+### 2.5 Find recently updated documents
 
 ```sql
 SELECT * FROM blocks
@@ -90,53 +97,211 @@ ORDER BY updated DESC
 LIMIT 10
 ```
 
-Specific heading type:
+## 3. `refs` table
 
-```sql
-SELECT * FROM blocks
-WHERE type='h' AND subtype='h2'
-  AND root_id='<document-id>'
-LIMIT 32
-```
+`refs` records block-reference relationships and is useful for backlinks, link analysis, and dependency tracing.
 
-## `refs` table
+### Key fields
 
-Tracks block-reference relationships.
-
-| field | meaning |
+| Field | Meaning |
 |---|---|
-| `block_id` | source block id |
-| `def_block_id` | referenced block id |
-| `def_block_root_id` | referenced block's document id |
+| `block_id` | the block that contains the reference |
+| `def_block_id` | the referenced target block ID |
+| `def_block_root_id` | the document ID of the referenced block |
+| `content` | reference anchor text |
+| `markdown` | full Markdown of the reference |
 
-### Backlink query
+### Find backlinks to a block
 
 ```sql
-SELECT B.* FROM blocks AS B
+SELECT B.*
+FROM blocks AS B
 WHERE B.id IN (
-    SELECT block_id FROM refs WHERE def_block_id = '<target-block-id>'
+  SELECT block_id
+  FROM refs
+  WHERE def_block_id = '<target-block-id>'
 )
 LIMIT 32
 ```
 
-## `attributes` table
+### Find references used inside a document
 
-Stores custom attributes.
+```sql
+SELECT *
+FROM refs
+WHERE root_id = '<document-id>'
+LIMIT 64
+```
 
-| field | meaning |
+## 4. `attributes` table
+
+The `attributes` table stores block metadata and is the key entry point for daily notes, business metadata, and custom tags.
+
+### Key fields
+
+| Field | Meaning |
 |---|---|
-| `block_id` | owner block id |
-| `name` | attribute key |
+| `block_id` | owning block ID |
+| `name` | attribute name |
 | `value` | attribute value |
-
-Custom keys usually use the `custom-` prefix.
+| `root_id` | owning document ID |
+| `box` | owning notebook ID |
 
 ### Query custom attributes
 
 ```sql
-SELECT B.* FROM blocks AS B
+SELECT B.*, A.name, A.value
+FROM blocks AS B
 JOIN attributes AS A ON B.id = A.block_id
 WHERE A.name = 'custom-myattr'
   AND A.value = 'somevalue'
 LIMIT 32
 ```
+
+### Query daily note documents
+
+```sql
+SELECT DISTINCT B.*
+FROM blocks AS B
+JOIN attributes AS A ON B.id = A.block_id
+WHERE B.type = 'd'
+  AND A.name LIKE 'custom-dailynote-%'
+  AND A.value >= '20231010'
+  AND A.value <= '20231013'
+ORDER BY A.value DESC
+LIMIT 32
+```
+
+## 5. `assets` table
+
+`assets` is useful for resource references such as images, PDFs, and attachments.
+
+### Key fields
+
+| Field | Meaning |
+|---|---|
+| `block_id` | block that references the asset |
+| `root_id` | owning document ID |
+| `box` | owning notebook ID |
+| `docpath` | document path |
+| `path` | asset file path |
+| `name` | asset filename |
+| `title` | asset title |
+
+### Find all assets referenced by a document
+
+```sql
+SELECT *
+FROM assets
+WHERE root_id = '<document-id>'
+LIMIT 64
+```
+
+### Find asset references by asset name
+
+```sql
+SELECT *
+FROM assets
+WHERE name LIKE '%keyword%'
+LIMIT 32
+```
+
+## 6. `spans` table
+
+`spans` is used for inline elements such as:
+
+- inline links
+- inline tags
+- inline code
+- inline highlights
+- inline math
+- inline block references
+
+### Key fields
+
+| Field | Meaning |
+|---|---|
+| `block_id` | owning block ID |
+| `root_id` | owning document ID |
+| `content` | inline element text |
+| `markdown` | full inline source |
+| `type` | inline element type |
+| `ial` | inline style attributes |
+
+### Find inline tags in a document
+
+```sql
+SELECT *
+FROM spans
+WHERE root_id = '<document-id>'
+  AND type = 'tag'
+LIMIT 64
+```
+
+### Find inline links in a document
+
+```sql
+SELECT *
+FROM spans
+WHERE root_id = '<document-id>'
+  AND type = 'textmark a'
+LIMIT 64
+```
+
+## 7. Query strategy recommendations
+
+### Narrow the scope first
+
+Prefer to narrow scope with:
+
+- `root_id`
+- `box`
+- `type`
+- `updated`
+- `parent_id`
+
+### Field selection guidance
+
+- for text search: prefer `content`
+- for format preservation: use `markdown`
+- for tree structure: use `parent_id`
+- for document scope: use `root_id`
+- for user-facing output: combine `hpath` and `content`
+
+### Avoid this pattern
+
+Do not start with:
+
+```sql
+SELECT * FROM blocks WHERE content LIKE '%foo%'
+```
+
+A better approach is:
+
+```sql
+SELECT * FROM blocks
+WHERE box = '<notebook-id>'
+  AND type IN ('d', 'h', 'p')
+  AND content LIKE '%foo%'
+LIMIT 32
+```
+
+## 8. Practical rules for agents
+
+1. identify the query target first: document, block, attribute, asset, or inline element
+2. narrow scope before fuzzy matching
+3. return `id` when stable referencing is required
+4. return `root_id`, `path`, and `hpath` when document context matters
+5. include `markdown` when format fidelity matters
+6. prefer `refs` for backlink or reference analysis
+7. prefer `attributes` for metadata filtering
+
+## 9. One-sentence summary
+
+- `blocks`: primary content
+- `refs`: reference relationships
+- `attributes`: metadata
+- `assets`: resource files
+- `spans`: inline elements
+
+Once an agent clearly separates the responsibilities of these five tables, most SiYuan queries become much less error-prone.
