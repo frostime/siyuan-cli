@@ -21,7 +21,7 @@ async function runTool(tool: ToolSchema, args: Record<string, unknown>, position
     args,
     positional,
   });
-  const ctx = await createToolContext(args as any);
+  const ctx = await createToolContext(args as any, tool.id);
   const result = await tool.run(ctx, input);
   renderToolResult(result, args as any);
 }

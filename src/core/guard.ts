@@ -1,28 +1,16 @@
 /**
  * Schema guard execution — payload checking + response filtering.
- * See reference/siyuan-cli-design/07-module-permission.md §4-5.
  */
-import {
-  deriveEndpointId,
-  type EndpointSchema,
-  type PermissionEngineLike,
-  type GuardFieldKind,
-} from "./schema.js";
-import { ContentAccessDeniedError, ConfirmationRequiredError, type PermissionEngine } from "./permission.js";
+import { deriveEndpointId, type EndpointSchema, type PermissionEngineLike, type RegisteredEndpoint } from "./schema.js";
+import { ConfirmationRequiredError, type PermissionEngine } from "./permission.js";
 import type { SiyuanClient } from "./client.js";
-
-// ─── Minimal jsonpath ─────────────────────────────────────────────────────────
-// Supports: "field", "field.sub", "field[*]", "field.sub[*]"
-// Does NOT support wildcards, filters, or recursive descent.
 
 function jsonpathGet(obj: unknown, path: string): unknown[] {
   const parts = path.split(".");
   let current: unknown[] = [obj];
-
   for (const part of parts) {
     const arrayMatch = /^([a-zA-Z0-9_$]+)\[\*\]$/.exec(part);
     const next: unknown[] = [];
-
     if (arrayMatch) {
       const key = arrayMatch[1]!;
       for (const item of current) {
@@ -39,15 +27,12 @@ function jsonpathGet(obj: unknown, path: string): unknown[] {
         }
       }
     }
-
     current = next;
   }
-
   return current;
 }
 
 function jsonpathSet(obj: unknown, path: string, value: unknown): void {
-  // Only supports "a.b" style (no array expansion) — used to write back filtered arrays
   const parts = path.split(".");
   let cursor = obj as Record<string, unknown>;
   for (let i = 0; i < parts.length - 1; i++) {
@@ -56,9 +41,7 @@ function jsonpathSet(obj: unknown, path: string, value: unknown): void {
   cursor[parts[parts.length - 1]!] = value;
 }
 
-// ─── Heuristic payload guard ──────────────────────────────────────────────────
-
-const HEURISTIC_FIELDS: Record<string, GuardFieldKind> = {
+const HEURISTIC_FIELDS = {
   id: "id",
   blockId: "id", blockID: "id",
   parentID: "id", parentId: "id",
@@ -66,64 +49,66 @@ const HEURISTIC_FIELDS: Record<string, GuardFieldKind> = {
   docID: "id", docId: "id",
   path: "path",
   notebook: "notebook", box: "notebook", notebookID: "notebook",
-};
+} as const;
 
-export function heuristicPayloadGuard(payload: unknown, engine: PermissionEngineLike): void {
+export async function heuristicPayloadGuard(
+  payload: unknown,
+  engine: PermissionEngineLike,
+  access: "read" | "write",
+  surface?: "meta" | "content" | "asset" | "workspace" | "runtime" | "network",
+): Promise<void> {
   if (!payload || typeof payload !== "object") return;
   const p = payload as Record<string, unknown>;
-  const item: { id?: string; path?: string; notebook?: string } = {};
-
   for (const [key, kind] of Object.entries(HEURISTIC_FIELDS)) {
     if (typeof p[key] === "string") {
-      item[kind] = p[key] as string;
+      const actualKind = key === "path" && surface === "workspace" ? "workspace-path" : kind;
+      await engine.checkContentRef({ kind: actualKind, value: p[key] as string, access });
     }
-  }
-
-  if (Object.keys(item).length > 0) {
-    const res = engine.checkDeny(item);
-    if (!res.allowed) throw new ContentAccessDeniedError(res.reason ?? "access denied");
   }
 }
 
-// ─── Declarative payload guard ────────────────────────────────────────────────
-
-export function applyPayloadGuard(schema: EndpointSchema, payload: unknown, engine: PermissionEngineLike): void {
-  const guardPayload = schema.guard?.payload;
-  if (!guardPayload) {
-    heuristicPayloadGuard(payload, engine);
+export async function applyPayloadGuard(
+  schema: EndpointSchema,
+  payload: unknown,
+  engine: PermissionEngineLike,
+  access: "read" | "write",
+  surface?: "meta" | "content" | "asset" | "workspace" | "runtime" | "network",
+): Promise<void> {
+  const p = payload as Record<string, unknown>;
+  const targets = schema.guard?.payloadTargets;
+  if (targets?.length) {
+    for (const target of targets) {
+      const value = p[target.field];
+      if (typeof value === "string") {
+        await engine.checkContentRef({ kind: target.kind, value, access: target.access });
+      }
+    }
     return;
   }
 
-  const p = payload as Record<string, unknown>;
-  const item: { id?: string; path?: string; notebook?: string } = {};
-
-  for (const [field, kind] of Object.entries(guardPayload)) {
-    if (typeof p[field] === "string") {
-      item[kind] = p[field] as string;
+  const guardPayload = schema.guard?.payload;
+  if (guardPayload) {
+    for (const [field, kind] of Object.entries(guardPayload)) {
+      const value = p[field];
+      if (typeof value === "string") {
+        await engine.checkContentRef({ kind: kind as any, value, access });
+      }
     }
+    return;
   }
 
-  if (Object.keys(item).length > 0) {
-    const res = engine.checkDeny(item);
-    if (!res.allowed) throw new ContentAccessDeniedError(res.reason ?? "access denied");
-  }
+  await heuristicPayloadGuard(payload, engine, access, surface);
 }
-
-// ─── Response guard ───────────────────────────────────────────────────────────
 
 export function applyResponseGuard(schema: EndpointSchema, response: unknown, engine: PermissionEngineLike): unknown {
   const guard = schema.guard;
   if (!guard) return response;
-
-  // Imperative hook takes priority
   if (guard.filterResponse) {
     return guard.filterResponse(response, engine);
   }
-
   if (guard.response) {
     const { itemsAt, fieldMap } = guard.response;
     const items = jsonpathGet(response, itemsAt);
-
     const { kept, removed, reasons } = engine.filterItems(items, (item) => {
       const i = item as Record<string, unknown>;
       return {
@@ -132,27 +117,18 @@ export function applyResponseGuard(schema: EndpointSchema, response: unknown, en
         notebook: fieldMap.notebook ? (i[fieldMap.notebook] as string | undefined) : undefined,
       };
     });
-
     if (removed > 0) {
-      // Write filtered array back to response
-      // itemsAt ends with "[*]" — strip that to get the parent path
       const parentPath = itemsAt.replace(/\[\*\]$/, "");
       jsonpathSet(response, parentPath, kept);
-      // Emit filter info to stderr (non-blocking)
       const summary = Object.entries(reasons).map(([r, n]) => `${n}x: ${r}`).join("; ");
-      process.stderr.write(
-        JSON.stringify({ warning: "CONTENT_FILTERED", removed, reasons: summary }) + "\n",
-      );
+      process.stderr.write(JSON.stringify({ warning: "CONTENT_FILTERED", removed, reasons: summary }) + "\n");
     }
   }
-
   return response;
 }
 
-// ─── Main execution flow ──────────────────────────────────────────────────────
-
 export interface ExecuteOptions {
-  schema: EndpointSchema;
+  entry: RegisteredEndpoint;
   payload: unknown;
   client: SiyuanClient;
   engine: PermissionEngine;
@@ -167,35 +143,33 @@ function debugPreview(schema: EndpointSchema, payload: unknown): void {
   process.stderr.write(JSON.stringify({ debug: { endpoint: schema.endpoint, payload, curl } }) + "\n");
 }
 
-function isWriteEndpoint(schema: EndpointSchema): boolean {
-  const tags = schema.tags ?? [];
-  return tags.includes("write") || tags.includes("mutation") || tags.includes("dangerous") || tags.includes("upload");
+function isWriteLike(entry: RegisteredEndpoint): boolean {
+  return entry.meta.classification.mode === "write" || entry.meta.classification.mode === "invoke";
 }
 
 export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
-  const { schema, payload, client, engine, dryRun, yes, debug } = opts;
+  const { entry, payload, client, engine, dryRun, yes, debug } = opts;
+  const { schema } = entry;
   const { id } = deriveEndpointId(schema.endpoint);
 
-  // 1. Endpoint-level permission
   engine.checkEndpoint(id);
+  await applyPayloadGuard(
+    schema,
+    payload,
+    engine,
+    entry.meta.classification.mode === "read" ? "read" : "write",
+    entry.meta.classification.surface,
+  );
 
-  // 2. Payload guard
-  applyPayloadGuard(schema, payload, engine);
-
-  // 3. Dry-run
-  if (debug) {
-    debugPreview(schema, payload);
-  }
-  if (dryRun && isWriteEndpoint(schema)) {
+  if (debug) debugPreview(schema, payload);
+  if (dryRun && isWriteLike(entry)) {
     return { dryRun: true, endpoint: schema.endpoint, payload };
   }
 
-  // 4. Write protection
-  if (engine.requiresConfirmation(schema) && !yes) {
+  if (engine.requiresConfirmation(entry) && !yes) {
     throw new ConfirmationRequiredError(id);
   }
 
-  // 5. Send request
   let response: unknown;
   if (schema.multipart) {
     const files = (schema.multipart.fileFields || []).flatMap((field) => {
@@ -214,6 +188,5 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
     response = await client.call(schema.endpoint, payload);
   }
 
-  // 6. Response guard
   return applyResponseGuard(schema, response, engine);
 }

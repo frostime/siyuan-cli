@@ -1,8 +1,5 @@
 /**
  * `siyuan api` command — direct kernel API calls.
- * `list` and `describe` are fixed subcommands.
- * Each registered endpoint id (e.g. `query.sql`) is exposed as a dynamic subcommand,
- * so `siyuan api query.sql --help` works with Citty's native help flow.
  */
 import { defineCommand } from "citty";
 import { registry } from "../core/registry.js";
@@ -29,49 +26,35 @@ export function listEndpoints(args: Record<string, unknown>): void {
     id: e.id,
     endpoint: e.schema.endpoint,
     summary: e.schema.summary,
-    tags: e.schema.tags ?? [],
+    tags: e.meta.tags,
+    classification: e.meta.classification,
+    risk: e.meta.risk,
   })));
 }
 
 export function describeEndpoint(id: string): void {
   const entry = registry.get(id);
   if (!entry) {
-    process.stderr.write(
-      JSON.stringify({ error: "ENDPOINT_NOT_FOUND", id, message: `Endpoint "${id}" not found. Run \`siyuan api list\` to see all endpoints.` }) + "\n",
-    );
+    process.stderr.write(JSON.stringify({ error: "ENDPOINT_NOT_FOUND", id, message: `Endpoint "${id}" not found. Run \`siyuan api list\` to see all endpoints.` }) + "\n");
     process.exit(1);
   }
   const { schema } = entry;
   const serializable = {
     ...schema,
-    guard: schema.guard
-      ? { ...schema.guard, filterResponse: schema.guard.filterResponse ? "[Function]" : undefined }
-      : undefined,
+    guard: schema.guard ? { ...schema.guard, filterResponse: schema.guard.filterResponse ? "[Function]" : undefined } : undefined,
   };
   out({ ...entry, schema: serializable });
 }
 
 function isWriteEndpoint(entry: RegisteredEndpoint): boolean {
-  const tags = entry.schema.tags ?? [];
-  return tags.includes("write") || tags.includes("mutation") || tags.includes("dangerous") || tags.includes("upload");
+  return entry.meta.classification.mode === "write" || entry.meta.classification.mode === "invoke";
 }
 
-async function callEndpoint(
-  entry: RegisteredEndpoint,
-  rawArgs: Record<string, unknown>,
-  positional?: string,
-): Promise<void> {
-  const { schema } = entry;
-
-  const payload = parsePayload({
-    schema,
-    args: rawArgs,
-    positional,
-  });
-
+async function callEndpoint(entry: RegisteredEndpoint, rawArgs: Record<string, unknown>, positional?: string): Promise<void> {
+  const payload = parsePayload({ schema: entry.schema, args: rawArgs, positional });
   const config = loadConfig(rawArgs["config"] as string | undefined);
   if (rawArgs["dry-run"] && isWriteEndpoint(entry)) {
-    out({ dryRun: true, endpoint: schema.endpoint, payload });
+    out({ dryRun: true, endpoint: entry.schema.endpoint, payload });
     return;
   }
 
@@ -81,10 +64,10 @@ async function callEndpoint(
     token: rawArgs["token"] as string | undefined,
   });
   const client = new SiyuanClient(workspace);
-  const engine = createPermissionEngine(config, workspace.name);
+  const engine = createPermissionEngine(config, workspace.name, client);
 
   const result = await executeEndpoint({
-    schema,
+    entry,
     payload,
     client,
     engine,
@@ -97,10 +80,7 @@ async function callEndpoint(
 
 function buildEndpointSubCommand(entry: RegisteredEndpoint) {
   return defineCommand({
-    meta: {
-      name: entry.id,
-      description: entry.schema.summary,
-    },
+    meta: { name: entry.id, description: entry.schema.summary },
     args: {
       workspace: { type: "string", description: "Workspace to use", alias: "w" },
       "dry-run": { type: "boolean", description: "Preview request without sending", default: false },
@@ -114,19 +94,11 @@ function buildEndpointSubCommand(entry: RegisteredEndpoint) {
         required: false,
       },
       ...Object.fromEntries(
-        Object.entries(entry.schema.payload.properties).map(([field, prop]) => [
-          field,
-          {
-            type: "string",
-            description: prop.description ?? field,
-          },
-        ]),
+        Object.entries(entry.schema.payload.properties).map(([field, prop]) => [field, { type: "string", description: prop.description ?? field }]),
       ),
     },
     run: async ({ args }) => {
-      await callEndpoint(entry, args as Record<string, unknown>, args.primary as string | undefined).catch((e) => {
-        fatalError(toCliError(e));
-      });
+      await callEndpoint(entry, args as Record<string, unknown>, args.primary as string | undefined).catch((e) => fatalError(toCliError(e)));
     },
   });
 }
@@ -135,26 +107,18 @@ const listCommand = defineCommand({
   meta: { name: "list", description: "List all registered API endpoints." },
   args: {
     group: { type: "string", description: "Filter by group (e.g. query, block)" },
-    tag: { type: "string", description: "Filter by tag (read, write, mutation, ...)" },
+    tag: { type: "string", description: "Filter by tag (mode:read, surface:content, ...)" },
   },
-  run: ({ args }) => {
-    listEndpoints(args as Record<string, unknown>);
-  },
+  run: ({ args }) => listEndpoints(args as Record<string, unknown>),
 });
 
 const describeCommand = defineCommand({
   meta: { name: "describe", description: "Show full EndpointSchema for an endpoint." },
-  args: {
-    id: { type: "positional", description: "Endpoint id (e.g. query.sql)", required: true },
-  },
-  run: ({ args }) => {
-    describeEndpoint(args.id);
-  },
+  args: { id: { type: "positional", description: "Endpoint id (e.g. query.sql)", required: true } },
+  run: ({ args }) => describeEndpoint(args.id),
 });
 
-export const endpointSubCommands = Object.fromEntries(
-  registry.list().map((entry) => [entry.id, buildEndpointSubCommand(entry)]),
-);
+export const endpointSubCommands = Object.fromEntries(registry.list().map((entry) => [entry.id, buildEndpointSubCommand(entry)]));
 
 export const apiCommand = defineCommand({
   meta: { name: "api", description: "Call SiYuan kernel API endpoints directly." },

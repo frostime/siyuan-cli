@@ -1,24 +1,37 @@
 /**
  * Schema type definitions for endpoints (kernel API) and tools (business wrappers).
  *
- * Key design (v2):
- * - `endpoint` (e.g. "/api/query/sql") is the ONLY authoritative identity field.
- *   `id` / `group` / `name` are derived at registration time.
- * - Input source handling is EXPLICIT via `cli.allowSource`. Values are passed
- *   literally unless a prefix like `@file:`, `@stdin`, `@env:` is used AND the
- *   field's allowSource includes the corresponding kind.
+ * Transitional design (P1):
+ * - `classification` is the new authored truth for migrated endpoint schemas.
+ * - legacy `tags` remain accepted during rollout and are normalized by the registry.
+ * - runtime consumers must read `RegisteredEndpoint.meta`, not raw `schema.tags`.
  */
 
 export type InputSource = "literal" | "file" | "stdin" | "env";
 
+/** Legacy tag model kept only for rollout compatibility. */
 export type EndpointTag = "read" | "write" | "mutation" | "dangerous" | "upload" | "query";
 
 export type ToolTag = "read" | "write" | "aggregate" | "util";
-
 export type GuardFieldKind = "id" | "path" | "notebook";
 
+export type EndpointMode = "read" | "write" | "invoke";
+export type EndpointSurface = "meta" | "content" | "asset" | "workspace" | "runtime" | "network";
+export type EndpointScope = "single" | "batch" | "global";
+export type EndpointOperation =
+  | "inspect"
+  | "search"
+  | "query"
+  | "create"
+  | "update"
+  | "delete"
+  | "move"
+  | "upload"
+  | "control";
+export type RiskLabel = "safe" | "sensitive" | "elevated" | "destructive" | "critical";
+export type ResourceKind = "id" | "notebook" | "path" | "workspace-path";
+
 // ————— JSONSchema subset (we rely on ajv for validation) —————
-// Full JSON Schema Draft 2020-12 is supported by ajv; we type only what we use.
 export type JSONSchemaProperty = {
   type?: "string" | "integer" | "number" | "boolean" | "array" | "object" | "null";
   description?: string;
@@ -41,22 +54,24 @@ export type JSONSchema = JSONSchemaProperty & {
 export interface CliBehavior {
   /** If the payload has exactly one required string field, allow positional. */
   primary?: string;
-
   examples?: Array<{ command: string; description?: string }>;
-
   /** Short-flag aliases, e.g. { stmt: "s" }. */
   aliases?: Record<string, string>;
-
-  /**
-   * Allowed input sources per field. Missing entries default to ["literal"]
-   * (only literal values accepted; no @file:/@stdin/@env: expansion).
-   */
+  /** Allowed input sources per field. Missing entries default to ["literal"]. */
   allowSource?: Record<string, InputSource[]>;
 }
 
 // ————— Permission guard —————
+export interface PayloadTargetSpec {
+  field: string;
+  kind: ResourceKind;
+  access: "read" | "write";
+}
+
 export interface GuardSpec {
-  /** Map payload field name → what kind of entity it is (for checkDeny). */
+  /** New payload guard contract (P1+). */
+  payloadTargets?: PayloadTargetSpec[];
+  /** Legacy payload guard contract accepted during rollout. */
   payload?: Record<string, GuardFieldKind>;
 
   /** Declarative response extractor. */
@@ -71,12 +86,32 @@ export interface GuardSpec {
   filterResponse?: (response: unknown, engine: PermissionEngineLike) => unknown;
 }
 
+export interface EndpointClassification {
+  mode: EndpointMode;
+  surface: EndpointSurface;
+  scope: EndpointScope;
+  operation?: EndpointOperation;
+  riskOverride?: RiskLabel;
+}
+
+export interface DerivedMeta {
+  classification: EndpointClassification;
+  tags: string[];
+  risk: RiskLabel;
+  /** Base confirmation derived from risk only. Workspace policies may extend it at runtime. */
+  requiresConfirmation: boolean;
+}
+
 /**
  * Minimal shape of the permission engine that schema guards need.
  * The real engine (src/core/permission.ts) implements this + more.
  */
 export interface PermissionEngineLike {
-  checkDeny(item: { id?: string; path?: string; notebook?: string }): { allowed: boolean; reason?: string };
+  checkEndpoint(id: string): void;
+  checkTool(id: string): void;
+  checkContentRef(ref: { kind: ResourceKind; value: string; access: "read" | "write" }): Promise<void>;
+  resolveContentIds(ids: string[]): Promise<Map<string, { notebook: string; path: string }>>;
+  resolveContentId(id: string): Promise<{ notebook: string; path: string }>;
   filterItems<T>(
     items: T[],
     extract: (item: T) => { id?: string; path?: string; notebook?: string },
@@ -87,59 +122,47 @@ export interface PermissionEngineLike {
 export interface EndpointSchema {
   /** The only authoritative identity — e.g. "/api/query/sql". */
   endpoint: string;
-
   summary: string;
   description?: string;
-
   payload: JSONSchema;
   response?: JSONSchemaProperty;
 
+  /** New authored truth. Optional only during rollout. */
+  classification?: EndpointClassification;
+  /** Legacy tags accepted only during rollout. */
   tags?: EndpointTag[];
 
   minKernelVersion?: string;
   deprecated?: { replacement?: string; removeAt?: string; reason?: string };
-
   /** For endpoints that use multipart/form-data instead of JSON body. */
   multipart?: { fileFields: string[] };
-
   cli?: CliBehavior;
   guard?: GuardSpec;
 }
 
-/** Derived view of EndpointSchema (produced by the registry). */
+/** Derived, normalized view of EndpointSchema (produced by the registry). */
 export interface RegisteredEndpoint {
   schema: EndpointSchema;
-  /** e.g. "query.sql" */
   id: string;
-  /** e.g. "query" */
   group: string;
-  /** e.g. "sql" */
   name: string;
+  meta: DerivedMeta;
 }
 
 // ————— ToolSchema —————
 export interface ToolResult {
-  /** Human-/agent-readable text. Default stdout. */
   content: string;
-  /** Structured companion. Emitted only with --details or --only details. */
   details?: unknown;
-  /** Non-fatal warnings, printed to stderr. */
   warnings?: string[];
-  /** Debug-only metadata, printed to stderr when --debug. */
   meta?: { elapsedMs?: number; filteredCount?: number; truncated?: boolean };
 }
 
 export interface ToolContext {
-  /* Implementations provided by src/core/* at runtime. */
   client: unknown;
   registry: unknown;
   permission: PermissionEngineLike;
-
-  /** Recommended way to call the kernel: goes through permission engine. */
   callEndpoint: <T = unknown>(id: string, payload: unknown) => Promise<T>;
-  /** Bypass guard; use with care. Tool must do filtering itself. */
   callEndpointRaw: <T = unknown>(id: string, payload: unknown) => Promise<T>;
-
   logger: unknown;
   args: GlobalArgs;
 }
@@ -153,7 +176,6 @@ export interface GlobalArgs {
   dryRun?: boolean;
   config?: string;
   yes?: boolean;
-  /** Tool-specific: control output form. */
   details?: boolean;
   only?: "content" | "details";
 }
@@ -163,27 +185,17 @@ export interface ToolSchema {
   summary: string;
   description?: string;
   tags?: ToolTag[];
-
   input: JSONSchema;
   output?: JSONSchemaProperty;
-
   cli?: CliBehavior;
-
   run: (ctx: ToolContext, input: unknown) => Promise<ToolResult>;
 }
 
 // ————— Helpers —————
-
-/**
- * Derive id / group / name from "/api/<group>/<n>".
- * Throws if endpoint doesn't match the two-segment shape.
- */
 export function deriveEndpointId(endpoint: string): { id: string; group: string; name: string } {
   const m = /^\/api\/([a-zA-Z0-9_]+)\/([a-zA-Z0-9_]+)$/.exec(endpoint);
   if (!m) {
-    throw new Error(
-      `Invalid endpoint "${endpoint}": expected shape /api/<group>/<name>`,
-    );
+    throw new Error(`Invalid endpoint "${endpoint}": expected shape /api/<group>/<name>`);
   }
   const group = m[1]!;
   const name = m[2]!;

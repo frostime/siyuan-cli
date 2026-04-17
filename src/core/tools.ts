@@ -30,7 +30,7 @@ export class ToolRegistry {
 
 export const toolRegistry = new ToolRegistry();
 
-export async function createToolContext(args: GlobalArgs): Promise<ToolContext> {
+export async function createToolContext(args: GlobalArgs, toolId?: string): Promise<ToolContext> {
   const config = loadConfig(args.config);
   const workspace = resolveWorkspace(config, {
     workspace: args.workspace,
@@ -38,15 +38,14 @@ export async function createToolContext(args: GlobalArgs): Promise<ToolContext> 
     token: args.token,
   });
   const client = new SiyuanClient(workspace);
-  const permission = createPermissionEngine(config, workspace.name);
+  const permission = createPermissionEngine(config, workspace.name, client);
+  if (toolId) permission.checkTool(toolId);
 
   const callEndpoint: ToolContext["callEndpoint"] = async <T = unknown>(id: string, payload: unknown): Promise<T> => {
     const entry = endpointRegistry.get(id);
-    if (!entry) {
-      throw new Error(`Endpoint "${id}" not found.`);
-    }
+    if (!entry) throw new Error(`Endpoint "${id}" not found.`);
     return executeEndpoint({
-      schema: entry.schema,
+      entry,
       payload,
       client,
       engine: permission,
@@ -58,9 +57,7 @@ export async function createToolContext(args: GlobalArgs): Promise<ToolContext> 
 
   const callEndpointRaw: ToolContext["callEndpointRaw"] = async <T = unknown>(id: string, payload: unknown): Promise<T> => {
     const entry = endpointRegistry.get(id);
-    if (!entry) {
-      throw new Error(`Endpoint "${id}" not found.`);
-    }
+    if (!entry) throw new Error(`Endpoint "${id}" not found.`);
     return client.call(entry.schema.endpoint, payload) as Promise<T>;
   };
 
@@ -82,17 +79,14 @@ export function renderToolResult(result: ToolResult, args: GlobalArgs): void {
   if (args.debug && result.meta) {
     process.stderr.write(JSON.stringify({ meta: result.meta }) + "\n");
   }
-
   if (args.only === "details") {
     process.stdout.write(JSON.stringify(result.details ?? null, null, 2) + "\n");
     return;
   }
-
   if (args.details) {
     process.stdout.write(JSON.stringify({ content: result.content, details: result.details ?? null }, null, 2) + "\n");
     return;
   }
-
   process.stdout.write(result.content + "\n");
 }
 
@@ -101,9 +95,7 @@ export function buildToolHelp(tool: ToolSchema): string {
   lines.push(tool.summary);
   lines.push("");
   lines.push("USAGE");
-  if (tool.cli?.primary) {
-    lines.push(`  siyuan tool ${tool.id} <${tool.cli.primary}>`);
-  }
+  if (tool.cli?.primary) lines.push(`  siyuan tool ${tool.id} <${tool.cli.primary}>`);
   lines.push(`  siyuan tool ${tool.id} [--<field> <value>...]`);
   lines.push("");
   lines.push("PARAMETERS");

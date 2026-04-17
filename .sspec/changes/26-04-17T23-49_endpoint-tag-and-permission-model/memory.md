@@ -1,6 +1,6 @@
 # Memory: endpoint-tag-and-permission-model (Root)
 
-**Updated**: 2026-04-18T01:17+08:00
+**Updated**: 2026-04-18T02:18+08:00
 
 ## Git Baseline (Immutable)
 <!-- Original creation-time baseline was lost in the malformed memory file.
@@ -25,14 +25,14 @@ This reconstructed baseline records the branch divergence point explicitly and M
 
 | Phase | Sub-Change | Status | Blocker |
 |-------|------------|--------|---------|
-| P1: Core Contracts | (pending) | ⏳ | Waiting for root gate approval, then create sub-change |
-| P2: Demo Adoption | (pending) | ⏳ | Wait for P1 contract freeze |
-| P3: Rollout | (pending) | ⏳ | Wait for P1/P2 results |
+| P1: Core Contracts | `26-04-18T01-28_p1-core-contracts` | ✅ DONE | — |
+| P2: Demo Adoption | (pending) | ⏳ | Ready to create sub-change |
+| P3: Rollout | (pending) | ⏳ | Wait for P2 results |
 
 ## State
 
-Root design has incorporated the latest review comments and is ready for gate approval.
-Next: approve the current root `spec.md` + `design.md`, then create the P1 sub-change.
+P1 is done.
+Next: create the P2 demo adoption sub-change and migrate `block.moveBlock`, `query.sql`, and `file.putFile`.
 Do not implement directly from the root change.
 
 ## Key Files
@@ -61,9 +61,16 @@ Do not implement directly from the root change.
 - [2026-04-18T01:17] [Decision] Read and write scopes are independent. Read operations only check `content.read` / `workspace.read`; write operations only check `content.write` / `workspace.write`.
 - [2026-04-18T01:17] [Decision] For tool execution, endpoint deny wins over tool allow because hard-deny semantics remain authoritative at the endpoint layer.
 - [2026-04-18T01:17] [Gotcha] Original `memory.md` lost the true creation-time baseline; the current baseline is reconstructed from branch topology and must stay frozen from now on.
+- [2026-04-18T01:29] [CoordinationDecision] P1 sub-change created as `26-04-18T01-28_p1-core-contracts`; root stays at coordination level only.
+- [2026-04-18T01:39] [CoordinationDecision] P1 has finished implementation and validation; root is waiting for P1 review before opening P2.
+- [2026-04-18T02:10] [CoordinationDecision] P1 completed revision 001 (contract hardening + tests); ready to close.
+- [2026-04-18T02:18] [CoordinationDecision] P1 review passed and the phase is closed; root may open P2.
 
 ## Milestones
 
 - [2026-04-17T23:49] Design: created the change and drafted first-pass spec/design for endpoint classification and permission redesign.
 - [2026-04-18T00:58] Design: converted the change into a root coordinator, narrowed implementation to P1 contracts + P2 demo + P3 rollout, and normalized memory format.
 - [2026-04-18T01:17] Design: incorporated latest review follow-ups on P1→P2 amendment loop, read/write independence, endpoint-deny precedence, and reconstructed git baseline.
+- [2026-04-18T01:29] Coordination: created P1 sub-change `26-04-18T01-28_p1-core-contracts` and drafted its first-pass spec/design.
+- [2026-04-18T01:39] Coordination: P1 implementation finished, validated locally, and moved to review.
+- [2026-04-18T02:18] Coordination: P1 review accepted; root advanced to P2-ready state.

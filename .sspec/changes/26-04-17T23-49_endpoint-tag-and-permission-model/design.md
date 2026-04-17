@@ -434,7 +434,7 @@ class ToolDisabledError extends CliError {
 ```ts
 interface ContentScopeRule {
   notebooks?: { allow?: string[]; deny?: string[] };
-  paths?: { allow?: string[]; deny?: string[] };
+  paths?: { allow?: string[]; deny?: string[] }; // SiYuan `path` (ID-based), not `hpath`
 }
 
 interface WorkspaceScopeRule {
@@ -492,6 +492,8 @@ interface AppConfigV2 {
 
 ### 5.1.2 YAML demo
 
+`content.read.paths` / `content.write.paths` always match against SiYuan `path` (ID-based path of the containing document). They do not match human-readable `hpath`.
+
 ```yaml
 schemaVersion: 2
 current: local
@@ -521,12 +523,12 @@ workspaces:
           notebooks:
             allow: ["20240101000000-abcdefg"]
           paths:
-            deny: ["/系统/**"]
+            deny: ["/20260107143325-zbrtqup/**"]
         write:
           notebooks:
             allow: ["20240101000000-abcdefg"]
           paths:
-            deny: ["/系统/**", "/模板/**"]
+            deny: ["/20260107143325-zbrtqup/**", "/20260108888888-qwertyu/**"]
 
       workspace:
         read:
@@ -547,6 +549,7 @@ workspace.write.paths.deny -> reject file.putFile / file.removeFile / file.renam
 ```
 
 ```text
+content paths use SiYuan `path` (ID-based), not `hpath`
 read and write scopes are independent
 read operation   -> check content.read / workspace.read only
 write operation  -> check content.write / workspace.write only
