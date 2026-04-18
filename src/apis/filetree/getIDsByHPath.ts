@@ -21,7 +21,7 @@ export const schema: EndpointSchema = {
   },
   guard: {
     payloadTargets: [
-      { field: "notebook", kind: "notebook", access: "read" },
+      { path: "notebook", kind: "notebook", access: "read" },
     ],
     // `path` here is hpath, not SiYuan id-based path. Current ResourceKind cannot express hpath precisely.
   },

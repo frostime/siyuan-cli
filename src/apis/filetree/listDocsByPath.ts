@@ -23,8 +23,8 @@ export const schema: EndpointSchema = {
   },
   guard: {
     payloadTargets: [
-      { field: "notebook", kind: "notebook", access: "read" },
-      { field: "path", kind: "path", access: "read" },
+      { path: "notebook", kind: "notebook", access: "read" },
+      { path: "path", kind: "path", access: "read" },
     ],
     filterResponse: (response, engine) => {
       const r = response as { files?: Array<Record<string, unknown>>; data?: { files?: Array<Record<string, unknown>>; box?: string } };

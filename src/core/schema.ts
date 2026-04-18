@@ -10,6 +10,7 @@ export type InputSource = "literal" | "file" | "stdin" | "env";
 
 export type ToolTag = "read" | "write" | "aggregate" | "util";
 export type GuardFieldKind = "id" | "path" | "notebook";
+export type PointerPath = string;
 
 export type EndpointMode = "read" | "write" | "invoke";
 export type EndpointSurface = "meta" | "content" | "asset" | "workspace" | "runtime" | "network";
@@ -59,11 +60,9 @@ export interface CliBehavior {
 
 // ————— Permission guard —————
 export interface PayloadTargetSpec {
-  field: string;
+  path: PointerPath;
   kind: ResourceKind;
   access: "read" | "write";
-  /** When true, payload[field] is treated as string[] and any denied item rejects the request. */
-  isArray?: boolean;
 }
 
 export interface GuardSpec {
@@ -76,13 +75,11 @@ export interface GuardSpec {
    * Declarative response extractor.
    * `itemsAt` is evaluated against the unwrapped `data` value returned by SiyuanClient,
    * not the raw kernel envelope `{ code, msg, data }`.
-   * Examples: `blocks[*]`, `notebooks[*]`. Root arrays should use `filterResponse`.
-   * TODO(Px): consider upgrading this minimal path syntax to full JSONPath support,
-   * including root arrays like `[*]` and nested selections like `[*].id`.
+   * Examples: `blocks[*]`, `notebooks[*]`, `[*]`.
    */
   response?: {
-    /** Minimal jsonpath: "blocks[*]" / "notebooks[*]". */
-    itemsAt: string;
+    /** Minimal pointer syntax: `blocks[*]`, `notebooks[*]`, `[*]`. */
+    itemsAt: PointerPath;
     /** Which field within each item is the id / path / notebook. */
     fieldMap: Partial<Record<GuardFieldKind, string>>;
   };
@@ -192,6 +189,137 @@ export interface ToolSchema {
   output?: JSONSchemaProperty;
   cli?: CliBehavior;
   run: (ctx: ToolContext, input: unknown) => Promise<ToolResult>;
+}
+
+export class PointerPathShapeError extends Error {
+  constructor(path: PointerPath, message: string) {
+    super(`PointerPath \"${path}\" ${message}`);
+  }
+}
+
+export type PathOp =
+  | { kind: "key"; name: string }
+  | { kind: "expandArray" }
+  | { kind: "expandKey"; name: string };
+
+export interface ShapePolicy {
+  onMissingKey: "skip" | "throw";
+  onNonArray: "skip" | "throw";
+  onNonObject: "skip" | "throw";
+}
+
+export const STRICT_POINTER_POLICY: ShapePolicy = {
+  onMissingKey: "skip",
+  onNonArray: "throw",
+  onNonObject: "skip",
+};
+
+function rejectByPolicy(path: PointerPath, mode: "skip" | "throw", message: string): boolean {
+  if (mode === "throw") throw new PointerPathShapeError(path, message);
+  return true;
+}
+
+export function compilePointerPath(path: PointerPath): PathOp[] {
+  if (!path) throw new PointerPathShapeError(path, "must not be empty");
+  return path.split(".").map((part, index) => {
+    if (part === "[*]") {
+      if (index !== 0) throw new PointerPathShapeError(path, 'may use root "[*]" only as the first segment');
+      return { kind: "expandArray" };
+    }
+    const m = /^([A-Za-z_][A-Za-z0-9_]*)(\[\*\])?$/.exec(part);
+    if (!m) throw new PointerPathShapeError(path, `has invalid segment \"${part}\"`);
+    return m[2] ? { kind: "expandKey", name: m[1]! } : { kind: "key", name: m[1]! };
+  });
+}
+
+export function pointerPathRoot(path: PointerPath): string | undefined {
+  const [first] = compilePointerPath(path);
+  return first?.kind === "key" || first?.kind === "expandKey" ? first.name : undefined;
+}
+
+export function runPointerGet(root: unknown, ops: PathOp[], path: PointerPath, policy: ShapePolicy = STRICT_POINTER_POLICY): unknown[] {
+  let current: unknown[] = [root];
+  for (const op of ops) {
+    const next: unknown[] = [];
+    for (const item of current) {
+      if (op.kind === "expandArray") {
+        if (!Array.isArray(item)) {
+          rejectByPolicy(path, policy.onNonArray, 'expected array at root "[*]" segment');
+          continue;
+        }
+        next.push(...item);
+        continue;
+      }
+
+      if (!item || typeof item !== "object") {
+        rejectByPolicy(path, policy.onNonObject, `expected object before segment \"${op.name}\"`);
+        continue;
+      }
+      if (!(op.name in item)) {
+        rejectByPolicy(path, policy.onMissingKey, `missing key \"${op.name}\"`);
+        continue;
+      }
+      const value = (item as Record<string, unknown>)[op.name];
+      if (op.kind === "key") {
+        next.push(value);
+        continue;
+      }
+      if (!Array.isArray(value)) {
+        rejectByPolicy(path, policy.onNonArray, `expected array at segment \"${op.name}[*]\"`);
+        continue;
+      }
+      next.push(...value);
+    }
+    current = next;
+  }
+  return current;
+}
+
+export function evaluatePointerPath(root: unknown, path: PointerPath, policy: ShapePolicy = STRICT_POINTER_POLICY): unknown[] {
+  return runPointerGet(root, compilePointerPath(path), path, policy);
+}
+
+export function runPointerFilterTerminal(
+  root: unknown,
+  path: PointerPath,
+  filter: (items: unknown[]) => unknown[],
+  policy: ShapePolicy = STRICT_POINTER_POLICY,
+): unknown {
+  const ops = compilePointerPath(path);
+  if (ops.length === 0) throw new PointerPathShapeError(path, "must not be empty");
+  const last = ops[ops.length - 1]!;
+
+  if (last.kind === "expandArray") {
+    if (ops.length !== 1) throw new PointerPathShapeError(path, 'root "[*]" must be the only terminal array segment');
+    if (!Array.isArray(root)) {
+      rejectByPolicy(path, policy.onNonArray, 'expected array at root "[*]" segment');
+      return root;
+    }
+    return filter(root);
+  }
+
+  if (last.kind !== "expandKey") {
+    throw new PointerPathShapeError(path, "terminal filter requires an array expansion segment");
+  }
+
+  const parents = runPointerGet(root, ops.slice(0, -1), path, policy);
+  for (const parent of parents) {
+    if (!parent || typeof parent !== "object") {
+      rejectByPolicy(path, policy.onNonObject, `expected object before terminal segment \"${last.name}[*]\"`);
+      continue;
+    }
+    const arr = (parent as Record<string, unknown>)[last.name];
+    if (arr === undefined) {
+      rejectByPolicy(path, policy.onMissingKey, `missing key \"${last.name}\"`);
+      continue;
+    }
+    if (!Array.isArray(arr)) {
+      rejectByPolicy(path, policy.onNonArray, `expected array at terminal segment \"${last.name}[*]\"`);
+      continue;
+    }
+    (parent as Record<string, unknown>)[last.name] = filter(arr);
+  }
+  return root;
 }
 
 // ————— Helpers —————

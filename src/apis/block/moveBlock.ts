@@ -29,9 +29,9 @@ export const schema: EndpointSchema = {
   },
   guard: {
     payloadTargets: [
-      { field: "id", kind: "id", access: "write" },
-      { field: "parentID", kind: "id", access: "write" },
-      { field: "previousID", kind: "id", access: "write" },
+      { path: "id", kind: "id", access: "write" },
+      { path: "parentID", kind: "id", access: "write" },
+      { path: "previousID", kind: "id", access: "write" },
     ],
   },
 };

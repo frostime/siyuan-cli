@@ -123,32 +123,32 @@ test("Batches A2-B2-C migrated compatible endpoints to authored classification",
 
 test("phase 6 holdouts are fully migrated with explicit array targets", () => {
   assert.deepEqual(exportResources.guard?.payloadTargets, [
-    { field: "paths", kind: "workspace-path", access: "read", isArray: true },
+    { path: "paths[*]", kind: "workspace-path", access: "read" },
   ]);
   assert.deepEqual(filetreeMoveDocs.guard?.payloadTargets, [
-    { field: "fromPaths", kind: "path", access: "write", isArray: true },
-    { field: "toNotebook", kind: "notebook", access: "write" },
-    { field: "toPath", kind: "path", access: "write" },
+    { path: "fromPaths[*]", kind: "path", access: "write" },
+    { path: "toNotebook", kind: "notebook", access: "write" },
+    { path: "toPath", kind: "path", access: "write" },
   ]);
   assert.deepEqual(filetreeMoveDocsByID.guard?.payloadTargets, [
-    { field: "fromIDs", kind: "id", access: "write", isArray: true },
-    { field: "toID", kind: "id", access: "write" },
+    { path: "fromIDs[*]", kind: "id", access: "write" },
+    { path: "toID", kind: "id", access: "write" },
   ]);
   assert.deepEqual(filetreeGetIDsByHPath.guard?.payloadTargets, [
-    { field: "notebook", kind: "notebook", access: "read" },
+    { path: "notebook", kind: "notebook", access: "read" },
   ]);
 });
 
 test("workspace, filetree, and global response guards use post-client response shapes", () => {
   assert.deepEqual(fileReadDir.guard?.payloadTargets, [
-    { field: "path", kind: "workspace-path", access: "read" },
+    { path: "path", kind: "workspace-path", access: "read" },
   ]);
   assert.deepEqual(fileRenameFile.guard?.payloadTargets, [
-    { field: "path", kind: "workspace-path", access: "write" },
-    { field: "newPath", kind: "workspace-path", access: "write" },
+    { path: "path", kind: "workspace-path", access: "write" },
+    { path: "newPath", kind: "workspace-path", access: "write" },
   ]);
   assert.deepEqual(filetreeGetIDsByHPath.guard?.payloadTargets, [
-    { field: "notebook", kind: "notebook", access: "read" },
+    { path: "notebook", kind: "notebook", access: "read" },
   ]);
   assert.equal(searchFullTextSearchBlock.guard?.response?.itemsAt, "blocks[*]");
   assert.equal(notebookLsNotebooks.guard?.response?.itemsAt, "notebooks[*]");
@@ -204,7 +204,7 @@ test("moveDocs rejects when any fromPaths item is denied before request executio
   assert.equal(actualCalls, 0);
 });
 
-test("searchDocs filters denied rows from unwrapped array responses and warns", () => {
+test("declarative root-array response filtering still emits warnings", () => {
   const engine = {
     filterItems(items: any[]) {
       return { kept: items.filter((x) => x.path !== "/denied/doc.sy"), removed: 1, reasons: { denied: 1 } };
@@ -212,15 +212,19 @@ test("searchDocs filters denied rows from unwrapped array responses and warns", 
   } as any;
   const writes: string[] = [];
   const origWrite = process.stderr.write.bind(process.stderr);
-  process.stderr.write = ((chunk: any, ...args: any[]) => {
+  process.stderr.write = ((chunk: any) => {
     writes.push(String(chunk));
     return true;
   }) as any;
   try {
-    const filtered = filetreeSearchDocs.guard!.filterResponse!([
-      { box: "nb", path: "/allowed/doc.sy", hPath: "/Allowed" },
-      { box: "nb", path: "/denied/doc.sy", hPath: "/Denied" },
-    ], engine);
+    const filtered = applyResponseGuard(
+      filetreeSearchDocs,
+      [
+        { box: "nb", path: "/allowed/doc.sy", hPath: "/Allowed" },
+        { box: "nb", path: "/denied/doc.sy", hPath: "/Denied" },
+      ],
+      engine,
+    );
     assert.deepEqual(filtered, [{ box: "nb", path: "/allowed/doc.sy", hPath: "/Allowed" }]);
     assert.match(writes.join(""), /CONTENT_FILTERED/);
   } finally {

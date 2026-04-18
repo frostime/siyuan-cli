@@ -1,45 +1,9 @@
 /**
  * Schema guard execution — payload checking + response filtering.
  */
-import { deriveEndpointId, type EndpointSchema, type PermissionEngineLike, type RegisteredEndpoint } from "./schema.js";
+import { deriveEndpointId, evaluatePointerPath, runPointerFilterTerminal, type EndpointSchema, type PermissionEngineLike, type RegisteredEndpoint } from "./schema.js";
 import { ConfirmationRequiredError, ContentAccessDeniedError, type PermissionEngine } from "./permission.js";
 import type { SiyuanClient } from "./client.js";
-
-function jsonpathGet(obj: unknown, path: string): unknown[] {
-  const parts = path.split(".");
-  let current: unknown[] = [obj];
-  for (const part of parts) {
-    const arrayMatch = /^([a-zA-Z0-9_$]+)\[\*\]$/.exec(part);
-    const next: unknown[] = [];
-    if (arrayMatch) {
-      const key = arrayMatch[1]!;
-      for (const item of current) {
-        if (item && typeof item === "object") {
-          const arr = (item as Record<string, unknown>)[key];
-          if (Array.isArray(arr)) next.push(...arr);
-        }
-      }
-    } else {
-      for (const item of current) {
-        if (item && typeof item === "object") {
-          const val = (item as Record<string, unknown>)[part];
-          if (val !== undefined) next.push(val);
-        }
-      }
-    }
-    current = next;
-  }
-  return current;
-}
-
-function jsonpathSet(obj: unknown, path: string, value: unknown): void {
-  const parts = path.split(".");
-  let cursor = obj as Record<string, unknown>;
-  for (let i = 0; i < parts.length - 1; i++) {
-    cursor = cursor[parts[i]!] as Record<string, unknown>;
-  }
-  cursor[parts[parts.length - 1]!] = value;
-}
 
 const HEURISTIC_FIELDS = {
   id: "id",
@@ -78,23 +42,16 @@ export async function applyPayloadGuard(
   const targets = schema.guard?.payloadTargets;
   if (targets?.length) {
     for (const target of targets) {
-      const value = p[target.field];
-      if (target.isArray) {
-        if (value === undefined) {
-          continue;
-        }
-        if (!Array.isArray(value)) {
-          throw new ContentAccessDeniedError(`payload field "${target.field}" must be an array`);
-        }
-        for (const item of value) {
-          if (typeof item !== "string") {
-            throw new ContentAccessDeniedError(`payload field "${target.field}" must contain only string items`);
-          }
-          await engine.checkContentRef({ kind: target.kind, value: item, access: target.access });
-        }
-        continue;
+      let values: unknown[];
+      try {
+        values = evaluatePointerPath(payload, target.path);
+      } catch (error) {
+        throw new ContentAccessDeniedError((error as Error).message);
       }
-      if (typeof value === "string") {
+      for (const value of values) {
+        if (typeof value !== "string") {
+          throw new ContentAccessDeniedError(`payload path "${target.path}" must resolve to string values`);
+        }
         await engine.checkContentRef({ kind: target.kind, value, access: target.access });
       }
     }
@@ -127,7 +84,7 @@ export function applyResponseGuard(schema: EndpointSchema, response: unknown, en
   }
   if (guard.response) {
     const { itemsAt, fieldMap } = guard.response;
-    const items = jsonpathGet(response, itemsAt);
+    const items = evaluatePointerPath(response, itemsAt);
     const { kept, removed, reasons } = engine.filterItems(items, (item) => {
       const i = item as Record<string, unknown>;
       return {
@@ -137,10 +94,9 @@ export function applyResponseGuard(schema: EndpointSchema, response: unknown, en
       };
     });
     if (removed > 0) {
-      const parentPath = itemsAt.replace(/\[\*\]$/, "");
-      jsonpathSet(response, parentPath, kept);
       const summary = Object.entries(reasons).map(([r, n]) => `${n}x: ${r}`).join("; ");
       process.stderr.write(JSON.stringify({ warning: "CONTENT_FILTERED", removed, reasons: summary }) + "\n");
+      return runPointerFilterTerminal(response, itemsAt, () => kept);
     }
   }
   return response;

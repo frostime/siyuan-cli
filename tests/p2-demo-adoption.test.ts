@@ -44,9 +44,9 @@ test("moveBlock is normalized as content write move with three write targets", (
   });
   assert.equal(entry.meta.risk, "elevated");
   assert.deepEqual(moveBlock.guard?.payloadTargets, [
-    { field: "id", kind: "id", access: "write" },
-    { field: "parentID", kind: "id", access: "write" },
-    { field: "previousID", kind: "id", access: "write" },
+    { path: "id", kind: "id", access: "write" },
+    { path: "parentID", kind: "id", access: "write" },
+    { path: "previousID", kind: "id", access: "write" },
   ]);
 });
 
@@ -60,11 +60,11 @@ test("getBlockKramdown is normalized as content read inspect with read target", 
   });
   assert.equal(entry.meta.risk, "sensitive");
   assert.deepEqual(getBlockKramdown.guard?.payloadTargets, [
-    { field: "id", kind: "id", access: "read" },
+    { path: "id", kind: "id", access: "read" },
   ]);
 });
 
-test("query.sql remains global read query with response filter", () => {
+test("query.sql remains global read query with declarative root-array response guard", () => {
   const entry = registerOne(querySql);
   assert.deepEqual(entry.meta.classification, {
     mode: "read",
@@ -73,7 +73,10 @@ test("query.sql remains global read query with response filter", () => {
     operation: "query",
   });
   assert.equal(entry.meta.risk, "sensitive");
-  assert.ok(querySql.guard?.filterResponse);
+  assert.deepEqual(querySql.guard?.response, {
+    itemsAt: "[*]",
+    fieldMap: { id: "id", path: "path", notebook: "box" },
+  });
 });
 
 test("file.getFile and file.putFile use workspace-path targets", () => {
@@ -83,14 +86,14 @@ test("file.getFile and file.putFile use workspace-path targets", () => {
   assert.equal(readEntry.meta.classification.surface, "workspace");
   assert.equal(readEntry.meta.classification.mode, "read");
   assert.deepEqual(fileGetFile.guard?.payloadTargets, [
-    { field: "path", kind: "workspace-path", access: "read" },
+    { path: "path", kind: "workspace-path", access: "read" },
   ]);
 
   assert.equal(writeEntry.meta.classification.surface, "workspace");
   assert.equal(writeEntry.meta.classification.mode, "write");
   assert.equal(writeEntry.meta.risk, "critical");
   assert.deepEqual(filePutFile.guard?.payloadTargets, [
-    { field: "path", kind: "workspace-path", access: "write" },
+    { path: "path", kind: "workspace-path", access: "write" },
   ]);
 });
 
