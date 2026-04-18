@@ -197,60 +197,129 @@ export class PointerPathShapeError extends Error {
   }
 }
 
-type PointerSegment = { key?: string; expand: boolean };
+export type PathOp =
+  | { kind: "key"; name: string }
+  | { kind: "expandArray" }
+  | { kind: "expandKey"; name: string };
 
-function parsePointerPath(path: PointerPath): PointerSegment[] {
+export interface ShapePolicy {
+  onMissingKey: "skip" | "throw";
+  onNonArray: "skip" | "throw";
+  onNonObject: "skip" | "throw";
+}
+
+export const STRICT_POINTER_POLICY: ShapePolicy = {
+  onMissingKey: "skip",
+  onNonArray: "throw",
+  onNonObject: "skip",
+};
+
+function rejectByPolicy(path: PointerPath, mode: "skip" | "throw", message: string): boolean {
+  if (mode === "throw") throw new PointerPathShapeError(path, message);
+  return true;
+}
+
+export function compilePointerPath(path: PointerPath): PathOp[] {
   if (!path) throw new PointerPathShapeError(path, "must not be empty");
-  const parts = path.split(".");
-  return parts.map((part, index) => {
+  return path.split(".").map((part, index) => {
     if (part === "[*]") {
       if (index !== 0) throw new PointerPathShapeError(path, 'may use root "[*]" only as the first segment');
-      return { expand: true };
+      return { kind: "expandArray" };
     }
     const m = /^([A-Za-z_][A-Za-z0-9_]*)(\[\*\])?$/.exec(part);
     if (!m) throw new PointerPathShapeError(path, `has invalid segment \"${part}\"`);
-    return { key: m[1]!, expand: Boolean(m[2]) };
+    return m[2] ? { kind: "expandKey", name: m[1]! } : { kind: "key", name: m[1]! };
   });
 }
 
 export function pointerPathRoot(path: PointerPath): string | undefined {
-  const [first] = parsePointerPath(path);
-  return first?.key;
+  const [first] = compilePointerPath(path);
+  return first?.kind === "key" || first?.kind === "expandKey" ? first.name : undefined;
 }
 
-export function evaluatePointerPath(root: unknown, path: PointerPath): unknown[] {
-  const segments = parsePointerPath(path);
+export function runPointerGet(root: unknown, ops: PathOp[], path: PointerPath, policy: ShapePolicy = STRICT_POINTER_POLICY): unknown[] {
   let current: unknown[] = [root];
-  for (const segment of segments) {
+  for (const op of ops) {
     const next: unknown[] = [];
     for (const item of current) {
-      if (segment.key === undefined) {
+      if (op.kind === "expandArray") {
         if (!Array.isArray(item)) {
-          throw new PointerPathShapeError(path, 'expected array at root "[*]" segment');
+          rejectByPolicy(path, policy.onNonArray, 'expected array at root "[*]" segment');
+          continue;
         }
         next.push(...item);
         continue;
       }
 
       if (!item || typeof item !== "object") {
+        rejectByPolicy(path, policy.onNonObject, `expected object before segment \"${op.name}\"`);
         continue;
       }
-      const value = (item as Record<string, unknown>)[segment.key];
-      if (value === undefined) {
+      if (!(op.name in item)) {
+        rejectByPolicy(path, policy.onMissingKey, `missing key \"${op.name}\"`);
         continue;
       }
-      if (segment.expand) {
-        if (!Array.isArray(value)) {
-          throw new PointerPathShapeError(path, `expected array at segment \"${segment.key}[*]\"`);
-        }
-        next.push(...value);
-      } else {
+      const value = (item as Record<string, unknown>)[op.name];
+      if (op.kind === "key") {
         next.push(value);
+        continue;
       }
+      if (!Array.isArray(value)) {
+        rejectByPolicy(path, policy.onNonArray, `expected array at segment \"${op.name}[*]\"`);
+        continue;
+      }
+      next.push(...value);
     }
     current = next;
   }
   return current;
+}
+
+export function evaluatePointerPath(root: unknown, path: PointerPath, policy: ShapePolicy = STRICT_POINTER_POLICY): unknown[] {
+  return runPointerGet(root, compilePointerPath(path), path, policy);
+}
+
+export function runPointerFilterTerminal(
+  root: unknown,
+  path: PointerPath,
+  filter: (items: unknown[]) => unknown[],
+  policy: ShapePolicy = STRICT_POINTER_POLICY,
+): unknown {
+  const ops = compilePointerPath(path);
+  if (ops.length === 0) throw new PointerPathShapeError(path, "must not be empty");
+  const last = ops[ops.length - 1]!;
+
+  if (last.kind === "expandArray") {
+    if (ops.length !== 1) throw new PointerPathShapeError(path, 'root "[*]" must be the only terminal array segment');
+    if (!Array.isArray(root)) {
+      rejectByPolicy(path, policy.onNonArray, 'expected array at root "[*]" segment');
+      return root;
+    }
+    return filter(root);
+  }
+
+  if (last.kind !== "expandKey") {
+    throw new PointerPathShapeError(path, "terminal filter requires an array expansion segment");
+  }
+
+  const parents = runPointerGet(root, ops.slice(0, -1), path, policy);
+  for (const parent of parents) {
+    if (!parent || typeof parent !== "object") {
+      rejectByPolicy(path, policy.onNonObject, `expected object before terminal segment \"${last.name}[*]\"`);
+      continue;
+    }
+    const arr = (parent as Record<string, unknown>)[last.name];
+    if (arr === undefined) {
+      rejectByPolicy(path, policy.onMissingKey, `missing key \"${last.name}\"`);
+      continue;
+    }
+    if (!Array.isArray(arr)) {
+      rejectByPolicy(path, policy.onNonArray, `expected array at terminal segment \"${last.name}[*]\"`);
+      continue;
+    }
+    (parent as Record<string, unknown>)[last.name] = filter(arr);
+  }
+  return root;
 }
 
 // ————— Helpers —————

@@ -5,7 +5,7 @@ import { EndpointRegistry } from "../src/core/registry.ts";
 import { PermissionEngine, BlockNotFoundError, WorkspaceAccessDeniedError } from "../src/core/permission.ts";
 import { applyPayloadGuard } from "../src/core/guard.ts";
 import type { AppConfig, PermissionConfig } from "../src/core/config.ts";
-import { evaluatePointerPath, PointerPathShapeError, type EndpointSchema, type PermissionEngineLike } from "../src/core/schema.ts";
+import { evaluatePointerPath, PointerPathShapeError, runPointerFilterTerminal, type EndpointSchema, type PermissionEngineLike } from "../src/core/schema.ts";
 
 function makeConfig(permission?: PermissionConfig): AppConfig {
   return {
@@ -106,6 +106,12 @@ test("evaluatePointerPath supports root arrays and nested arrays", () => {
 test("evaluatePointerPath throws on shape mismatch", () => {
   assert.throws(() => evaluatePointerPath({ blocks: {} }, "blocks[*]"), PointerPathShapeError);
   assert.throws(() => evaluatePointerPath({ blocks: [{ id: "a" }] }, "blocks[*].id[*]"), PointerPathShapeError);
+});
+
+test("runPointerFilterTerminal rewrites terminal arrays at any depth", () => {
+  const root = { data: { blocks: [{ id: "a" }, { id: "b" }] } };
+  const out = runPointerFilterTerminal(root, "data.blocks[*]", (items) => items.slice(0, 1)) as any;
+  assert.deepEqual(out, { data: { blocks: [{ id: "a" }] } });
 });
 
 test("requiresConfirmation uses risk-auto and policy-match union", () => {

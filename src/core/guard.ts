@@ -1,18 +1,9 @@
 /**
  * Schema guard execution — payload checking + response filtering.
  */
-import { deriveEndpointId, evaluatePointerPath, type EndpointSchema, type PermissionEngineLike, type RegisteredEndpoint } from "./schema.js";
+import { deriveEndpointId, evaluatePointerPath, runPointerFilterTerminal, type EndpointSchema, type PermissionEngineLike, type RegisteredEndpoint } from "./schema.js";
 import { ConfirmationRequiredError, ContentAccessDeniedError, type PermissionEngine } from "./permission.js";
 import type { SiyuanClient } from "./client.js";
-
-function pointerPathSet(obj: unknown, path: string, value: unknown): void {
-  const parts = path.split(".");
-  let cursor = obj as Record<string, unknown>;
-  for (let i = 0; i < parts.length - 1; i++) {
-    cursor = cursor[parts[i]!] as Record<string, unknown>;
-  }
-  cursor[parts[parts.length - 1]!] = value;
-}
 
 const HEURISTIC_FIELDS = {
   id: "id",
@@ -103,13 +94,9 @@ export function applyResponseGuard(schema: EndpointSchema, response: unknown, en
       };
     });
     if (removed > 0) {
-      if (itemsAt === "[*]") {
-        return kept;
-      }
-      const parentPath = itemsAt.replace(/\[\*\]$/, "");
-      pointerPathSet(response, parentPath, kept);
       const summary = Object.entries(reasons).map(([r, n]) => `${n}x: ${r}`).join("; ");
       process.stderr.write(JSON.stringify({ warning: "CONTENT_FILTERED", removed, reasons: summary }) + "\n");
+      return runPointerFilterTerminal(response, itemsAt, () => kept);
     }
   }
   return response;

@@ -35,6 +35,13 @@ updated: 2026-04-18T20:49:00+08:00
 - [x] Run full targeted regression for selector migration
 **Verification**: `pnpm typecheck`, `pnpm build`, `node dist/cli.mjs api list`, and the targeted P1/P2/P3 test suite all pass
 
+### Feedback Tasks (→ [001-pathprogram-runtime-redesign](./revisions/001-pathprogram-runtime-redesign.md))
+- [x] Replace temporary response write-back helper with PathProgram-style terminal filtering
+- [x] Restore `CONTENT_FILTERED` warning behavior for declarative root-array response guards
+- [x] Add regression coverage for terminal-array filtering and warning behavior
+- [x] Keep response shape mismatch fail-loud by design
+**Verification**: PathProgram runtime tests pass and declarative root-array filtering emits warnings
+
 ---
 
 ## Progress
@@ -53,3 +60,4 @@ updated: 2026-04-18T20:49:00+08:00
 - [2026-04-18] Design: drafted spec/design around a minimal `PointerPath` contract
 - [2026-04-18] Plan: converted the design into a file-level implementation plan
 - [2026-04-18] Implement: completed PointerPath migration and passed targeted regression
+- [2026-04-18] Review-Fix: upgraded selector runtime to PathProgram terminal filtering and passed targeted regression

@@ -10,6 +10,9 @@ reference:
   - source: ".sspec/changes/26-04-18T03-11_p3-rollout"
     type: "prev-change"
     note: "Consumes the review findings around jsonpath debt, root-array filtering, and selector asymmetry"
+  - source: ".sspec/changes/26-04-18T20-26_minimal-pointer-path-selectors/revisions/001-pathprogram-runtime-redesign.md"
+    type: "revision"
+    note: "Upgrade the temporary selector helpers to a PathProgram-style runtime"
 ---
 
 # minimal-pointer-path-selectors
