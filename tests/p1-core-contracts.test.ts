@@ -208,6 +208,68 @@ test("workspace surface-aware heuristic treats path as workspace-path", async ()
   assert.deepEqual(seen, [{ kind: "workspace-path", value: "/workspace/notes.txt", access: "write" }]);
 });
 
+test("array payload targets reject non-array payload values", async () => {
+  const engine: PermissionEngineLike = {
+    checkEndpoint() {},
+    checkTool() {},
+    async checkContentRef() {},
+    async resolveContentIds() {
+      return new Map();
+    },
+    async resolveContentId() {
+      return { notebook: "nb", path: "/x.sy" };
+    },
+    filterItems(items) {
+      return { kept: items, removed: 0, reasons: {} };
+    },
+  };
+
+  await assert.rejects(() => applyPayloadGuard(
+    {
+      endpoint: "/api/test/arrayRefs",
+      summary: "Array refs",
+      payload: { type: "object", properties: { ids: { type: "array", items: { type: "string" } } } },
+      classification: { mode: "write", surface: "content", scope: "batch", operation: "update" },
+      guard: { payloadTargets: [{ field: "ids", kind: "id", access: "write", isArray: true }] },
+    },
+    { ids: "/denied/doc.sy" },
+    engine,
+    "write",
+    "content",
+  ), /must be an array/);
+});
+
+test("array payload targets reject non-string items", async () => {
+  const engine: PermissionEngineLike = {
+    checkEndpoint() {},
+    checkTool() {},
+    async checkContentRef() {},
+    async resolveContentIds() {
+      return new Map();
+    },
+    async resolveContentId() {
+      return { notebook: "nb", path: "/x.sy" };
+    },
+    filterItems(items) {
+      return { kept: items, removed: 0, reasons: {} };
+    },
+  };
+
+  await assert.rejects(() => applyPayloadGuard(
+    {
+      endpoint: "/api/test/arrayRefs",
+      summary: "Array refs",
+      payload: { type: "object", properties: { ids: { type: "array", items: { type: "string" } } } },
+      classification: { mode: "write", surface: "content", scope: "batch", operation: "update" },
+      guard: { payloadTargets: [{ field: "ids", kind: "id", access: "write", isArray: true }] },
+    },
+    { ids: ["ok", 1] },
+    engine,
+    "write",
+    "content",
+  ), /must contain only string items/);
+});
+
 test("array payload targets reject on any denied item", async () => {
   const seen: string[] = [];
   const engine: PermissionEngineLike = {

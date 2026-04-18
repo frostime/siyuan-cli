@@ -204,18 +204,28 @@ test("moveDocs rejects when any fromPaths item is denied before request executio
   assert.equal(actualCalls, 0);
 });
 
-test("searchDocs filters denied rows from unwrapped array responses", () => {
+test("searchDocs filters denied rows from unwrapped array responses and warns", () => {
   const engine = {
     filterItems(items: any[]) {
       return { kept: items.filter((x) => x.path !== "/denied/doc.sy"), removed: 1, reasons: { denied: 1 } };
     },
   } as any;
-
-  const filtered = filetreeSearchDocs.guard!.filterResponse!([
-    { box: "nb", path: "/allowed/doc.sy", hPath: "/Allowed" },
-    { box: "nb", path: "/denied/doc.sy", hPath: "/Denied" },
-  ], engine);
-  assert.deepEqual(filtered, [{ box: "nb", path: "/allowed/doc.sy", hPath: "/Allowed" }]);
+  const writes: string[] = [];
+  const origWrite = process.stderr.write.bind(process.stderr);
+  process.stderr.write = ((chunk: any, ...args: any[]) => {
+    writes.push(String(chunk));
+    return true;
+  }) as any;
+  try {
+    const filtered = filetreeSearchDocs.guard!.filterResponse!([
+      { box: "nb", path: "/allowed/doc.sy", hPath: "/Allowed" },
+      { box: "nb", path: "/denied/doc.sy", hPath: "/Denied" },
+    ], engine);
+    assert.deepEqual(filtered, [{ box: "nb", path: "/allowed/doc.sy", hPath: "/Allowed" }]);
+    assert.match(writes.join(""), /CONTENT_FILTERED/);
+  } finally {
+    process.stderr.write = origWrite as any;
+  }
 });
 
 test("runtime/meta/network risk mapping is explicit", () => {

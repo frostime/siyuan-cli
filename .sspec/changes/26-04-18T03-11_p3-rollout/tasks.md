@@ -66,6 +66,13 @@ updated: 2026-04-18T03:15:00+08:00
 - [x] Record deferred `filterResponse` helper extraction decision in memory
 **Verification**: Phase 6 follow-up review points are reflected in docs/code/tests
 
+### Feedback Tasks (→ [003-guard-hardening-and-path-semantics](./revisions/003-guard-hardening-and-path-semantics.md))
+- [x] Harden `applyPayloadGuard()` against malformed array-shaped payloads
+- [x] Keep `getIDsByHPath` notebook-only guard, but record hpath limitation explicitly
+- [x] Add `CONTENT_FILTERED` warning to `searchDocs` imperative filtering
+- [x] Record `kind: "path"` semantic ambiguity and `forwardProxy` critical-risk rationale
+**Verification**: malformed array payloads fail loud; searchDocs filtering warns; review decisions are explicit in code/memory
+
 ---
 
 ## Progress
@@ -86,3 +93,4 @@ updated: 2026-04-18T03:15:00+08:00
 - [2026-04-18] Implement: migrated Batch A1 contract-compatible endpoints and added `tests/p3-rollout-batch-a1.test.ts`
 - [2026-04-18] Implement: advanced rollout through Batch C and stopped before Batch Z bridge removal
 - [2026-04-18] Implement: completed Batch Z holdout migration, removed legacy bridge, and passed final targeted regression
+- [2026-04-18] Review-Fix: hardened array guard execution and documented hpath/path semantics

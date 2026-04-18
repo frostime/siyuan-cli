@@ -1,6 +1,6 @@
 # Memory: p3-rollout
 
-**Updated**: 2026-04-18T16:54+08:00
+**Updated**: 2026-04-18T17:09+08:00
 
 ## Git Baseline (Immutable)
 <!-- Captured during `sspec change new` before any change files are written. -->
@@ -49,6 +49,9 @@ Next: capture review result and either close P3 or record a follow-up revision.
 - [2026-04-18T16:18] [Decision] `filetree/searchDocs.ts` now filters unwrapped array responses by `{ box, path }` to close the known read-leak review gap during Batch Z cleanup.
 - [2026-04-18T16:45] [Decision] `system/logoutAuth.ts` uses `riskOverride: "sensitive"` because it invalidates session state without destroying workspace/content data.
 - [2026-04-18T16:45] [Decision] Imperative `filterResponse` duplication across `query.sql`, `getChildBlocks`, `listDocsByPath`, and `searchDocs` is accepted for this change; helper extraction is deferred.
+- [2026-04-18T17:09] [Constraint] `filetree/getIDsByHPath.path` is hpath. Current `ResourceKind` cannot express hpath precisely, so this change keeps notebook-only request guarding instead of pretending hpath is block-path.
+- [2026-04-18T17:09] [Gotcha] `kind: "path"` currently mixes existing id-based SiYuan paths with some target-path payload fields. This is acceptable for the current rollout and should be revisited if resource kinds expand.
+- [2026-04-18T17:09] [Decision] `applyPayloadGuard()` now fails loud on malformed `isArray` payload values instead of relying on upstream schema validation for safety.
 
 ## Milestones
 
@@ -59,3 +62,4 @@ Next: capture review result and either close P3 or record a follow-up revision.
 - [2026-04-18T16:18] Implement+Validate: completed Batch Z holdout migration, removed `deriveClassificationFromLegacyTags()`, updated tests/docs, and passed `pnpm typecheck`, `pnpm build`, `node dist/cli.mjs api list`, `tsx --test tests/p1-core-contracts.test.ts tests/p2-demo-adoption.test.ts tests/p3-rollout-batch-a1.test.ts tests/p3-rollout-batches-a2-to-c.test.ts`.
 - [2026-04-18T16:45] Review-Fix+Validate: recorded revision 002, documented the `getIDsByHPath` payload correction, lowered `logoutAuth` risk to `sensitive`, added endpoint-level array behavioral coverage for `moveDocs`, and re-ran the targeted regression suite.
 - [2026-04-18T16:54] Review: P3 status updated to REVIEW; awaiting acceptance or final review feedback.
+- [2026-04-18T17:09] Review-Fix+Validate: recorded revision 003, hardened array payload guard execution, aligned `searchDocs` warning behavior, and re-ran targeted regression tests.

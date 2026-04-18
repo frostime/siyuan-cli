@@ -23,5 +23,6 @@ export const schema: EndpointSchema = {
     payloadTargets: [
       { field: "notebook", kind: "notebook", access: "read" },
     ],
+    // `path` here is hpath, not SiYuan id-based path. Current ResourceKind cannot express hpath precisely.
   },
 };

@@ -20,5 +20,6 @@ export const schema: EndpointSchema = {
     surface: "network",
     scope: "single",
     operation: "control",
+    // Critical by fallback: this can drive arbitrary outbound requests through the kernel.
   },
 };

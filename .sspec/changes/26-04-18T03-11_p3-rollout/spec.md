@@ -16,6 +16,9 @@ reference:
   - source: ".sspec/changes/26-04-18T03-11_p3-rollout/revisions/002-phase-6-review-follow-ups.md"
     type: "revision"
     note: "Record schema correction, close risk follow-up, and add array endpoint behavioral coverage"
+  - source: ".sspec/changes/26-04-18T03-11_p3-rollout/revisions/003-guard-hardening-and-path-semantics.md"
+    type: "revision"
+    note: "Harden array guard execution and record remaining hpath/path semantics explicitly"
 ---
 
 # P3: Rollout

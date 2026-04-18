@@ -2,7 +2,7 @@
  * Schema guard execution — payload checking + response filtering.
  */
 import { deriveEndpointId, type EndpointSchema, type PermissionEngineLike, type RegisteredEndpoint } from "./schema.js";
-import { ConfirmationRequiredError, type PermissionEngine } from "./permission.js";
+import { ConfirmationRequiredError, ContentAccessDeniedError, type PermissionEngine } from "./permission.js";
 import type { SiyuanClient } from "./client.js";
 
 function jsonpathGet(obj: unknown, path: string): unknown[] {
@@ -80,12 +80,17 @@ export async function applyPayloadGuard(
     for (const target of targets) {
       const value = p[target.field];
       if (target.isArray) {
-        if (Array.isArray(value)) {
-          for (const item of value) {
-            if (typeof item === "string") {
-              await engine.checkContentRef({ kind: target.kind, value: item, access: target.access });
-            }
+        if (value === undefined) {
+          continue;
+        }
+        if (!Array.isArray(value)) {
+          throw new ContentAccessDeniedError(`payload field "${target.field}" must be an array`);
+        }
+        for (const item of value) {
+          if (typeof item !== "string") {
+            throw new ContentAccessDeniedError(`payload field "${target.field}" must contain only string items`);
           }
+          await engine.checkContentRef({ kind: target.kind, value: item, access: target.access });
         }
         continue;
       }
