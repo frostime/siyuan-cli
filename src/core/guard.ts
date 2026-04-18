@@ -79,6 +79,16 @@ export async function applyPayloadGuard(
   if (targets?.length) {
     for (const target of targets) {
       const value = p[target.field];
+      if (target.isArray) {
+        if (Array.isArray(value)) {
+          for (const item of value) {
+            if (typeof item === "string") {
+              await engine.checkContentRef({ kind: target.kind, value: item, access: target.access });
+            }
+          }
+        }
+        continue;
+      }
       if (typeof value === "string") {
         await engine.checkContentRef({ kind: target.kind, value, access: target.access });
       }

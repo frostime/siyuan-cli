@@ -55,7 +55,7 @@ filetree/moveDocs.ts           -> fromPaths[]
 filetree/moveDocsByID.ts       -> fromIDs[]
 export/exportResources.ts      -> paths[]
 search/fullTextSearchBlock.ts  -> paths[]
-filetree/getIDsByHPath.ts      -> paths[]
+filetree/getIDsByHPath.ts      -> local draft listed paths[]; Phase 6 corrected it to upstream `path` hpath input
 asset/upload.ts                -> file[]
 ```
 
@@ -187,7 +187,7 @@ guard: { payloadTargets: [{ field: "id", kind: "id", access: "write" }] }
 
 **Watchpoints**
 - `moveDocs.ts` / `moveDocsByID.ts` likely blocked by array contract gate
-- `getIDsByHPath.ts` may also block on array semantics
+- `getIDsByHPath.ts` local draft may need upstream payload-shape verification before migration
 
 ### 2.5 Batch C — system / notification / network / sqlite
 

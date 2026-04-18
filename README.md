@@ -85,6 +85,8 @@ siyuan api query.sql --help
 siyuan api block.appendBlock --help
 ```
 
+`--tag` filters derived endpoint tags such as `mode:read`, `surface:content`, `scope:batch`, `operation:move`, and `risk:sensitive`.
+
 Common flags for all endpoints:
 
 | Flag | Description |

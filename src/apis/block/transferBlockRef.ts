@@ -13,5 +13,17 @@ export const schema: EndpointSchema = {
       refIDs: { type: "array", description: "Reference block IDs to transfer", items: { type: "string", pattern: "^\\d{14}-[0-9a-z]{7}$" } },
     },
   },
-  tags: ["write", "mutation"],
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "single",
+    operation: "move",
+  },
+  guard: {
+    payloadTargets: [
+      { field: "fromID", kind: "id", access: "write" },
+      { field: "toID", kind: "id", access: "write" },
+      { field: "refIDs", kind: "id", access: "write", isArray: true },
+    ],
+  },
 };

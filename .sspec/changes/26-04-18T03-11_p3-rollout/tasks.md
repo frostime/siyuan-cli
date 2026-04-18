@@ -41,13 +41,13 @@ updated: 2026-04-18T03:15:00+08:00
 - [x] Run batch C regression checks
 **Verification**: runtime/meta/network split is complete and riskOverride usage is explicit
 
-### Phase 6: Batch Z — bridge removal + docs/tests cleanup ⏳
-- [ ] Complete P1 amendment for array item authorization
-- [ ] Migrate array-contract holdouts
-- [ ] Remove `deriveClassificationFromLegacyTags()` and related transition-only code after holdouts are gone
-- [ ] Update `README.md` / key docs / tests to reflect full rollout
-- [ ] Run final full regression checks
-- [ ] Update `memory.md` State + Milestones with results
+### Phase 6: Batch Z — bridge removal + docs/tests cleanup ✅
+- [x] Complete P1 amendment for array item authorization
+- [x] Migrate array-contract holdouts
+- [x] Remove `deriveClassificationFromLegacyTags()` and related transition-only code after holdouts are gone
+- [x] Update `README.md` / key docs / tests to reflect full rollout
+- [x] Run final full regression checks
+- [x] Update `memory.md` State + Milestones with results
 **Verification**: no endpoint relies on legacy tags; final regression suite passes
 
 ### Feedback Tasks (→ [001-guard-semantics-and-phase-6-gate](./revisions/001-guard-semantics-and-phase-6-gate.md))
@@ -59,11 +59,18 @@ updated: 2026-04-18T03:15:00+08:00
 - [x] Define Phase 6 path decision for array-contract holdouts
 **Verification**: targeted P3 tests include guard-path and response-shape coverage
 
+### Feedback Tasks (→ [002-phase-6-review-follow-ups](./revisions/002-phase-6-review-follow-ups.md))
+- [x] Record `getIDsByHPath` payload correction explicitly in revision/code comments/design
+- [x] Apply `logoutAuth` risk follow-up with rationale
+- [x] Add one endpoint-level behavioral test for migrated array authorization
+- [x] Record deferred `filterResponse` helper extraction decision in memory
+**Verification**: Phase 6 follow-up review points are reflected in docs/code/tests
+
 ---
 
 ## Progress
 
-**Overall**: 83%
+**Overall**: 100%
 
 | Phase | Progress | Status |
 |-------|----------|--------|
@@ -72,9 +79,10 @@ updated: 2026-04-18T03:15:00+08:00
 | Phase 3 | 100% | ✅ |
 | Phase 4 | 100% | ✅ |
 | Phase 5 | 100% | ✅ |
-| Phase 6 | 0% | ⏸️ |
+| Phase 6 | 100% | ✅ |
 
 **Recent**:
 - [2026-04-18] Plan: created batch-based rollout plan for remaining endpoint migration
 - [2026-04-18] Implement: migrated Batch A1 contract-compatible endpoints and added `tests/p3-rollout-batch-a1.test.ts`
 - [2026-04-18] Implement: advanced rollout through Batch C and stopped before Batch Z bridge removal
+- [2026-04-18] Implement: completed Batch Z holdout migration, removed legacy bridge, and passed final targeted regression

@@ -1,16 +1,12 @@
 /**
  * Schema type definitions for endpoints (kernel API) and tools (business wrappers).
  *
- * Transitional design (P1):
- * - `classification` is the new authored truth for migrated endpoint schemas.
- * - legacy `tags` remain accepted during rollout and are normalized by the registry.
- * - runtime consumers must read `RegisteredEndpoint.meta`, not raw `schema.tags`.
+ * Endpoint design:
+ * - `classification` is the authored truth for endpoint schemas.
+ * - runtime consumers read `RegisteredEndpoint.meta`.
  */
 
 export type InputSource = "literal" | "file" | "stdin" | "env";
-
-/** Legacy tag model kept only for rollout compatibility. */
-export type EndpointTag = "read" | "write" | "mutation" | "dangerous" | "upload" | "query";
 
 export type ToolTag = "read" | "write" | "aggregate" | "util";
 export type GuardFieldKind = "id" | "path" | "notebook";
@@ -66,6 +62,8 @@ export interface PayloadTargetSpec {
   field: string;
   kind: ResourceKind;
   access: "read" | "write";
+  /** When true, payload[field] is treated as string[] and any denied item rejects the request. */
+  isArray?: boolean;
 }
 
 export interface GuardSpec {
@@ -134,10 +132,8 @@ export interface EndpointSchema {
   payload: JSONSchema;
   response?: JSONSchemaProperty;
 
-  /** New authored truth. Optional only during rollout. */
-  classification?: EndpointClassification;
-  /** Legacy tags accepted only during rollout. */
-  tags?: EndpointTag[];
+  /** Authored endpoint classification. */
+  classification: EndpointClassification;
 
   minKernelVersion?: string;
   deprecated?: { replacement?: string; removeAt?: string; reason?: string };

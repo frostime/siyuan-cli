@@ -10,39 +10,6 @@ import {
   type RiskLabel,
 } from "./schema.js";
 
-function deriveClassificationFromLegacyTags(schema: EndpointSchema, group: string, name: string): EndpointClassification {
-  const tags = schema.tags ?? [];
-  const isQuery = tags.includes("query");
-  const isWrite = tags.includes("write") || tags.includes("mutation") || tags.includes("upload");
-  const mode = isWrite ? "write" : "read";
-
-  let surface: EndpointClassification["surface"] = "content";
-  if (group === "file") surface = "workspace";
-  else if (group === "asset") surface = "asset";
-  else if (group === "network") surface = "network";
-  else if (group === "notification") surface = "runtime";
-  else if (group === "system") {
-    if (["exit", "logoutAuth"].includes(name)) surface = "runtime";
-    else surface = "meta";
-  }
-
-  let scope: EndpointClassification["scope"] = "single";
-  if (isQuery || group === "search" || name === "lsNotebooks") scope = "global";
-  else if (/(moveDocs|removeDocs|listDocs|searchDocs)/.test(name)) scope = "batch";
-
-  let operation: EndpointClassification["operation"] | undefined;
-  if (isQuery) operation = "query";
-  else if (group === "search") operation = "search";
-  else if (tags.includes("upload")) operation = "upload";
-  else if (/^get|^ls|^read|^export/.test(name)) operation = "inspect";
-  else if (/create|append|prepend|insert/.test(name)) operation = "create";
-  else if (/delete|remove/.test(name)) operation = "delete";
-  else if (/move|rename|transfer/.test(name)) operation = "move";
-  else if (/update|set|flush|open|close|exit|logout|push/.test(name)) operation = surface === "runtime" || surface === "network" ? "control" : "update";
-
-  return { mode, surface, scope, ...(operation ? { operation } : {}) };
-}
-
 function deriveRisk(classification: EndpointClassification): RiskLabel {
   if (classification.riskOverride) return classification.riskOverride;
   const { mode, surface, scope } = classification;
@@ -58,8 +25,8 @@ function deriveRisk(classification: EndpointClassification): RiskLabel {
   return "elevated";
 }
 
-function deriveMeta(schema: EndpointSchema, group: string, name: string): RegisteredEndpoint["meta"] {
-  const classification = schema.classification ?? deriveClassificationFromLegacyTags(schema, group, name);
+function deriveMeta(schema: EndpointSchema): RegisteredEndpoint["meta"] {
+  const classification = schema.classification;
   const risk = deriveRisk(classification);
   const tags = [
     `mode:${classification.mode}`,
@@ -77,8 +44,8 @@ function deriveMeta(schema: EndpointSchema, group: string, name: string): Regist
 }
 
 function validateSchema(schema: EndpointSchema, entry: RegisteredEndpoint): void {
-  if (!schema.classification && !schema.tags?.length) {
-    throw new Error(`Endpoint "${entry.id}" must declare classification or legacy tags during transition.`);
+  if (!schema.classification) {
+    throw new Error(`Endpoint "${entry.id}" must declare classification.`);
   }
 
   const c = entry.meta.classification;
@@ -103,7 +70,10 @@ export class EndpointRegistry {
     if (this.map.has(id)) {
       throw new Error(`Endpoint "${id}" is already registered.`);
     }
-    const entry: RegisteredEndpoint = { schema, id, group, name, meta: deriveMeta(schema, group, name) };
+    if (!schema.classification) {
+      throw new Error(`Endpoint "${id}" must declare classification.`);
+    }
+    const entry: RegisteredEndpoint = { schema, id, group, name, meta: deriveMeta(schema) };
     validateSchema(schema, entry);
     this.map.set(id, entry);
   }

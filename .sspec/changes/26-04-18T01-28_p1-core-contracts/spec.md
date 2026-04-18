@@ -10,6 +10,9 @@ reference:
   - source: ".sspec/changes/26-04-18T01-28_p1-core-contracts/revisions/001-contract-hardening-and-tests.md"
     type: "revision"
     note: "Review follow-up: contract hardening, workspace heuristic fix, and minimal tests"
+  - source: ".sspec/changes/26-04-18T01-28_p1-core-contracts/revisions/002-array-payload-target-authorization.md"
+    type: "revision"
+    note: "Phase 6 prerequisite: add conservative array payload authorization support"
 ---
 
 # P1: Core Contracts

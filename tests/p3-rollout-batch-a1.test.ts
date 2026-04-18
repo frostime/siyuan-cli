@@ -54,13 +54,13 @@ test("batch A1 migrated endpoints use authored classification without tags", () 
     blockGetChildBlocks,
     blockInsertBlock,
     blockPrependBlock,
+    blockTransferBlockRef,
     blockUnfoldBlock,
     blockUpdateBlock,
   ];
 
   for (const schema of migrated) {
     assert.ok(schema.classification, `${schema.endpoint} should define classification`);
-    assert.equal(schema.tags, undefined, `${schema.endpoint} should not keep legacy tags`);
     const entry = registerOne(schema);
     assert.ok(entry.meta.tags.length > 0);
   }
@@ -130,7 +130,12 @@ test("insertBlock denies optional write refs independently", async () => {
   assert.equal(actualCalls, 0);
 });
 
-test("transferBlockRef remains legacy because refIDs[] is blocked by array contract gate", () => {
-  assert.equal(blockTransferBlockRef.classification, undefined);
-  assert.deepEqual(blockTransferBlockRef.tags, ["write", "mutation"]);
+test("transferBlockRef uses array write payload targets", () => {
+  assert.deepEqual(blockTransferBlockRef.guard?.payloadTargets, [
+    { field: "fromID", kind: "id", access: "write" },
+    { field: "toID", kind: "id", access: "write" },
+    { field: "refIDs", kind: "id", access: "write", isArray: true },
+  ]);
+  const entry = registerOne(blockTransferBlockRef);
+  assert.equal(entry.meta.classification.operation, "move");
 });

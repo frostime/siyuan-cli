@@ -209,7 +209,7 @@ export function buildEndpointHelp(endpoint: {
 
   lines.push("ENDPOINT");
   lines.push(`  POST ${schema.endpoint}`);
-  const tags = meta?.tags ?? schema.tags;
+  const tags = meta?.tags;
   if (tags?.length) {
     lines.push(`  Tags: ${tags.join(", ")}`);
   }

@@ -20,15 +20,15 @@ function makeConfig(permission?: PermissionConfig): AppConfig {
   };
 }
 
-test("registry normalizes legacy query tags into global read meta", () => {
+test("registry derives meta from authored classification", () => {
   const registry = new EndpointRegistry();
   const schema: EndpointSchema = {
     endpoint: "/api/query/sql",
     summary: "SQL",
     payload: { type: "object", properties: { stmt: { type: "string" } } },
-    tags: ["read", "query"],
+    classification: { mode: "read", surface: "content", scope: "global", operation: "query" },
     guard: {
-      response: { itemsAt: "data[*]", fieldMap: { id: "id", path: "path", notebook: "box" } },
+      response: { itemsAt: "blocks[*]", fieldMap: { id: "id", path: "path", notebook: "box" } },
     },
   };
 
@@ -73,7 +73,7 @@ test("global read endpoint without response guard fails loud", () => {
   }, /global read/);
 });
 
-test("schema without classification and tags fails loud", () => {
+test("schema without classification fails loud", () => {
   const registry = new EndpointRegistry();
   assert.throws(() => {
     registry.register({
@@ -81,7 +81,7 @@ test("schema without classification and tags fails loud", () => {
       summary: "Version",
       payload: { type: "object", properties: {} },
     });
-  }, /must declare classification or legacy tags/);
+  }, /must declare classification/);
 });
 
 test("payloadTargets field must exist in payload.properties", () => {
@@ -193,7 +193,12 @@ test("workspace surface-aware heuristic treats path as workspace-path", async ()
   };
 
   await applyPayloadGuard(
-    { endpoint: "/api/file/putFile", summary: "Put", payload: { type: "object", properties: { path: { type: "string" } } }, tags: ["write", "mutation"] },
+    {
+      endpoint: "/api/file/putFile",
+      summary: "Put",
+      payload: { type: "object", properties: { path: { type: "string" } } },
+      classification: { mode: "write", surface: "workspace", scope: "single", operation: "update" },
+    },
     { path: "/workspace/notes.txt" },
     engine,
     "write",
@@ -201,6 +206,42 @@ test("workspace surface-aware heuristic treats path as workspace-path", async ()
   );
 
   assert.deepEqual(seen, [{ kind: "workspace-path", value: "/workspace/notes.txt", access: "write" }]);
+});
+
+test("array payload targets reject on any denied item", async () => {
+  const seen: string[] = [];
+  const engine: PermissionEngineLike = {
+    checkEndpoint() {},
+    checkTool() {},
+    async checkContentRef(ref) {
+      seen.push(ref.value);
+      if (ref.value === "bad") throw new Error("denied");
+    },
+    async resolveContentIds() {
+      return new Map();
+    },
+    async resolveContentId() {
+      return { notebook: "nb", path: "/x.sy" };
+    },
+    filterItems(items) {
+      return { kept: items, removed: 0, reasons: {} };
+    },
+  };
+
+  await assert.rejects(() => applyPayloadGuard(
+    {
+      endpoint: "/api/test/arrayRefs",
+      summary: "Array refs",
+      payload: { type: "object", properties: { ids: { type: "array", items: { type: "string" } } } },
+      classification: { mode: "write", surface: "content", scope: "batch", operation: "update" },
+      guard: { payloadTargets: [{ field: "ids", kind: "id", access: "write", isArray: true }] },
+    },
+    { ids: ["ok", "bad", "later"] },
+    engine,
+    "write",
+    "content",
+  ));
+  assert.deepEqual(seen, ["ok", "bad"]);
 });
 
 test("workspace deny rejects workspace-path refs", async () => {

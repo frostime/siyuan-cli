@@ -9,5 +9,7 @@ export const schema: EndpointSchema = {
     surface: "runtime",
     scope: "single",
     operation: "control",
+    // Invalidates the current session but does not destroy workspace/content data.
+    riskOverride: "sensitive",
   },
 };

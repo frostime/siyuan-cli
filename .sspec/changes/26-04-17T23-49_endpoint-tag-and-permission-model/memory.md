@@ -1,6 +1,6 @@
 # Memory: endpoint-tag-and-permission-model (Root)
 
-**Updated**: 2026-04-18T03:27+08:00
+**Updated**: 2026-04-18T16:00+08:00
 
 ## Git Baseline (Immutable)
 <!-- Original creation-time baseline was lost in the malformed memory file.
@@ -71,6 +71,8 @@ Do not implement directly from the root change.
 - [2026-04-18T03:15] [CoordinationDecision] P3 sub-change created as `26-04-18T03-11_p3-rollout` with batch strategy and array-contract gate.
 - [2026-04-18T03:18] [CoordinationDecision] P2 accepted and closed. P3 Batch A1 migrated all contract-compatible block/attr endpoints; `block/transferBlockRef.ts` remains blocked by the array contract gate.
 - [2026-04-18T03:27] [CoordinationDecision] P3 advanced through Batches A2→C. Remaining legacy holdouts are array-contract-blocked endpoints plus final bridge removal/docs cleanup in Phase 6.
+- [2026-04-18T16:00] [CoordinationDecision] P1 revision 002 landed to support conservative array payload authorization, unblocking Phase 6 Path A.
+- [2026-04-18T16:18] [CoordinationDecision] P3 completed Phase 6 holdout migration and removed the legacy classification bridge; rollout implementation is ready for review.
 
 ## Milestones
 
@@ -86,3 +88,5 @@ Do not implement directly from the root change.
 - [2026-04-18T03:15] Coordination: created P3 rollout sub-change and initialized its design/plan.
 - [2026-04-18T03:18] Coordination: P2 closed; P3 Batch A1 implemented and validated locally.
 - [2026-04-18T03:27] Coordination: P3 advanced through Batch C and is paused before Phase 6 per user instruction.
+- [2026-04-18T16:00] Coordination: P1 revision 002 completed; root now has the contract support needed to start holdout migration in Phase 6.
+- [2026-04-18T16:18] Coordination: P3 implementation reached full rollout coverage and is awaiting review before closeout.

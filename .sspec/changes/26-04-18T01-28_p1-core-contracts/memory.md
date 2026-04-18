@@ -1,6 +1,6 @@
 # Memory: p1-core-contracts
 
-**Updated**: 2026-04-18T02:18+08:00
+**Updated**: 2026-04-18T16:00+08:00
 
 ## Git Baseline (Immutable)
 <!-- Captured during `sspec change new` before any change files are written. -->
@@ -19,7 +19,7 @@
 ## State
 
 DONE. P1 core contracts are accepted and closed.
-Next: create P2 demo adoption and migrate `block.moveBlock`, `query.sql`, and `file.putFile`.
+Next: revision 002 is now available for Phase 6 holdout migration; P3 can consume array payload authorization without widening the contract ad-hoc.
 
 ## Key Files
 
@@ -41,6 +41,7 @@ Next: create P2 demo adoption and migrate `block.moveBlock`, `query.sql`, and `f
 - [2026-04-18T01:39] [VitalFinding] Registry normalization allows P1 to land without bulk endpoint migration; this is the key mechanism that separates P1 from P3 rollout.
 - [2026-04-18T02:10] [Decision] Review follow-up is recorded in revision `001-contract-hardening-and-tests`; P1 baseline now includes fail-loud schema validation and targeted contract tests.
 - [2026-04-18T02:10] [Gotcha] `pnpm test` currently scans external `temp/siyuan-sdk/node/tests/**` and is unsuitable as a P1 verifier. Use `tsx --test tests/p1-core-contracts.test.ts` for targeted contract validation.
+- [2026-04-18T16:00] [Decision] Revision `002-array-payload-target-authorization` extends `PayloadTargetSpec` with `isArray?: boolean` and adopts reject-on-any-denial semantics.
 
 ## Milestones
 
@@ -48,3 +49,4 @@ Next: create P2 demo adoption and migrate `block.moveBlock`, `query.sql`, and `f
 - [2026-04-18T01:39] Implement+Validate: landed P1 core contracts, then passed `pnpm typecheck`, `pnpm build`, and `node dist/cli.mjs api list`.
 - [2026-04-18T02:10] Review-Fix+Validate: completed revision 001, then passed `tsx --test tests/p1-core-contracts.test.ts`.
 - [2026-04-18T02:18] Review: Claude accepted P1 after final cleanup; P1 marked DONE.
+- [2026-04-18T16:00] Review-Fix+Validate: completed revision 002 and re-ran P1/P2/P3 targeted regression tests.

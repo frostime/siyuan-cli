@@ -42,6 +42,12 @@ updated: 2026-04-18T01:29:30+08:00
 - [x] Add targeted contract tests for registry / permission / guard
 **Verification**: `tsx --test tests/p1-core-contracts.test.ts` passes
 
+### Feedback Tasks (→ [002-array-payload-target-authorization](./revisions/002-array-payload-target-authorization.md))
+- [x] Extend `PayloadTargetSpec` with conservative array authorization support
+- [x] Update guard execution to iterate `isArray` payload fields and reject on any denied item
+- [x] Add targeted contract tests for array payload authorization
+**Verification**: array payload targets reject on any denied item and existing P1/P2/P3 tests still pass
+
 ---
 
 ## Progress
@@ -59,3 +65,4 @@ updated: 2026-04-18T01:29:30+08:00
 - [2026-04-18] Plan: created file-level execution plan for P1 core contracts
 - [2026-04-18] Implement: completed P1 contract implementation and validation
 - [2026-04-18] Review-Fix: completed contract hardening follow-up and targeted tests
+- [2026-04-18] Review-Fix: completed revision 002 for array payload target authorization

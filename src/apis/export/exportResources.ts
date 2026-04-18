@@ -12,5 +12,15 @@ export const schema: EndpointSchema = {
       name: { type: "string", description: "Export file name" },
     },
   },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "workspace",
+    scope: "batch",
+    operation: "inspect",
+  },
+  guard: {
+    payloadTargets: [
+      { field: "paths", kind: "workspace-path", access: "read", isArray: true },
+    ],
+  },
 };

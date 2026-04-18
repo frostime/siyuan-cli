@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 
 import { EndpointRegistry } from "../src/core/registry.ts";
 import { deriveEndpointId } from "../src/core/schema.ts";
-import { applyResponseGuard } from "../src/core/guard.ts";
+import { applyResponseGuard, executeEndpoint } from "../src/core/guard.ts";
+import { PermissionEngine, ContentAccessDeniedError } from "../src/core/permission.ts";
+import type { AppConfig, PermissionConfig } from "../src/core/config.ts";
 
 import { schema as assetUpload } from "../src/apis/asset/upload.ts";
 import { schema as convertPandoc } from "../src/apis/convert/pandoc.ts";
@@ -49,6 +51,19 @@ import { schema as systemGetConf } from "../src/apis/system/getConf.ts";
 import { schema as systemLogoutAuth } from "../src/apis/system/logoutAuth.ts";
 import { schema as systemVersion } from "../src/apis/system/version.ts";
 
+function makeConfig(permission?: PermissionConfig): AppConfig {
+  return {
+    schemaVersion: 2,
+    current: "local",
+    workspaces: {
+      local: {
+        baseUrl: "http://127.0.0.1:6806",
+        ...(permission ? { permission } : {}),
+      },
+    },
+  };
+}
+
 function registerOne(schema: any) {
   const registry = new EndpointRegistry();
   registry.register(schema);
@@ -63,6 +78,7 @@ test("Batches A2-B2-C migrated compatible endpoints to authored classification",
     searchFullTextSearchBlock,
     templateRender,
     templateRenderSprig,
+    exportResources,
     fileReadDir,
     fileRemoveFile,
     fileRenameFile,
@@ -78,8 +94,11 @@ test("Batches A2-B2-C migrated compatible endpoints to authored classification",
     filetreeCreateDocWithMd,
     filetreeGetHPathByID,
     filetreeGetHPathByPath,
+    filetreeGetIDsByHPath,
     filetreeGetPathByID,
     filetreeListDocsByPath,
+    filetreeMoveDocs,
+    filetreeMoveDocsByID,
     filetreeRemoveDoc,
     filetreeRemoveDocByID,
     filetreeRenameDoc,
@@ -97,26 +116,39 @@ test("Batches A2-B2-C migrated compatible endpoints to authored classification",
 
   for (const schema of migrated) {
     assert.ok(schema.classification, `${schema.endpoint} should define classification`);
-    assert.equal(schema.tags, undefined, `${schema.endpoint} should not keep legacy tags`);
     const entry = registerOne(schema);
     assert.equal(entry.meta.classification.mode, schema.classification!.mode);
   }
 });
 
-test("known array contract-gated holdouts remain legacy", () => {
-  for (const schema of [exportResources, filetreeGetIDsByHPath, filetreeMoveDocs, filetreeMoveDocsByID]) {
-    assert.equal(schema.classification, undefined, `${schema.endpoint} should stay blocked until array contract amendment`);
-    assert.ok(schema.tags?.length, `${schema.endpoint} should still carry legacy tags during transition`);
-  }
+test("phase 6 holdouts are fully migrated with explicit array targets", () => {
+  assert.deepEqual(exportResources.guard?.payloadTargets, [
+    { field: "paths", kind: "workspace-path", access: "read", isArray: true },
+  ]);
+  assert.deepEqual(filetreeMoveDocs.guard?.payloadTargets, [
+    { field: "fromPaths", kind: "path", access: "write", isArray: true },
+    { field: "toNotebook", kind: "notebook", access: "write" },
+    { field: "toPath", kind: "path", access: "write" },
+  ]);
+  assert.deepEqual(filetreeMoveDocsByID.guard?.payloadTargets, [
+    { field: "fromIDs", kind: "id", access: "write", isArray: true },
+    { field: "toID", kind: "id", access: "write" },
+  ]);
+  assert.deepEqual(filetreeGetIDsByHPath.guard?.payloadTargets, [
+    { field: "notebook", kind: "notebook", access: "read" },
+  ]);
 });
 
-test("workspace and global response guards use post-client response shapes", () => {
+test("workspace, filetree, and global response guards use post-client response shapes", () => {
   assert.deepEqual(fileReadDir.guard?.payloadTargets, [
     { field: "path", kind: "workspace-path", access: "read" },
   ]);
   assert.deepEqual(fileRenameFile.guard?.payloadTargets, [
     { field: "path", kind: "workspace-path", access: "write" },
     { field: "newPath", kind: "workspace-path", access: "write" },
+  ]);
+  assert.deepEqual(filetreeGetIDsByHPath.guard?.payloadTargets, [
+    { field: "notebook", kind: "notebook", access: "read" },
   ]);
   assert.equal(searchFullTextSearchBlock.guard?.response?.itemsAt, "blocks[*]");
   assert.equal(notebookLsNotebooks.guard?.response?.itemsAt, "notebooks[*]");
@@ -144,10 +176,53 @@ test("response guards are evaluated against unwrapped data", () => {
   assert.deepEqual(notebookResponse.notebooks, [{ id: "nb1" }]);
 });
 
+test("moveDocs rejects when any fromPaths item is denied before request execution", async () => {
+  let actualCalls = 0;
+  const client = {
+    call: async () => {
+      actualCalls++;
+      return { ok: true };
+    },
+    upload: async () => ({ ok: true }),
+  } as any;
+  const engine = new PermissionEngine(makeConfig({ content: { write: { paths: { deny: ["/denied/**"] } } } }), "local", client);
+  const entry = registerOne(filetreeMoveDocs);
+
+  await assert.rejects(
+    () => executeEndpoint({
+      entry,
+      payload: {
+        fromPaths: ["/allowed/a.sy", "/denied/b.sy", "/allowed/c.sy"],
+        toNotebook: "20260101120000-abcdefg",
+        toPath: "/allowed/target.sy",
+      },
+      client,
+      engine,
+    }),
+    ContentAccessDeniedError,
+  );
+  assert.equal(actualCalls, 0);
+});
+
+test("searchDocs filters denied rows from unwrapped array responses", () => {
+  const engine = {
+    filterItems(items: any[]) {
+      return { kept: items.filter((x) => x.path !== "/denied/doc.sy"), removed: 1, reasons: { denied: 1 } };
+    },
+  } as any;
+
+  const filtered = filetreeSearchDocs.guard!.filterResponse!([
+    { box: "nb", path: "/allowed/doc.sy", hPath: "/Allowed" },
+    { box: "nb", path: "/denied/doc.sy", hPath: "/Denied" },
+  ], engine);
+  assert.deepEqual(filtered, [{ box: "nb", path: "/allowed/doc.sy", hPath: "/Allowed" }]);
+});
+
 test("runtime/meta/network risk mapping is explicit", () => {
   assert.equal(registerOne(notificationPushErrMsg).meta.risk, "safe");
   assert.equal(registerOne(networkForwardProxy).meta.risk, "critical");
   assert.equal(registerOne(sqliteFlushTransaction).meta.risk, "destructive");
   assert.equal(registerOne(systemGetConf).meta.risk, "sensitive");
+  assert.equal(registerOne(systemLogoutAuth).meta.risk, "sensitive");
   assert.equal(registerOne(systemVersion).meta.risk, "safe");
 });

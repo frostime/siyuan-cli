@@ -20,4 +20,20 @@ export const schema: EndpointSchema = {
     operation: "search",
   },
   cli: { primary: "k" },
+  guard: {
+    payloadTargets: [
+      { field: "notebook", kind: "notebook", access: "read" },
+      { field: "path", kind: "path", access: "read" },
+    ],
+    filterResponse: (response, engine) => {
+      const rows = Array.isArray(response) ? response : [];
+      return engine.filterItems(rows, (row) => {
+        const r = row as Record<string, unknown>;
+        return {
+          path: typeof r.path === "string" ? r.path : undefined,
+          notebook: typeof r.box === "string" ? r.box : undefined,
+        };
+      }).kept;
+    },
+  },
 };
