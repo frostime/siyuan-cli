@@ -10,6 +10,7 @@ export type InputSource = "literal" | "file" | "stdin" | "env";
 
 export type ToolTag = "read" | "write" | "aggregate" | "util";
 export type GuardFieldKind = "id" | "path" | "notebook";
+export type PointerPath = string;
 
 export type EndpointMode = "read" | "write" | "invoke";
 export type EndpointSurface = "meta" | "content" | "asset" | "workspace" | "runtime" | "network";
@@ -59,11 +60,9 @@ export interface CliBehavior {
 
 // ————— Permission guard —————
 export interface PayloadTargetSpec {
-  field: string;
+  path: PointerPath;
   kind: ResourceKind;
   access: "read" | "write";
-  /** When true, payload[field] is treated as string[] and any denied item rejects the request. */
-  isArray?: boolean;
 }
 
 export interface GuardSpec {
@@ -76,13 +75,11 @@ export interface GuardSpec {
    * Declarative response extractor.
    * `itemsAt` is evaluated against the unwrapped `data` value returned by SiyuanClient,
    * not the raw kernel envelope `{ code, msg, data }`.
-   * Examples: `blocks[*]`, `notebooks[*]`. Root arrays should use `filterResponse`.
-   * TODO(Px): consider upgrading this minimal path syntax to full JSONPath support,
-   * including root arrays like `[*]` and nested selections like `[*].id`.
+   * Examples: `blocks[*]`, `notebooks[*]`, `[*]`.
    */
   response?: {
-    /** Minimal jsonpath: "blocks[*]" / "notebooks[*]". */
-    itemsAt: string;
+    /** Minimal pointer syntax: `blocks[*]`, `notebooks[*]`, `[*]`. */
+    itemsAt: PointerPath;
     /** Which field within each item is the id / path / notebook. */
     fieldMap: Partial<Record<GuardFieldKind, string>>;
   };
@@ -192,6 +189,68 @@ export interface ToolSchema {
   output?: JSONSchemaProperty;
   cli?: CliBehavior;
   run: (ctx: ToolContext, input: unknown) => Promise<ToolResult>;
+}
+
+export class PointerPathShapeError extends Error {
+  constructor(path: PointerPath, message: string) {
+    super(`PointerPath \"${path}\" ${message}`);
+  }
+}
+
+type PointerSegment = { key?: string; expand: boolean };
+
+function parsePointerPath(path: PointerPath): PointerSegment[] {
+  if (!path) throw new PointerPathShapeError(path, "must not be empty");
+  const parts = path.split(".");
+  return parts.map((part, index) => {
+    if (part === "[*]") {
+      if (index !== 0) throw new PointerPathShapeError(path, 'may use root "[*]" only as the first segment');
+      return { expand: true };
+    }
+    const m = /^([A-Za-z_][A-Za-z0-9_]*)(\[\*\])?$/.exec(part);
+    if (!m) throw new PointerPathShapeError(path, `has invalid segment \"${part}\"`);
+    return { key: m[1]!, expand: Boolean(m[2]) };
+  });
+}
+
+export function pointerPathRoot(path: PointerPath): string | undefined {
+  const [first] = parsePointerPath(path);
+  return first?.key;
+}
+
+export function evaluatePointerPath(root: unknown, path: PointerPath): unknown[] {
+  const segments = parsePointerPath(path);
+  let current: unknown[] = [root];
+  for (const segment of segments) {
+    const next: unknown[] = [];
+    for (const item of current) {
+      if (segment.key === undefined) {
+        if (!Array.isArray(item)) {
+          throw new PointerPathShapeError(path, 'expected array at root "[*]" segment');
+        }
+        next.push(...item);
+        continue;
+      }
+
+      if (!item || typeof item !== "object") {
+        continue;
+      }
+      const value = (item as Record<string, unknown>)[segment.key];
+      if (value === undefined) {
+        continue;
+      }
+      if (segment.expand) {
+        if (!Array.isArray(value)) {
+          throw new PointerPathShapeError(path, `expected array at segment \"${segment.key}[*]\"`);
+        }
+        next.push(...value);
+      } else {
+        next.push(value);
+      }
+    }
+    current = next;
+  }
+  return current;
 }
 
 // ————— Helpers —————

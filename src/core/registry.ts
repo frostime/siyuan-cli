@@ -4,6 +4,7 @@
  */
 import {
   deriveEndpointId,
+  pointerPathRoot,
   type EndpointClassification,
   type EndpointSchema,
   type RegisteredEndpoint,
@@ -56,8 +57,9 @@ function validateSchema(schema: EndpointSchema, entry: RegisteredEndpoint): void
   }
 
   for (const target of schema.guard?.payloadTargets ?? []) {
-    if (!(target.field in schema.payload.properties)) {
-      throw new Error(`Endpoint "${entry.id}" payloadTargets field "${target.field}" is not declared in payload.properties.`);
+    const root = pointerPathRoot(target.path);
+    if (!root || !(root in schema.payload.properties)) {
+      throw new Error(`Endpoint "${entry.id}" payloadTargets path root "${target.path}" is not declared in payload.properties.`);
     }
   }
 }

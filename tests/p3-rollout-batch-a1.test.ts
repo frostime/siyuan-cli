@@ -68,16 +68,16 @@ test("batch A1 migrated endpoints use authored classification without tags", () 
 
 test("insertBlock uses three optional write payload targets", () => {
   assert.deepEqual(blockInsertBlock.guard?.payloadTargets, [
-    { field: "nextID", kind: "id", access: "write" },
-    { field: "previousID", kind: "id", access: "write" },
-    { field: "parentID", kind: "id", access: "write" },
+    { path: "nextID", kind: "id", access: "write" },
+    { path: "previousID", kind: "id", access: "write" },
+    { path: "parentID", kind: "id", access: "write" },
   ]);
   const entry = registerOne(blockInsertBlock);
   assert.equal(entry.meta.classification.mode, "write");
   assert.equal(entry.meta.classification.operation, "create");
 });
 
-test("getChildBlocks uses batch content read with imperative response filtering", () => {
+test("getChildBlocks uses batch content read with declarative root-array response filtering", () => {
   const entry = registerOne(blockGetChildBlocks);
   assert.deepEqual(entry.meta.classification, {
     mode: "read",
@@ -85,18 +85,10 @@ test("getChildBlocks uses batch content read with imperative response filtering"
     scope: "batch",
     operation: "inspect",
   });
-  assert.ok(blockGetChildBlocks.guard?.filterResponse);
-
-  const engine = {
-    filterItems(items: any[]) {
-      return { kept: items.filter((x) => x.path !== "/denied/doc.sy"), removed: 1, reasons: { denied: 1 } };
-    },
-  } as any;
-  const filtered = blockGetChildBlocks.guard!.filterResponse!([
-    { id: "a", path: "/allowed/doc.sy", box: "nb" },
-    { id: "b", path: "/denied/doc.sy", box: "nb" },
-  ], engine);
-  assert.deepEqual(filtered, [{ id: "a", path: "/allowed/doc.sy", box: "nb" }]);
+  assert.deepEqual(blockGetChildBlocks.guard?.response, {
+    itemsAt: "[*]",
+    fieldMap: { id: "id", path: "path", notebook: "box" },
+  });
 });
 
 test("insertBlock denies optional write refs independently", async () => {
@@ -132,9 +124,9 @@ test("insertBlock denies optional write refs independently", async () => {
 
 test("transferBlockRef uses array write payload targets", () => {
   assert.deepEqual(blockTransferBlockRef.guard?.payloadTargets, [
-    { field: "fromID", kind: "id", access: "write" },
-    { field: "toID", kind: "id", access: "write" },
-    { field: "refIDs", kind: "id", access: "write", isArray: true },
+    { path: "fromID", kind: "id", access: "write" },
+    { path: "toID", kind: "id", access: "write" },
+    { path: "refIDs[*]", kind: "id", access: "write" },
   ]);
   const entry = registerOne(blockTransferBlockRef);
   assert.equal(entry.meta.classification.operation, "move");

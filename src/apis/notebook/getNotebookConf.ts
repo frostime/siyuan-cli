@@ -19,7 +19,7 @@ export const schema: EndpointSchema = {
   },
   guard: {
     payloadTargets: [
-      { field: "notebook", kind: "notebook", access: "read" },
+      { path: "notebook", kind: "notebook", access: "read" },
     ],
   },
 };

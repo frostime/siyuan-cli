@@ -23,9 +23,9 @@ export const schema: EndpointSchema = {
   cli: { allowSource: { data: ["literal", "file", "stdin"] } },
   guard: {
     payloadTargets: [
-      { field: "nextID", kind: "id", access: "write" },
-      { field: "previousID", kind: "id", access: "write" },
-      { field: "parentID", kind: "id", access: "write" },
+      { path: "nextID", kind: "id", access: "write" },
+      { path: "previousID", kind: "id", access: "write" },
+      { path: "parentID", kind: "id", access: "write" },
     ],
   },
 };

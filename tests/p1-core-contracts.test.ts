@@ -5,7 +5,7 @@ import { EndpointRegistry } from "../src/core/registry.ts";
 import { PermissionEngine, BlockNotFoundError, WorkspaceAccessDeniedError } from "../src/core/permission.ts";
 import { applyPayloadGuard } from "../src/core/guard.ts";
 import type { AppConfig, PermissionConfig } from "../src/core/config.ts";
-import type { EndpointSchema, PermissionEngineLike } from "../src/core/schema.ts";
+import { evaluatePointerPath, PointerPathShapeError, type EndpointSchema, type PermissionEngineLike } from "../src/core/schema.ts";
 
 function makeConfig(permission?: PermissionConfig): AppConfig {
   return {
@@ -92,9 +92,20 @@ test("payloadTargets field must exist in payload.properties", () => {
       summary: "Update",
       payload: { type: "object", properties: { id: { type: "string" } } },
       classification: { mode: "write", surface: "content", scope: "single", operation: "update" },
-      guard: { payloadTargets: [{ field: "missing", kind: "id", access: "write" }] },
+      guard: { payloadTargets: [{ path: "missing", kind: "id", access: "write" }] },
     });
-  }, /payloadTargets field/);
+  }, /payloadTargets path root/);
+});
+
+test("evaluatePointerPath supports root arrays and nested arrays", () => {
+  assert.deepEqual(evaluatePointerPath([{ id: "a" }, { id: "b" }], "[*]"), [{ id: "a" }, { id: "b" }]);
+  assert.deepEqual(evaluatePointerPath([{ id: "a" }, { id: "b" }], "[*].id"), ["a", "b"]);
+  assert.deepEqual(evaluatePointerPath({ blocks: [{ id: "a" }, { id: "b" }] }, "blocks[*].id"), ["a", "b"]);
+});
+
+test("evaluatePointerPath throws on shape mismatch", () => {
+  assert.throws(() => evaluatePointerPath({ blocks: {} }, "blocks[*]"), PointerPathShapeError);
+  assert.throws(() => evaluatePointerPath({ blocks: [{ id: "a" }] }, "blocks[*].id[*]"), PointerPathShapeError);
 });
 
 test("requiresConfirmation uses risk-auto and policy-match union", () => {
@@ -230,13 +241,13 @@ test("array payload targets reject non-array payload values", async () => {
       summary: "Array refs",
       payload: { type: "object", properties: { ids: { type: "array", items: { type: "string" } } } },
       classification: { mode: "write", surface: "content", scope: "batch", operation: "update" },
-      guard: { payloadTargets: [{ field: "ids", kind: "id", access: "write", isArray: true }] },
+      guard: { payloadTargets: [{ path: "ids[*]", kind: "id", access: "write" }] },
     },
     { ids: "/denied/doc.sy" },
     engine,
     "write",
     "content",
-  ), /must be an array/);
+  ), /expected array/);
 });
 
 test("array payload targets reject non-string items", async () => {
@@ -261,13 +272,13 @@ test("array payload targets reject non-string items", async () => {
       summary: "Array refs",
       payload: { type: "object", properties: { ids: { type: "array", items: { type: "string" } } } },
       classification: { mode: "write", surface: "content", scope: "batch", operation: "update" },
-      guard: { payloadTargets: [{ field: "ids", kind: "id", access: "write", isArray: true }] },
+      guard: { payloadTargets: [{ path: "ids[*]", kind: "id", access: "write" }] },
     },
     { ids: ["ok", 1] },
     engine,
     "write",
     "content",
-  ), /must contain only string items/);
+  ), /must resolve to string values/);
 });
 
 test("array payload targets reject on any denied item", async () => {
@@ -296,7 +307,7 @@ test("array payload targets reject on any denied item", async () => {
       summary: "Array refs",
       payload: { type: "object", properties: { ids: { type: "array", items: { type: "string" } } } },
       classification: { mode: "write", surface: "content", scope: "batch", operation: "update" },
-      guard: { payloadTargets: [{ field: "ids", kind: "id", access: "write", isArray: true }] },
+      guard: { payloadTargets: [{ path: "ids[*]", kind: "id", access: "write" }] },
     },
     { ids: ["ok", "bad", "later"] },
     engine,

@@ -20,8 +20,8 @@ export const schema: EndpointSchema = {
   },
   guard: {
     payloadTargets: [
-      { field: "path", kind: "workspace-path", access: "write" },
-      { field: "newPath", kind: "workspace-path", access: "write" },
+      { path: "path", kind: "workspace-path", access: "write" },
+      { path: "newPath", kind: "workspace-path", access: "write" },
     ],
   },
 };
