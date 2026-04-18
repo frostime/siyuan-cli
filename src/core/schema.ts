@@ -278,6 +278,19 @@ export function evaluatePointerPath(root: unknown, path: PointerPath, policy: Sh
   return runPointerGet(root, compilePointerPath(path), path, policy);
 }
 
+export function isTerminalFilterCompatiblePointerPath(path: PointerPath): boolean {
+  const ops = compilePointerPath(path);
+  const last = ops[ops.length - 1]!;
+  if (last.kind === "expandArray") {
+    return ops.length === 1;
+  }
+  if (last.kind !== "expandKey") {
+    return false;
+  }
+  const prefixOps = ops.slice(0, -1);
+  return !prefixOps.some((op) => op.kind === "expandArray" || op.kind === "expandKey");
+}
+
 export function runPointerFilterTerminal(
   root: unknown,
   path: PointerPath,

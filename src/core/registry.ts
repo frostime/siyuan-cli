@@ -4,6 +4,7 @@
  */
 import {
   deriveEndpointId,
+  isTerminalFilterCompatiblePointerPath,
   pointerPathRoot,
   type EndpointClassification,
   type EndpointSchema,
@@ -54,6 +55,10 @@ function validateSchema(schema: EndpointSchema, entry: RegisteredEndpoint): void
     if (!schema.guard?.response && !schema.guard?.filterResponse) {
       throw new Error(`Endpoint "${entry.id}" is global read and must declare guard.response or guard.filterResponse.`);
     }
+  }
+
+  if (schema.guard?.response && !isTerminalFilterCompatiblePointerPath(schema.guard.response.itemsAt)) {
+    throw new Error(`Endpoint "${entry.id}" response.itemsAt "${schema.guard.response.itemsAt}" is not compatible with declarative terminal filtering.`);
   }
 
   for (const target of schema.guard?.payloadTargets ?? []) {

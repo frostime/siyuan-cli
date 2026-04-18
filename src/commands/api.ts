@@ -46,17 +46,9 @@ export function describeEndpoint(id: string): void {
   out({ ...entry, schema: serializable });
 }
 
-function isWriteEndpoint(entry: RegisteredEndpoint): boolean {
-  return entry.meta.classification.mode === "write" || entry.meta.classification.mode === "invoke";
-}
-
 async function callEndpoint(entry: RegisteredEndpoint, rawArgs: Record<string, unknown>, positional?: string): Promise<void> {
   const payload = parsePayload({ schema: entry.schema, args: rawArgs, positional });
   const config = loadConfig(rawArgs["config"] as string | undefined);
-  if (rawArgs["dry-run"] && isWriteEndpoint(entry)) {
-    out({ dryRun: true, endpoint: entry.schema.endpoint, payload });
-    return;
-  }
 
   const workspace = resolveWorkspace(config, {
     workspace: rawArgs["workspace"] as string | undefined,

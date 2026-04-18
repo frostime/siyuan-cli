@@ -1,6 +1,6 @@
 ---
 name: minimal-pointer-path-selectors
-status: REVIEW
+status: DONE
 change-type: single
 created: 2026-04-18T20:26:16
 reference:
@@ -16,6 +16,9 @@ reference:
   - source: ".sspec/changes/26-04-18T20-26_minimal-pointer-path-selectors/revisions/002-terminal-filter-boundary.md"
     type: "revision"
     note: "Fail loud on unsupported multi-expand terminal filtering and record boundary semantics"
+  - source: ".sspec/changes/26-04-18T20-26_minimal-pointer-path-selectors/revisions/003-dry-run-and-response-validation.md"
+    type: "revision"
+    note: "Route dry-run through the shared execution path and validate response write-back shapes at startup"
 ---
 
 # minimal-pointer-path-selectors

@@ -49,6 +49,13 @@ updated: 2026-04-18T20:49:00+08:00
 - [x] Record documentation-worthy selector boundary decisions in memory
 **Verification**: multi-expand terminal filters fail loud and targeted regression still passes
 
+### Feedback Tasks (→ [003-dry-run-and-response-validation](./revisions/003-dry-run-and-response-validation.md))
+- [x] Remove the command-layer `--dry-run` bypass in `src/commands/api.ts`
+- [x] Validate declarative `response.itemsAt` terminal-filter compatibility at registry startup
+- [x] Add regression coverage for startup rejection of unsupported response filter shapes
+- [x] Record additional documentation-worthy execution-path decisions in memory
+**Verification**: real CLI dry-run now follows shared guard execution and unsupported `response.itemsAt` shapes fail at startup
+
 ---
 
 ## Progress
@@ -69,3 +76,4 @@ updated: 2026-04-18T20:49:00+08:00
 - [2026-04-18] Implement: completed PointerPath migration and passed targeted regression
 - [2026-04-18] Review-Fix: upgraded selector runtime to PathProgram terminal filtering and passed targeted regression
 - [2026-04-19] Review-Fix: tightened terminal filter boundary and recorded documentation candidates for selector semantics
+- [2026-04-19] Review-Fix: aligned dry-run execution and startup validation with the documented model

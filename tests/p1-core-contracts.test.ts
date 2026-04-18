@@ -5,7 +5,7 @@ import { EndpointRegistry } from "../src/core/registry.ts";
 import { PermissionEngine, BlockNotFoundError, WorkspaceAccessDeniedError } from "../src/core/permission.ts";
 import { applyPayloadGuard } from "../src/core/guard.ts";
 import type { AppConfig, PermissionConfig } from "../src/core/config.ts";
-import { evaluatePointerPath, PointerPathShapeError, runPointerFilterTerminal, type EndpointSchema, type PermissionEngineLike } from "../src/core/schema.ts";
+import { evaluatePointerPath, isTerminalFilterCompatiblePointerPath, PointerPathShapeError, runPointerFilterTerminal, type EndpointSchema, type PermissionEngineLike } from "../src/core/schema.ts";
 
 function makeConfig(permission?: PermissionConfig): AppConfig {
   return {
@@ -84,6 +84,19 @@ test("schema without classification fails loud", () => {
   }, /must declare classification/);
 });
 
+test("response.itemsAt must be terminal-filter compatible", () => {
+  const registry = new EndpointRegistry();
+  assert.throws(() => {
+    registry.register({
+      endpoint: "/api/query/sql",
+      summary: "SQL",
+      payload: { type: "object", properties: { stmt: { type: "string" } } },
+      classification: { mode: "read", surface: "content", scope: "global", operation: "query" },
+      guard: { response: { itemsAt: "pages[*].blocks[*]", fieldMap: { path: "path" } } },
+    });
+  }, /not compatible with declarative terminal filtering/);
+});
+
 test("payloadTargets field must exist in payload.properties", () => {
   const registry = new EndpointRegistry();
   assert.throws(() => {
@@ -115,6 +128,8 @@ test("runPointerFilterTerminal rewrites terminal arrays at any depth", () => {
 });
 
 test("runPointerFilterTerminal rejects multiple array expansions", () => {
+  assert.equal(isTerminalFilterCompatiblePointerPath("data.blocks[*]"), true);
+  assert.equal(isTerminalFilterCompatiblePointerPath("pages[*].blocks[*]"), false);
   assert.throws(
     () => runPointerFilterTerminal({ pages: [{ blocks: [{ id: "a" }] }] }, "pages[*].blocks[*]", (items) => items),
     /supports only one array expansion/,
