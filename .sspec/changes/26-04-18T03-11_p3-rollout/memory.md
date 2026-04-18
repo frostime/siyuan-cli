@@ -1,6 +1,6 @@
 # Memory: p3-rollout
 
-**Updated**: 2026-04-18T16:45+08:00
+**Updated**: 2026-04-18T16:54+08:00
 
 ## Git Baseline (Immutable)
 <!-- Captured during `sspec change new` before any change files are written. -->
@@ -18,8 +18,8 @@
 
 ## State
 
-Implementation complete. Batch Z migrated the remaining holdouts, removed the legacy classification bridge, and revalidated the targeted regression suite.
-Next: review the final P3 rollout result.
+REVIEW. Implementation is complete, Batch Z is validated, and P3 is now waiting for review/acceptance.
+Next: capture review result and either close P3 or record a follow-up revision.
 
 ## Key Files
 
@@ -58,3 +58,4 @@ Next: review the final P3 rollout result.
 - [2026-04-18T15:03] Review-Fix+Validate: recorded revision 001, clarified response semantics, added behavioral tests for `insertBlock` and response-shape handling, and reaffirmed the Phase 6 gate.
 - [2026-04-18T16:18] Implement+Validate: completed Batch Z holdout migration, removed `deriveClassificationFromLegacyTags()`, updated tests/docs, and passed `pnpm typecheck`, `pnpm build`, `node dist/cli.mjs api list`, `tsx --test tests/p1-core-contracts.test.ts tests/p2-demo-adoption.test.ts tests/p3-rollout-batch-a1.test.ts tests/p3-rollout-batches-a2-to-c.test.ts`.
 - [2026-04-18T16:45] Review-Fix+Validate: recorded revision 002, documented the `getIDsByHPath` payload correction, lowered `logoutAuth` risk to `sensitive`, added endpoint-level array behavioral coverage for `moveDocs`, and re-ran the targeted regression suite.
+- [2026-04-18T16:54] Review: P3 status updated to REVIEW; awaiting acceptance or final review feedback.

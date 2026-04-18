@@ -1,6 +1,6 @@
 ---
 name: endpoint-tag-and-permission-model
-status: PLANNING
+status: REVIEW
 change-type: root
 created: 2026-04-17T23:49:57
 reference:
@@ -44,7 +44,7 @@ reference:
 |-------|------|-----------|------------|
 | P1: Core Contracts | 冻结 classification / guard / permission / config / error 的共享契约 | — | TBD after gate |
 | P2: Demo Adoption | 迁移 7 个代表性 endpoint（content read/write、global read、workspace read/write、runtime invoke），验证冻结契约在真实 schema 上的执行路径 | P1 | TBD after gate |
-| P3: Rollout | 分批迁移剩余 `src/apis/**`、`src/tools/**`，补齐 docs/tests | P1, P2 | TBD after gate |
+| P3: Rollout | 分批迁移剩余 `src/apis/**`、`src/tools/**`，补齐 docs/tests | P1, P2 | `26-04-18T03-11_p3-rollout` |
 
 ### Coordination Notes
 

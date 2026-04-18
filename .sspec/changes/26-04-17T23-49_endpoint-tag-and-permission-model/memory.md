@@ -1,6 +1,6 @@
 # Memory: endpoint-tag-and-permission-model (Root)
 
-**Updated**: 2026-04-18T16:00+08:00
+**Updated**: 2026-04-18T16:54+08:00
 
 ## Git Baseline (Immutable)
 <!-- Original creation-time baseline was lost in the malformed memory file.
@@ -27,12 +27,12 @@ This reconstructed baseline records the branch divergence point explicitly and M
 |-------|------------|--------|---------|
 | P1: Core Contracts | `26-04-18T01-28_p1-core-contracts` | ✅ DONE | — |
 | P2: Demo Adoption | `26-04-18T02-23_p2-demo-adoption` | ✅ DONE | — |
-| P3: Rollout | `26-04-18T03-11_p3-rollout` | 🚧 DOING | Batches A1→C complete; holdouts identified; paused before Phase 6 |
+| P3: Rollout | `26-04-18T03-11_p3-rollout` | 🔎 REVIEW | Full rollout implemented and validated; awaiting acceptance |
 
 ## State
 
-P3 is in progress and has advanced through Batch C.
-Next: stop before Phase 6 / bridge removal. Remaining decision is how to handle array-contract holdouts before Batch Z.
+P3 is in REVIEW. Full rollout coverage is implemented and validated, including Phase 6 bridge removal and follow-up review fixes.
+Next: capture review acceptance and then close P3 and the root change.
 Do not implement directly from the root change.
 
 ## Key Files
@@ -73,6 +73,7 @@ Do not implement directly from the root change.
 - [2026-04-18T03:27] [CoordinationDecision] P3 advanced through Batches A2→C. Remaining legacy holdouts are array-contract-blocked endpoints plus final bridge removal/docs cleanup in Phase 6.
 - [2026-04-18T16:00] [CoordinationDecision] P1 revision 002 landed to support conservative array payload authorization, unblocking Phase 6 Path A.
 - [2026-04-18T16:18] [CoordinationDecision] P3 completed Phase 6 holdout migration and removed the legacy classification bridge; rollout implementation is ready for review.
+- [2026-04-18T16:54] [CoordinationDecision] P3 sub-change status is now REVIEW; root change moves to REVIEW while awaiting acceptance.
 
 ## Milestones
 
@@ -90,3 +91,4 @@ Do not implement directly from the root change.
 - [2026-04-18T03:27] Coordination: P3 advanced through Batch C and is paused before Phase 6 per user instruction.
 - [2026-04-18T16:00] Coordination: P1 revision 002 completed; root now has the contract support needed to start holdout migration in Phase 6.
 - [2026-04-18T16:18] Coordination: P3 implementation reached full rollout coverage and is awaiting review before closeout.
+- [2026-04-18T16:54] Coordination: root state synchronized to P3 REVIEW status.
