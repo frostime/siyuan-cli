@@ -12,8 +12,16 @@ export const schema: EndpointSchema = {
       path: { type: "string", description: "文档 path" },
     },
   },
-  tags: ["write", "mutation", "dangerous"],
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "single",
+    operation: "delete",
+  },
   guard: {
-    payload: { notebook: "notebook", path: "path" },
+    payloadTargets: [
+      { field: "notebook", kind: "notebook", access: "write" },
+      { field: "path", kind: "path", access: "write" },
+    ],
   },
 };

@@ -11,12 +11,31 @@ export const schema: EndpointSchema = {
       id: { type: "string", description: "Parent block ID", pattern: "^\\d{14}-[0-9a-z]{7}$" },
     },
   },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "content",
+    scope: "batch",
+    operation: "inspect",
+  },
   guard: {
-    payload: { id: "id" },
-    response: {
-      itemsAt: "data[*]",
-      fieldMap: { id: "id", path: "path", notebook: "box" },
+    payloadTargets: [
+      { field: "id", kind: "id", access: "read" },
+    ],
+    filterResponse: (response, engine) => {
+      const rows = Array.isArray(response) ? response : [];
+      const { kept, removed, reasons } = engine.filterItems(rows, (row) => {
+        const r = row as Record<string, unknown>;
+        return {
+          id: typeof r.id === "string" ? r.id : undefined,
+          path: typeof r.path === "string" ? r.path : undefined,
+          notebook: typeof r.box === "string" ? r.box : undefined,
+        };
+      });
+      if (removed > 0) {
+        const summary = Object.entries(reasons).map(([r, n]) => `${n}x: ${r}`).join("; ");
+        process.stderr.write(JSON.stringify({ warning: "CONTENT_FILTERED", removed, reasons: summary }) + "\n");
+      }
+      return kept;
     },
   },
 };

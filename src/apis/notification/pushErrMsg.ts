@@ -12,7 +12,14 @@ export const schema: EndpointSchema = {
       timeout: { type: "integer", description: "Display duration (milliseconds)" },
     },
   },
-  tags: ["write"],
+  classification: {
+    mode: "invoke",
+    surface: "runtime",
+    scope: "single",
+    operation: "control",
+    // UI-only notification; affects runtime UX but does not alter data or durable state.
+    riskOverride: "safe",
+  },
   cli: {
     primary: "msg",
     allowSource: { msg: ["literal", "file", "stdin"] },

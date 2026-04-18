@@ -3,5 +3,10 @@ export const schema: EndpointSchema = {
   endpoint: "/api/system/version",
   summary: "Get SiYuan kernel version",
   payload: { type: "object", properties: {} },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "meta",
+    scope: "single",
+    operation: "inspect",
+  },
 };

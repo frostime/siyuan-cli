@@ -11,8 +11,15 @@ export const schema: EndpointSchema = {
       id: { type: "string", description: "Document or block ID", pattern: "^\\d{14}-[0-9a-z]{7}$" },
     },
   },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "content",
+    scope: "single",
+    operation: "inspect",
+  },
   guard: {
-    payload: { id: "id" },
+    payloadTargets: [
+      { field: "id", kind: "id", access: "read" },
+    ],
   },
 };

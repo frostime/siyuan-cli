@@ -4,5 +4,10 @@ export const schema: EndpointSchema = {
   endpoint: "/api/system/currentTime",
   summary: "Get current system time",
   payload: { type: "object", properties: {} },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "meta",
+    scope: "single",
+    operation: "inspect",
+  },
 };

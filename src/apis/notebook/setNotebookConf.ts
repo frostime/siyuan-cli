@@ -17,6 +17,15 @@ export const schema: EndpointSchema = {
       },
     },
   },
-  tags: ["write", "mutation"],
-  guard: { payload: { notebook: "notebook" } },
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "single",
+    operation: "update",
+  },
+  guard: {
+    payloadTargets: [
+      { field: "notebook", kind: "notebook", access: "write" },
+    ],
+  },
 };

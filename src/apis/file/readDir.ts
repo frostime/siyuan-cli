@@ -11,5 +11,15 @@ export const schema: EndpointSchema = {
       path: { type: "string", description: "Directory path under workspace" },
     },
   },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "workspace",
+    scope: "single",
+    operation: "inspect",
+  },
+  guard: {
+    payloadTargets: [
+      { field: "path", kind: "workspace-path", access: "read" },
+    ],
+  },
 };

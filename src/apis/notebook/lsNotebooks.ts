@@ -10,10 +10,15 @@ export const schema: EndpointSchema = {
       flashcard: { type: "boolean", description: "Include flashcard-related information", default: false },
     },
   },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "content",
+    scope: "global",
+    operation: "inspect",
+  },
   guard: {
     response: {
-      itemsAt: "data.notebooks[*]",
+      itemsAt: "notebooks[*]",
       fieldMap: { notebook: "id" },
     },
   },

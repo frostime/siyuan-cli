@@ -13,7 +13,16 @@ export const schema: EndpointSchema = {
       parentID: { type: "string", description: "Parent block/document ID", pattern: "^\\d{14}-[0-9a-z]{7}$" },
     },
   },
-  tags: ["write", "mutation"],
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "single",
+    operation: "create",
+  },
   cli: { allowSource: { data: ["literal", "file", "stdin"] } },
-  guard: { payload: { parentID: "id" } },
+  guard: {
+    payloadTargets: [
+      { field: "parentID", kind: "id", access: "write" },
+    ],
+  },
 };

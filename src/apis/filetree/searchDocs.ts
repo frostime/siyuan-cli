@@ -13,6 +13,11 @@ export const schema: EndpointSchema = {
       path: { type: "string", description: "Path to search under" },
     },
   },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "content",
+    scope: "batch",
+    operation: "search",
+  },
   cli: { primary: "k" },
 };

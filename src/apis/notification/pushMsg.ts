@@ -17,6 +17,7 @@ export const schema: EndpointSchema = {
     surface: "runtime",
     scope: "single",
     operation: "control",
+    // UI-only notification; affects runtime UX but does not alter data or durable state.
     riskOverride: "safe",
   },
   cli: {

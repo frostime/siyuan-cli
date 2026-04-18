@@ -4,5 +4,10 @@ export const schema: EndpointSchema = {
   endpoint: "/api/system/logoutAuth",
   summary: "Logout authentication",
   payload: { type: "object", properties: {} },
-  tags: ["write", "mutation"],
+  classification: {
+    mode: "invoke",
+    surface: "runtime",
+    scope: "single",
+    operation: "control",
+  },
 };

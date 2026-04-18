@@ -14,7 +14,12 @@ export const schema: EndpointSchema = {
       args: { type: "string", description: "Additional Pandoc arguments" },
     },
   },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "meta",
+    scope: "single",
+    operation: "inspect",
+  },
   cli: {
     primary: "content",
     allowSource: { content: ["literal", "file", "stdin"] },

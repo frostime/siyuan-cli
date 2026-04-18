@@ -13,11 +13,19 @@ export const schema: EndpointSchema = {
       markdown: { type: "string", description: "Markdown content" },
     },
   },
-  tags: ["write", "mutation"],
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "single",
+    operation: "create",
+  },
   cli: {
     allowSource: { markdown: ["literal", "file", "stdin"] },
   },
   guard: {
-    payload: { notebook: "notebook", path: "path" },
+    payloadTargets: [
+      { field: "notebook", kind: "notebook", access: "write" },
+      { field: "path", kind: "path", access: "write" },
+    ],
   },
 };

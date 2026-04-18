@@ -1,6 +1,6 @@
 # Memory: p2-demo-adoption
 
-**Updated**: 2026-04-18T03:00+08:00
+**Updated**: 2026-04-18T03:18+08:00
 
 ## Git Baseline (Immutable)
 <!-- Captured during `sspec change new` before any change files are written. -->
@@ -18,9 +18,8 @@
 
 ## State
 
-P2 demo adoption is implemented, amended by revision 001, and re-validated.
-Next: review the seven demo migrations plus their guard-path tests; if accepted, mark P2 done and open P3 rollout.
-Do not widen the contract surface in P2; any gap returns to P1 amendment.
+DONE. P2 demo adoption is accepted and closed.
+Next: continue P3 rollout from Batch A1 while keeping P1/P2 regression checks green.
 
 ## Key Files
 
@@ -50,3 +49,4 @@ Do not widen the contract surface in P2; any gap returns to P1 amendment.
 - [2026-04-18T02:25] Design: created P2 sub-change and drafted initial spec/design for demo adoption.
 - [2026-04-18T02:33] Implement+Validate: migrated seven demo endpoints and passed `pnpm typecheck`, `pnpm build`, `node dist/cli.mjs api list`, `tsx --test tests/p1-core-contracts.test.ts tests/p2-demo-adoption.test.ts`.
 - [2026-04-18T03:00] Review-Fix+Validate: recorded revision 001, aligned root docs, and expanded P2 tests from metadata assertions to guard-path checks.
+- [2026-04-18T03:18] Review: P2 accepted; phase closed and P3 opened.

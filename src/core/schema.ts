@@ -74,9 +74,16 @@ export interface GuardSpec {
   /** Legacy payload guard contract accepted during rollout. */
   payload?: Record<string, GuardFieldKind>;
 
-  /** Declarative response extractor. */
+  /**
+   * Declarative response extractor.
+   * `itemsAt` is evaluated against the unwrapped `data` value returned by SiyuanClient,
+   * not the raw kernel envelope `{ code, msg, data }`.
+   * Examples: `blocks[*]`, `notebooks[*]`. Root arrays should use `filterResponse`.
+   * TODO(Px): consider upgrading this minimal path syntax to full JSONPath support,
+   * including root arrays like `[*]` and nested selections like `[*].id`.
+   */
   response?: {
-    /** Minimal jsonpath: "data[*]" / "data.blocks[*]". */
+    /** Minimal jsonpath: "blocks[*]" / "notebooks[*]". */
     itemsAt: string;
     /** Which field within each item is the id / path / notebook. */
     fieldMap: Partial<Record<GuardFieldKind, string>>;

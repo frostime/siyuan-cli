@@ -11,6 +11,15 @@ export const schema: EndpointSchema = {
       notebook: { type: "string", description: "Notebook ID", pattern: "^\\d{14}-[0-9a-z]{7}$" },
     },
   },
-  tags: ["write", "mutation"],
-  guard: { payload: { notebook: "notebook" } },
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "single",
+    operation: "update",
+  },
+  guard: {
+    payloadTargets: [
+      { field: "notebook", kind: "notebook", access: "write" },
+    ],
+  },
 };

@@ -1,6 +1,6 @@
 ---
 name: p2-demo-adoption
-status: REVIEW
+status: DONE
 change-type: single
 created: 2026-04-18T02:23:08
 reference:

@@ -1,6 +1,6 @@
 # Memory: endpoint-tag-and-permission-model (Root)
 
-**Updated**: 2026-04-18T02:33+08:00
+**Updated**: 2026-04-18T03:27+08:00
 
 ## Git Baseline (Immutable)
 <!-- Original creation-time baseline was lost in the malformed memory file.
@@ -26,13 +26,13 @@ This reconstructed baseline records the branch divergence point explicitly and M
 | Phase | Sub-Change | Status | Blocker |
 |-------|------------|--------|---------|
 | P1: Core Contracts | `26-04-18T01-28_p1-core-contracts` | ✅ DONE | — |
-| P2: Demo Adoption | `26-04-18T02-23_p2-demo-adoption` | 🚧 REVIEW | Waiting for P2 implementation review |
-| P3: Rollout | (pending) | ⏳ | Wait for P2 results |
+| P2: Demo Adoption | `26-04-18T02-23_p2-demo-adoption` | ✅ DONE | — |
+| P3: Rollout | `26-04-18T03-11_p3-rollout` | 🚧 DOING | Batches A1→C complete; holdouts identified; paused before Phase 6 |
 
 ## State
 
-P2 sub-change has been implemented and is now in review.
-Next: review `26-04-18T02-23_p2-demo-adoption`; if accepted, mark P2 done and open P3 rollout.
+P3 is in progress and has advanced through Batch C.
+Next: stop before Phase 6 / bridge removal. Remaining decision is how to handle array-contract holdouts before Batch Z.
 Do not implement directly from the root change.
 
 ## Key Files
@@ -68,6 +68,9 @@ Do not implement directly from the root change.
 - [2026-04-18T02:23] [CoordinationDecision] P2 sub-change created as `26-04-18T02-23_p2-demo-adoption`.
 - [2026-04-18T02:33] [CoordinationDecision] P2 implemented seven representative endpoint migrations and is ready for review.
 - [2026-04-18T03:00] [CoordinationDecision] P2 revision 001 recorded the 3→7 demo expansion and strengthened validation from metadata-only checks to guard-path tests.
+- [2026-04-18T03:15] [CoordinationDecision] P3 sub-change created as `26-04-18T03-11_p3-rollout` with batch strategy and array-contract gate.
+- [2026-04-18T03:18] [CoordinationDecision] P2 accepted and closed. P3 Batch A1 migrated all contract-compatible block/attr endpoints; `block/transferBlockRef.ts` remains blocked by the array contract gate.
+- [2026-04-18T03:27] [CoordinationDecision] P3 advanced through Batches A2→C. Remaining legacy holdouts are array-contract-blocked endpoints plus final bridge removal/docs cleanup in Phase 6.
 
 ## Milestones
 
@@ -80,3 +83,6 @@ Do not implement directly from the root change.
 - [2026-04-18T02:23] Coordination: created P2 sub-change `26-04-18T02-23_p2-demo-adoption`.
 - [2026-04-18T02:33] Coordination: P2 implementation finished, validated locally, and moved to review.
 - [2026-04-18T03:00] Coordination: P2 review follow-up completed; root docs and P2 tests now reflect actual 7-endpoint scope.
+- [2026-04-18T03:15] Coordination: created P3 rollout sub-change and initialized its design/plan.
+- [2026-04-18T03:18] Coordination: P2 closed; P3 Batch A1 implemented and validated locally.
+- [2026-04-18T03:27] Coordination: P3 advanced through Batch C and is paused before Phase 6 per user instruction.

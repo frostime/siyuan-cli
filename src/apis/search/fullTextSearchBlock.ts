@@ -17,11 +17,16 @@ export const schema: EndpointSchema = {
       types: { type: "object", description: "Block type filter", properties: {}, additionalProperties: true },
     },
   },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "content",
+    scope: "global",
+    operation: "search",
+  },
   cli: { primary: "query" },
   guard: {
     response: {
-      itemsAt: "data.blocks[*]",
+      itemsAt: "blocks[*]",
       fieldMap: { id: "id", path: "path", notebook: "box" },
     },
   },

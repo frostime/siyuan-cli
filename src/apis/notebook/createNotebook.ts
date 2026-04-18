@@ -11,7 +11,12 @@ export const schema: EndpointSchema = {
       name: { type: "string", description: "Notebook name" },
     },
   },
-  tags: ["write", "mutation"],
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "single",
+    operation: "create",
+  },
   cli: {
     primary: "name",
     allowSource: { name: ["literal"] },

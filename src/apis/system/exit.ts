@@ -9,6 +9,7 @@ export const schema: EndpointSchema = {
     surface: "runtime",
     scope: "single",
     operation: "control",
+    // Exits the kernel process; stronger than the default runtime-control risk level.
     riskOverride: "critical",
   },
 };

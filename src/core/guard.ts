@@ -100,6 +100,10 @@ export async function applyPayloadGuard(
   await heuristicPayloadGuard(payload, engine, access, surface);
 }
 
+/**
+ * Response guards operate on the unwrapped `data` returned by SiyuanClient.
+ * They do not see the raw kernel envelope `{ code, msg, data }`.
+ */
 export function applyResponseGuard(schema: EndpointSchema, response: unknown, engine: PermissionEngineLike): unknown {
   const guard = schema.guard;
   if (!guard) return response;

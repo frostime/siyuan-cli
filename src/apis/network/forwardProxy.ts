@@ -15,5 +15,10 @@ export const schema: EndpointSchema = {
       timeout: { type: "integer", description: "Request timeout (seconds)", default: 30 },
     },
   },
-  tags: ["read"],
+  classification: {
+    mode: "invoke",
+    surface: "network",
+    scope: "single",
+    operation: "control",
+  },
 };

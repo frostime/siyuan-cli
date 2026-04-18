@@ -11,7 +11,12 @@ export const schema: EndpointSchema = {
       template: { type: "string", description: "Sprig template string" },
     },
   },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "meta",
+    scope: "single",
+    operation: "inspect",
+  },
   cli: {
     primary: "template",
     allowSource: { template: ["literal", "file", "stdin"] },
