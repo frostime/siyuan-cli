@@ -1,6 +1,6 @@
 # Memory: minimal-pointer-path-selectors
 
-**Updated**: 2026-04-18T22:56+08:00
+**Updated**: 2026-04-19T00:48+08:00
 
 ## Git Baseline (Immutable)
 <!-- Captured during `sspec change new` before any change files are written.
@@ -37,6 +37,8 @@ REVIEW. PointerPath migration is implemented and validated; the change is waitin
 - [2026-04-18T20:45] [Decision] `query.sql`, `getChildBlocks`, and `searchDocs` now use declarative root-array response selectors; `listDocsByPath` stays imperative because it still needs response write-back handling.
 - [2026-04-18T22:56] [Decision] Review feedback upgraded the internal selector runtime to PathProgram-style operations: compile once per call, shared get runner, terminal-array filter runner.
 - [2026-04-18T22:56] [Decision] Response selector shape mismatches remain fail-loud; this protects the permission filter path from silently accepting unknown kernel response shapes.
+- [2026-04-19T00:48] [Constraint] Declarative response filtering supports only one terminal array expansion. Multi-expand shapes like `pages[*].blocks[*]` must fail loud because terminal filter write-back cannot preserve parent ownership after flattening.
+- [2026-04-19T00:48] [Decision] Documentation candidates from this change include: fail-loud response shape policy, terminal-filter single-expand boundary, `filterResponse` as escape hatch, payload `path` vs response `itemsAt` naming, and the distinction between selector power and resource-kind semantics.
 
 ## Milestones
 - [2026-04-18T20:26] Clarify: confirmed independent change scope, breaking migration mode, and minimal grammar boundary.
@@ -44,3 +46,4 @@ REVIEW. PointerPath migration is implemented and validated; the change is waitin
 - [2026-04-18T20:37] Plan: broke implementation into core engine, schema migration, and regression cleanup phases.
 - [2026-04-18T20:49] Implement+Validate: completed PointerPath contract migration, converted eligible root-array response guards, and passed `pnpm typecheck`, `pnpm build`, `node dist/cli.mjs api list`, `tsx --test tests/p1-core-contracts.test.ts tests/p2-demo-adoption.test.ts tests/p3-rollout-batch-a1.test.ts tests/p3-rollout-batches-a2-to-c.test.ts`.
 - [2026-04-18T22:56] Review-Fix+Validate: recorded revision 001, replaced temporary write-back helper with terminal filtering, restored root-array warnings, and passed the same targeted regression suite with 37 tests.
+- [2026-04-19T00:48] Review-Fix+Validate: recorded revision 002, rejected multi-expand terminal filtering, cleaned helper edge cases, and re-ran targeted regression with 38 passing tests.

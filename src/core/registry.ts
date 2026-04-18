@@ -58,7 +58,10 @@ function validateSchema(schema: EndpointSchema, entry: RegisteredEndpoint): void
 
   for (const target of schema.guard?.payloadTargets ?? []) {
     const root = pointerPathRoot(target.path);
-    if (!root || !(root in schema.payload.properties)) {
+    if (!root) {
+      throw new Error(`Endpoint "${entry.id}" payloadTargets path "${target.path}" must start with a payload property.`);
+    }
+    if (!(root in schema.payload.properties)) {
       throw new Error(`Endpoint "${entry.id}" payloadTargets path root "${target.path}" is not declared in payload.properties.`);
     }
   }

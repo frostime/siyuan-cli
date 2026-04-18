@@ -13,6 +13,9 @@ reference:
   - source: ".sspec/changes/26-04-18T20-26_minimal-pointer-path-selectors/revisions/001-pathprogram-runtime-redesign.md"
     type: "revision"
     note: "Upgrade the temporary selector helpers to a PathProgram-style runtime"
+  - source: ".sspec/changes/26-04-18T20-26_minimal-pointer-path-selectors/revisions/002-terminal-filter-boundary.md"
+    type: "revision"
+    note: "Fail loud on unsupported multi-expand terminal filtering and record boundary semantics"
 ---
 
 # minimal-pointer-path-selectors

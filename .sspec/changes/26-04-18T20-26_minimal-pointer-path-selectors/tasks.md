@@ -42,6 +42,13 @@ updated: 2026-04-18T20:49:00+08:00
 - [x] Keep response shape mismatch fail-loud by design
 **Verification**: PathProgram runtime tests pass and declarative root-array filtering emits warnings
 
+### Feedback Tasks (→ [002-terminal-filter-boundary](./revisions/002-terminal-filter-boundary.md))
+- [x] Reject multi-expand terminal filtering in `runPointerFilterTerminal()`
+- [x] Add regression coverage for the rejected multi-expand shape
+- [x] Clean small runtime helper issues and improve payload-root validation message
+- [x] Record documentation-worthy selector boundary decisions in memory
+**Verification**: multi-expand terminal filters fail loud and targeted regression still passes
+
 ---
 
 ## Progress
@@ -61,3 +68,4 @@ updated: 2026-04-18T20:49:00+08:00
 - [2026-04-18] Plan: converted the design into a file-level implementation plan
 - [2026-04-18] Implement: completed PointerPath migration and passed targeted regression
 - [2026-04-18] Review-Fix: upgraded selector runtime to PathProgram terminal filtering and passed targeted regression
+- [2026-04-19] Review-Fix: tightened terminal filter boundary and recorded documentation candidates for selector semantics

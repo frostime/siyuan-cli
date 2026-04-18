@@ -214,9 +214,8 @@ export const STRICT_POINTER_POLICY: ShapePolicy = {
   onNonObject: "skip",
 };
 
-function rejectByPolicy(path: PointerPath, mode: "skip" | "throw", message: string): boolean {
+function rejectByPolicy(path: PointerPath, mode: "skip" | "throw", message: string): void {
   if (mode === "throw") throw new PointerPathShapeError(path, message);
-  return true;
 }
 
 export function compilePointerPath(path: PointerPath): PathOp[] {
@@ -286,7 +285,6 @@ export function runPointerFilterTerminal(
   policy: ShapePolicy = STRICT_POINTER_POLICY,
 ): unknown {
   const ops = compilePointerPath(path);
-  if (ops.length === 0) throw new PointerPathShapeError(path, "must not be empty");
   const last = ops[ops.length - 1]!;
 
   if (last.kind === "expandArray") {
@@ -302,7 +300,12 @@ export function runPointerFilterTerminal(
     throw new PointerPathShapeError(path, "terminal filter requires an array expansion segment");
   }
 
-  const parents = runPointerGet(root, ops.slice(0, -1), path, policy);
+  const prefixOps = ops.slice(0, -1);
+  if (prefixOps.some((op) => op.kind === "expandArray" || op.kind === "expandKey")) {
+    throw new PointerPathShapeError(path, "terminal filter supports only one array expansion");
+  }
+
+  const parents = runPointerGet(root, prefixOps, path, policy);
   for (const parent of parents) {
     if (!parent || typeof parent !== "object") {
       rejectByPolicy(path, policy.onNonObject, `expected object before terminal segment \"${last.name}[*]\"`);

@@ -114,6 +114,13 @@ test("runPointerFilterTerminal rewrites terminal arrays at any depth", () => {
   assert.deepEqual(out, { data: { blocks: [{ id: "a" }] } });
 });
 
+test("runPointerFilterTerminal rejects multiple array expansions", () => {
+  assert.throws(
+    () => runPointerFilterTerminal({ pages: [{ blocks: [{ id: "a" }] }] }, "pages[*].blocks[*]", (items) => items),
+    /supports only one array expansion/,
+  );
+});
+
 test("requiresConfirmation uses risk-auto and policy-match union", () => {
   const client = { call: async () => [] } as any;
   const config = makeConfig({
