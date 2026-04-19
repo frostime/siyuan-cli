@@ -13,6 +13,7 @@ import {
 import { resolveEffectivePermission } from '../core/permission.js';
 import { SiyuanClient } from '../core/client.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../utils/errors.js';
+import { diagnoseConnection } from '../utils/diagnostics.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -146,11 +147,17 @@ const addCommand = defineCommand({
                 const client = new SiyuanClient(resolved);
                 const ping = await client.ping();
                 if (!ping.ok) {
+                    const diagnosis = await diagnoseConnection(args.url);
+                    const hint =
+                        diagnosis.hints.length > 0
+                            ? diagnosis.hints.join(' | ')
+                            : 'Use --skip-verify to add without checking, or fix the URL/token.';
                     throw new CliError(
                         ExitCode.NETWORK,
                         'VERIFY_FAILED',
                         `Cannot connect to ${args.url}: ${ping.message}`,
-                        'Use --skip-verify to add without checking, or fix the URL/token.'
+                        hint,
+                        { diagnosis }
                     );
                 }
             }
@@ -260,13 +267,17 @@ const verifyCommand = defineCommand({
                     const t0 = Date.now();
                     const client = new SiyuanClient(ws);
                     const ping = await client.ping();
+                    const diagnosis = ping.ok
+                        ? undefined
+                        : await diagnoseConnection(ws.baseUrl);
                     results.push({
                         workspace: name,
                         baseUrl: ws.baseUrl,
                         ok: ping.ok,
                         version: ping.version,
                         message: ping.message,
-                        elapsedMs: Date.now() - t0
+                        elapsedMs: Date.now() - t0,
+                        ...(diagnosis ? { diagnosis } : {})
                     });
                 }
                 out(results);
@@ -277,13 +288,17 @@ const verifyCommand = defineCommand({
             const t0 = Date.now();
             const client = new SiyuanClient(resolved);
             const ping = await client.ping();
+            const diagnosis = ping.ok
+                ? undefined
+                : await diagnoseConnection(resolved.baseUrl);
             const result = {
                 ok: ping.ok,
                 workspace: resolved.name,
                 baseUrl: resolved.baseUrl,
                 version: ping.version,
                 message: ping.message,
-                elapsedMs: Date.now() - t0
+                elapsedMs: Date.now() - t0,
+                ...(diagnosis ? { diagnosis } : {})
             };
 
             if (!ping.ok) {

@@ -18,6 +18,7 @@ export interface CliErrorJson {
     error: string;
     message: string;
     hint?: string;
+    details?: unknown;
 }
 
 export class CliError extends Error {
@@ -25,7 +26,8 @@ export class CliError extends Error {
         public readonly code: ExitCodeValue,
         public readonly errorType: string,
         message: string,
-        public readonly hint?: string
+        public readonly hint?: string,
+        public readonly details?: unknown
     ) {
         super(message);
         this.name = 'CliError';
@@ -35,7 +37,8 @@ export class CliError extends Error {
         return {
             error: this.errorType,
             message: this.message,
-            ...(this.hint ? { hint: this.hint } : {})
+            ...(this.hint ? { hint: this.hint } : {}),
+            ...(this.details !== undefined ? { details: this.details } : {})
         };
     }
 }
