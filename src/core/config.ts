@@ -20,7 +20,8 @@ import {
     loadProjectConfig
 } from '../utils/project-config.js';
 import { CliError, ExitCode } from '../utils/errors.js';
-import type { EndpointMode, EndpointScope, EndpointSurface } from './schema.js';
+import type { PermissionConfig } from './schema.js';
+export type { PermissionConfig };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -28,35 +29,6 @@ export type NotebookID = string;
 export type BlockID = string;
 export type BlockPath = string; // SiYuan path (ID-based path of containing document)
 export type WorkspacePath = string;
-
-export interface ContentScopeRule {
-    notebooks?: { deny?: NotebookID[]; allow?: NotebookID[] };
-    paths?: { deny?: BlockPath[]; allow?: BlockPath[] };
-}
-
-export interface WorkspaceScopeRule {
-    paths?: { deny?: WorkspacePath[]; allow?: WorkspacePath[] };
-}
-
-export interface ConfirmPolicy {
-    modes?: EndpointMode[];
-    surfaces?: EndpointSurface[];
-    scopes?: EndpointScope[];
-}
-
-export interface PermissionConfig {
-    endpoints?: { deny?: string[]; allow?: string[] };
-    tools?: { deny?: string[]; allow?: string[] };
-    content?: {
-        read?: ContentScopeRule;
-        write?: ContentScopeRule;
-    };
-    workspace?: {
-        read?: WorkspaceScopeRule;
-        write?: WorkspaceScopeRule;
-    };
-    confirm?: ConfirmPolicy;
-}
 
 export interface TokenSource {
     type: 'env' | 'file' | 'command';
@@ -142,51 +114,41 @@ const ID_PATTERN = /^\d{14}-[0-9a-z]{7}$/;
 const ID_SEGMENT_RE = /\d{14}-[0-9a-z]{7}/;
 
 /** Soft warning helper — never throws, just writes to stderr. */
-function warnPermissionSmoke(
+function warnRulesSmoke(
     scope: string,
     permission: PermissionConfig | undefined
 ): void {
-    if (!permission?.content) return;
-    for (const access of ['read', 'write'] as const) {
-        const rule = permission.content[access];
-        if (!rule) continue;
-        for (const bucket of ['allow', 'deny'] as const) {
-            for (const nb of rule.notebooks?.[bucket] ?? []) {
-                if (!ID_PATTERN.test(nb)) {
-                    process.stderr.write(
-                        JSON.stringify({
-                            warning: 'LIKELY_HPATH_NOT_ID',
-                            scope,
-                            at: `content.${access}.notebooks.${bucket}`,
-                            value: nb,
-                            hint: 'Notebook rules take a notebook id, not an hpath.'
-                        }) + '\n'
-                    );
-                }
-            }
-            for (const pathRule of rule.paths?.[bucket] ?? []) {
-                // If the rule does not contain any segment matching the id pattern,
-                // it almost certainly points at an hpath and will never match.
-                if (!ID_SEGMENT_RE.test(pathRule)) {
-                    process.stderr.write(
-                        JSON.stringify({
-                            warning: 'LIKELY_HPATH_NOT_ID_IN_PATH',
-                            scope,
-                            at: `content.${access}.paths.${bucket}`,
-                            value: pathRule,
-                            hint: 'Path rules take an id-based SiYuan path, not an hpath.'
-                        }) + '\n'
-                    );
-                }
-            }
+    if (!permission?.rules) return;
+    for (const [i, rule] of permission.rules.entries()) {
+        if (rule.notebook && !ID_PATTERN.test(rule.notebook)) {
+            process.stderr.write(
+                JSON.stringify({
+                    warning: 'LIKELY_HPATH_NOT_ID',
+                    scope,
+                    at: `rules[${i}].notebook`,
+                    value: rule.notebook,
+                    hint: 'Notebook rules take a notebook id, not an hpath.'
+                }) + '\n'
+            );
+        }
+        if (rule.path && !ID_SEGMENT_RE.test(rule.path)) {
+            process.stderr.write(
+                JSON.stringify({
+                    warning: 'LIKELY_HPATH_NOT_ID_IN_PATH',
+                    scope,
+                    at: `rules[${i}].path`,
+                    value: rule.path,
+                    hint: 'Path rules take an id-based SiYuan path, not an hpath.'
+                }) + '\n'
+                );
         }
     }
 }
 
 function runConfigSmokeTest(config: AppConfig): void {
-    warnPermissionSmoke('defaults', config.defaults?.permission);
+    warnRulesSmoke('defaults', config.defaults?.permission);
     for (const [name, ws] of Object.entries(config.workspaces)) {
-        warnPermissionSmoke(`workspaces.${name}`, ws.permission);
+        warnRulesSmoke(`workspaces.${name}`, ws.permission);
     }
 }
 

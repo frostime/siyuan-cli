@@ -61,6 +61,7 @@ export async function createToolContext(
             client,
             engine: permission,
             workspace,
+            callerTool: toolId,
             dryRun: args.dryRun,
             yes: args.yes,
             debug: args.debug

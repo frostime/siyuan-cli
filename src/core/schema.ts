@@ -8,6 +8,34 @@
 
 export type InputSource = 'literal' | 'file' | 'stdin' | 'env';
 
+// ————— Permission rule model —————
+export type PermissionEffect = 'allow' | 'deny' | 'confirm';
+
+export interface PermissionRule {
+    endpoint?: string;    // glob on endpoint id
+    tool?: string;        // glob on tool id
+    action?: 'read' | 'write';
+    notebook?: string;    // exact match notebook id
+    path?: string;        // glob on SiYuan id-based path
+    // workspacePath reserved for Phase 2
+    effect: PermissionEffect;
+    note?: string;        // human annotation, ignored by engine
+}
+
+export interface PermissionConfig {
+    default?: PermissionEffect;    // fallback when no rule matches; defaults to 'deny'
+    rules?: PermissionRule[];
+}
+
+/** Context assembled at evaluation time. All fields optional — unset = wildcard. */
+export interface PermissionContext {
+    endpoint?: string;
+    tool?: string;
+    action?: 'read' | 'write';
+    notebook?: string;
+    path?: string;
+}
+
 export type ToolTag = 'read' | 'write' | 'aggregate' | 'util';
 export type GuardFieldKind = 'id' | 'path' | 'notebook';
 export type PointerPath = string;
@@ -131,14 +159,18 @@ export interface DerivedMeta {
  * Minimal shape of the permission engine that schema guards need.
  * The real engine (src/core/permission.ts) implements this + more.
  */
+export interface CallerContext {
+    endpoint?: string;
+    tool?: string;
+}
+
 export interface PermissionEngineLike {
     checkEndpoint(id: string): void;
     checkTool(id: string): void;
-    checkContentRef(ref: {
-        kind: ResourceKind;
-        value: string;
-        access: 'read' | 'write';
-    }): Promise<void>;
+    checkContentRef(
+        ref: { kind: ResourceKind; value: string; access: 'read' | 'write' },
+        caller?: CallerContext
+    ): Promise<void>;
     resolveContentIds(
         ids: string[]
     ): Promise<Map<string, { notebook: string; path: string }>>;
@@ -146,8 +178,10 @@ export interface PermissionEngineLike {
     filterItems<T>(
         items: T[],
         extract: (item: T) => { id?: string; path?: string; notebook?: string },
+        caller?: CallerContext,
         access?: 'read' | 'write'
     ): { kept: T[]; removed: number; reasons: Record<string, number> };
+    evaluate(ctx: PermissionContext): PermissionEffect;
 }
 
 // ————— EndpointSchema —————

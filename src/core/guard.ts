@@ -5,13 +5,14 @@ import {
     deriveEndpointId,
     evaluatePointerPath,
     runPointerFilterTerminal,
+    type CallerContext,
     type EndpointSchema,
     type PermissionEngineLike,
     type RegisteredEndpoint
 } from './schema.js';
 import {
     ConfirmationRequiredError,
-    ContentAccessDeniedError,
+    ContentDeniedError,
     type PermissionEngine
 } from './permission.js';
 import type { SiyuanClient } from './client.js';
@@ -46,9 +47,8 @@ export async function applyPayloadGuard(
     payload: unknown,
     engine: PermissionEngineLike,
     access: 'read' | 'write',
-    surface?: 'meta' | 'content' | 'asset' | 'workspace' | 'runtime' | 'network'
+    caller?: CallerContext
 ): Promise<void> {
-    const p = payload as Record<string, unknown>;
     const targets = schema.guard?.payloadTargets;
     if (targets?.length) {
         for (const target of targets) {
@@ -56,22 +56,20 @@ export async function applyPayloadGuard(
             try {
                 values = evaluatePointerPath(payload, target.path);
             } catch (error) {
-                throw new ContentAccessDeniedError((error as Error).message);
+                throw new ContentDeniedError((error as Error).message);
             }
             for (const value of values) {
                 if (typeof value !== 'string') {
-                    throw new ContentAccessDeniedError(
+                    throw new ContentDeniedError(
                         `payload path "${target.path}" must resolve to string values`
                     );
                 }
-                await engine.checkContentRef({
-                    kind: target.kind,
-                    value,
-                    access: target.access
-                });
+                await engine.checkContentRef(
+                    { kind: target.kind, value, access: target.access },
+                    caller
+                );
             }
         }
-        return;
     }
 }
 
@@ -82,7 +80,8 @@ export async function applyPayloadGuard(
 export function applyResponseGuard(
     schema: EndpointSchema,
     response: unknown,
-    engine: PermissionEngineLike
+    engine: PermissionEngineLike,
+    caller?: CallerContext
 ): unknown {
     const guard = schema.guard;
     if (!guard) return response;
@@ -92,20 +91,25 @@ export function applyResponseGuard(
     if (guard.response) {
         const { itemsAt, fieldMap } = guard.response;
         const items = evaluatePointerPath(response, itemsAt);
-        const { kept, removed, reasons } = engine.filterItems(items, (item) => {
-            const i = item as Record<string, unknown>;
-            return {
-                id: fieldMap.id
-                    ? (i[fieldMap.id] as string | undefined)
-                    : undefined,
-                path: fieldMap.path
-                    ? (i[fieldMap.path] as string | undefined)
-                    : undefined,
-                notebook: fieldMap.notebook
-                    ? (i[fieldMap.notebook] as string | undefined)
-                    : undefined
-            };
-        });
+        const { kept, removed, reasons } = engine.filterItems(
+            items,
+            (item) => {
+                const i = item as Record<string, unknown>;
+                return {
+                    id: fieldMap.id
+                        ? (i[fieldMap.id] as string | undefined)
+                        : undefined,
+                    path: fieldMap.path
+                        ? (i[fieldMap.path] as string | undefined)
+                        : undefined,
+                    notebook: fieldMap.notebook
+                        ? (i[fieldMap.notebook] as string | undefined)
+                        : undefined
+                };
+            },
+            caller,
+            'read'
+        );
         if (removed > 0) {
             const summary = Object.entries(reasons)
                 .map(([r, n]) => `${n}x: ${r}`)
@@ -130,6 +134,8 @@ export interface ExecuteOptions {
     engine: PermissionEngine;
     /** Optional — when supplied, enables IMPLICIT_WORKSPACE warning on write-like risks. */
     workspace?: ResolvedWorkspace;
+    /** When called from inside a tool, carries the tool id for permission context. */
+    callerTool?: string;
     dryRun?: boolean;
     yes?: boolean;
     debug?: boolean;
@@ -159,29 +165,47 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
         client,
         engine,
         workspace,
+        callerTool,
         dryRun,
         yes,
         debug
     } = opts;
     const { schema } = entry;
     const { id } = deriveEndpointId(schema.endpoint);
+    const caller: CallerContext = {
+        endpoint: id,
+        ...(callerTool ? { tool: callerTool } : {})
+    };
+    const action: 'read' | 'write' = isWriteLike(entry) ? 'write' : 'read';
 
     maybeWarnImplicitWorkspace(entry, workspace);
+
+    // Phase 1: caller-level gate
     engine.checkEndpoint(id);
-    await applyPayloadGuard(
-        schema,
-        payload,
-        engine,
-        entry.meta.classification.mode === 'read' ? 'read' : 'write',
-        entry.meta.classification.surface
-    );
+
+    // Phase 2: resource-level gate (payload targets)
+    await applyPayloadGuard(schema, payload, engine, action, caller);
 
     if (debug) debugPreview(schema, payload);
+
+    // Confirm: rule-based + risk-auto post-processing
+    // Risk-auto: if the rule says 'allow' but risk is destructive/critical,
+    // upgrade to 'confirm'. User-written 'deny' or 'confirm' are never downgraded.
+    const ruleEffect = engine.evaluate({ ...caller, action });
+    const wouldConfirm =
+        ruleEffect === 'confirm' ||
+        (ruleEffect === 'allow' && entry.meta.requiresConfirmation);
+
     if (dryRun && isWriteLike(entry)) {
-        return { dryRun: true, endpoint: schema.endpoint, payload };
+        return {
+            dryRun: true,
+            endpoint: schema.endpoint,
+            payload,
+            wouldConfirm
+        };
     }
 
-    if (engine.requiresConfirmation(entry) && !yes) {
+    if (wouldConfirm && !yes) {
         throw new ConfirmationRequiredError(id);
     }
 
@@ -208,5 +232,5 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
         response = await client.call(schema.endpoint, payload);
     }
 
-    return applyResponseGuard(schema, response, engine);
+    return applyResponseGuard(schema, response, engine, caller);
 }
