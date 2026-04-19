@@ -57,10 +57,8 @@ stdout remains clean — an agent can `>/dev/null` stdout on error and still get
 | `ECONNREFUSED` | 3 | client.ts | kernel unreachable |
 | `ETIMEDOUT` | 3 | client.ts | request timed out |
 | `UNAUTHORIZED` | 4 | client.ts | 401 from kernel |
-| `ENDPOINT_DISABLED` | 5 | permission.ts | endpoint id denied by policy |
-| `TOOL_DISABLED` | 5 | permission.ts | tool id denied by policy |
-| `CONTENT_ACCESS_DENIED` | 5 | permission.ts / guard.ts | content scope violation |
-| `WORKSPACE_ACCESS_DENIED` | 5 | permission.ts | filesystem scope violation |
+| `ENDPOINT_DENIED` | 5 | permission.ts | endpoint or tool denied by rule or default policy |
+| `CONTENT_DENIED` | 5 | permission.ts / guard.ts | content access denied by rule or default policy |
 | `BLOCK_NOT_FOUND` | 1 | permission.ts | id did not resolve in kernel |
 | `CONFIRMATION_REQUIRED` | 1 | guard.ts | write-like without `--yes` |
 | `ENDPOINT_NOT_FOUND` | 1 | commands/api.ts | `describe` / call unknown id |

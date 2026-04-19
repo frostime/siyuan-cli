@@ -52,11 +52,12 @@ src/
  4. new SiyuanClient(workspace)                  src/core/client.ts
  5. createPermissionEngine(...)                  src/core/permission.ts
  6. executeEndpoint({...})                       src/core/guard.ts
-       ├── engine.checkEndpoint(id)              allow/deny by id pattern
-       ├── applyPayloadGuard(schema, ...)        payloadTargets → PointerPath → checkContentRef
+       ├── engine.checkEndpoint(id)              Phase 1: deny by pure-caller rule or default
+       ├── applyPayloadGuard(schema, ...)        Phase 2: payloadTargets → PointerPath → checkContentRef
        ├── debug preview (optional)
+       ├── engine.evaluate() + risk-auto         ruleEffect / wouldConfirm post-processing
        ├── dry-run short-circuit for write-like
-       ├── requiresConfirmation + --yes          risk + policy union
+       ├── wouldConfirm + --yes                  confirm gate
        ├── client.call(endpoint, payload)        or client.upload() for multipart
        └── applyResponseGuard(...)               declarative response filter + write-back
  7. write JSON to stdout
