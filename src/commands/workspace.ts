@@ -7,10 +7,13 @@ import {
     loadConfig,
     saveConfig,
     resolveWorkspace,
+    resolveEffectiveWorkspace,
     type WorkspaceEntry
 } from '../core/config.js';
+import { resolveEffectivePermission } from '../core/permission.js';
 import { SiyuanClient } from '../core/client.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../utils/errors.js';
+import { diagnoseConnection } from '../utils/diagnostics.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -144,11 +147,17 @@ const addCommand = defineCommand({
                 const client = new SiyuanClient(resolved);
                 const ping = await client.ping();
                 if (!ping.ok) {
+                    const diagnosis = await diagnoseConnection(args.url);
+                    const hint =
+                        diagnosis.hints.length > 0
+                            ? diagnosis.hints.join(' | ')
+                            : 'Use --skip-verify to add without checking, or fix the URL/token.';
                     throw new CliError(
                         ExitCode.NETWORK,
                         'VERIFY_FAILED',
                         `Cannot connect to ${args.url}: ${ping.message}`,
-                        'Use --skip-verify to add without checking, or fix the URL/token.'
+                        hint,
+                        { diagnosis }
                     );
                 }
             }
@@ -258,13 +267,17 @@ const verifyCommand = defineCommand({
                     const t0 = Date.now();
                     const client = new SiyuanClient(ws);
                     const ping = await client.ping();
+                    const diagnosis = ping.ok
+                        ? undefined
+                        : await diagnoseConnection(ws.baseUrl);
                     results.push({
                         workspace: name,
                         baseUrl: ws.baseUrl,
                         ok: ping.ok,
                         version: ping.version,
                         message: ping.message,
-                        elapsedMs: Date.now() - t0
+                        elapsedMs: Date.now() - t0,
+                        ...(diagnosis ? { diagnosis } : {})
                     });
                 }
                 out(results);
@@ -275,13 +288,17 @@ const verifyCommand = defineCommand({
             const t0 = Date.now();
             const client = new SiyuanClient(resolved);
             const ping = await client.ping();
+            const diagnosis = ping.ok
+                ? undefined
+                : await diagnoseConnection(resolved.baseUrl);
             const result = {
                 ok: ping.ok,
                 workspace: resolved.name,
                 baseUrl: resolved.baseUrl,
                 version: ping.version,
                 message: ping.message,
-                elapsedMs: Date.now() - t0
+                elapsedMs: Date.now() - t0,
+                ...(diagnosis ? { diagnosis } : {})
             };
 
             if (!ping.ok) {
@@ -377,6 +394,51 @@ const removeCommand = defineCommand({
         })
 });
 
+// ─── which ────────────────────────────────────────────────────────────────────
+
+const whichCommand = defineCommand({
+    meta: {
+        name: 'which',
+        description:
+            'Show how workspace resolution works in the current directory.'
+    },
+    args: {
+        cwd: {
+            type: 'string',
+            description: 'Directory to resolve from (defaults to current)',
+            required: false
+        }
+    },
+    run: ({ args }) =>
+        tryRun(async () => {
+            const config = loadConfig();
+            const resolved = resolveEffectiveWorkspace(
+                config,
+                {},
+                args.cwd ?? process.cwd()
+            );
+            const effectivePerm = resolveEffectivePermission(config, resolved);
+            const permissionSummary = {
+                hasEndpointsRule: !!effectivePerm.endpoints,
+                hasToolsRule: !!effectivePerm.tools,
+                hasContentRead: !!effectivePerm.content?.read,
+                hasContentWrite: !!effectivePerm.content?.write,
+                hasWorkspaceRead: !!effectivePerm.workspace?.read,
+                hasWorkspaceWrite: !!effectivePerm.workspace?.write,
+                hasConfirmPolicy: !!effectivePerm.confirm
+            };
+            out({
+                workspace: resolved.name,
+                source: resolved.source,
+                baseUrl: resolved.baseUrl,
+                hasToken: !!resolved.token,
+                projectConfigPath: resolved.projectConfigPath ?? null,
+                permissionOverriddenByProject: !!resolved.effectivePermission,
+                permission: permissionSummary
+            });
+        })
+});
+
 // ─── Export ───────────────────────────────────────────────────────────────────
 
 export const workspaceCommand = defineCommand({
@@ -390,6 +452,7 @@ export const workspaceCommand = defineCommand({
         use: useCommand,
         verify: verifyCommand,
         show: showCommand,
-        remove: removeCommand
+        remove: removeCommand,
+        which: whichCommand
     }
 });

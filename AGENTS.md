@@ -2,6 +2,15 @@
 
 CLI 内部文档、提示应当使用英文。
 
+开发时，灵活使用 CLI 工具:
+
+- `rg`/`grep` - Grep
+- `fd` - Find file
+- `sspec tool view-tree` - List file tree
+- `sspec tool mdtoc` - Inspect long md file
+- `slsp` - LSP CLI (see `slsp --help` for builtin doc)
+- `sspec change [new|list|archive]`
+
 <!-- SSPEC:START -->
 # .sspec Agent Protocol
 

@@ -65,6 +65,10 @@ stdout remains clean — an agent can `>/dev/null` stdout on error and still get
 | `CONFIRMATION_REQUIRED` | 1 | guard.ts | write-like without `--yes` |
 | `ENDPOINT_NOT_FOUND` | 1 | commands/api.ts | `describe` / call unknown id |
 | `TOOL_NOT_FOUND` | 1 | commands/tool.ts | unknown tool id |
+| `PROJECT_CONFIG_PARSE_ERROR` | 2 | utils/project-config.ts | `.siyuan-cli.yaml` unreadable or invalid YAML |
+| `PROJECT_CONFIG_VERSION_UNSUPPORTED` | 2 | utils/project-config.ts | project file `schemaVersion` != current |
+| `PROJECT_CONFIG_REJECTED_FIELD` | 2 | utils/project-config.ts | project file contains `token` / `baseUrl` / `tokenSource` / `defaults` |
+| `PROJECT_CONFIG_WORKSPACE_NOT_FOUND` | 2 | utils/project-config.ts | project file `workspace:` name not in global config |
 
 ## Throwing errors in your code
 
@@ -117,7 +121,18 @@ Framework-emitted warnings use a JSON shape:
 {"warning":"CONTENT_FILTERED","removed":2,"reasons":"2x: path /denied in read deny list"}
 ```
 
-so agents can parse them.
+Other framework warnings agents should be aware of:
+
+| Warning | Where | When |
+|---|---|---|
+| `CONTENT_FILTERED` | guard.ts | response guard removed items |
+| `IMPLICIT_WORKSPACE` | guard.ts | write-like endpoint resolved workspace via `global-current` fallback |
+| `LIKELY_HPATH_NOT_ID` | config.ts / utils/project-config.ts | notebook-rule entry doesn't match kernel id pattern |
+| `LIKELY_HPATH_NOT_ID_IN_PATH` | config.ts / utils/project-config.ts | path-rule entry contains no kernel id segment |
+| `UNKNOWN_PROJECT_CONFIG_KEY` | utils/project-config.ts | top-level key in `.siyuan-cli.yaml` not recognized |
+| `CONFIG_MIGRATED` | config.ts | legacy `%APPDATA%` config migrated to XDG location |
+
+All go to stderr and never change exit code. Agents can parse them line-by-line as JSON.
 
 ## Agent-side error handling pattern
 

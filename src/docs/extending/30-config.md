@@ -182,6 +182,33 @@ Each block is all-or-nothing: declaring workspace-level `content.read` replaces 
 | `block.get*` | `block.getBlockKramdown`, `block.getBlockInfo` |
 | `!query.*` | **not** supported by this engine — use the `deny` list |
 
+## Project config file (`.siyuan-cli.yaml`)
+
+A project-level file can override workspace selection and permission per directory tree. This is the recommended mechanism for:
+
+- isolating concurrent agent sessions to different workspaces (the root motivation; see `31-workspace-resolution.md`)
+- pinning "prod read-only" in one project directory and "prod read-write" in another without duplicating workspace entries
+- making "which workspace does this project talk to" a property of the project, committable or not per team preference
+
+See `31-workspace-resolution.md` for the full resolution chain, file format, validation rules, and permission-override semantics.
+
+Short form:
+
+```yaml
+# .siyuan-cli.yaml (project root)
+schemaVersion: 1
+workspace: prod                      # must exist in global config
+permission:                          # completely replaces global cascade
+  endpoints:
+    deny: ["block.delete*"]
+  content:
+    write:
+      paths:
+        deny: ["/20260107143325-zbrtqup/**"]
+```
+
+Fields `token`, `baseUrl`, `tokenSource`, `defaults` are hard-rejected at load time. The file is safe to commit.
+
 ## One-line summary
 
-**Config is layered: workspace overrides defaults. Permission is layered: risk-auto confirmation unions user `confirm` policy. Guards consult the engine, the engine consults the config.**
+**Config is layered: workspace overrides defaults. Permission is layered: risk-auto confirmation unions user `confirm` policy. A project `.siyuan-cli.yaml` sits between `$SIYUAN_CLI_WORKSPACE` and `config.current` and can fully replace the permission cascade. Guards consult the engine, the engine consults the resolved config.**

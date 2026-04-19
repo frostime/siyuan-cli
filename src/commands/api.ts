@@ -3,7 +3,7 @@
  */
 import { defineCommand } from 'citty';
 import { registry } from '../core/registry.js';
-import { loadConfig, resolveWorkspace } from '../core/config.js';
+import { loadConfig, resolveEffectiveWorkspace } from '../core/config.js';
 import { SiyuanClient } from '../core/client.js';
 import { createPermissionEngine } from '../core/permission.js';
 import { executeEndpoint } from '../core/guard.js';
@@ -73,19 +73,20 @@ async function callEndpoint(
     });
     const config = loadConfig(rawArgs['config'] as string | undefined);
 
-    const workspace = resolveWorkspace(config, {
+    const workspace = resolveEffectiveWorkspace(config, {
         workspace: rawArgs['workspace'] as string | undefined,
         baseUrl: rawArgs['baseUrl'] as string | undefined,
         token: rawArgs['token'] as string | undefined
     });
     const client = new SiyuanClient(workspace);
-    const engine = createPermissionEngine(config, workspace.name, client);
+    const engine = createPermissionEngine(config, workspace, client);
 
     const result = await executeEndpoint({
         entry,
         payload,
         client,
         engine,
+        workspace,
         dryRun: rawArgs['dry-run'] as boolean | undefined,
         yes: rawArgs['yes'] as boolean | undefined,
         debug: rawArgs['debug'] as boolean | undefined
