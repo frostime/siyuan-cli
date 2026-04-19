@@ -4,17 +4,17 @@ status: DONE
 change-type: single
 created: 2026-04-17 11:58:00
 reference:
-- source: .sspec/changes/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/05-module-tool.md
+- source: .sspec/changes/archive/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/05-module-tool.md
   type: doc
   note: ToolSchema、输出契约、MVP tool 清单
-- source: .sspec/changes/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/06-module-skill.md
+- source: .sspec/changes/archive/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/06-module-skill.md
   type: doc
   note: Skill 结构、skill install/list/read 设计
-- source: .sspec/changes/26-04-17T01-57_p2-api-layer
+- source: .sspec/changes/archive/26-04-17T01-57_p2-api-layer
   type: sub-change
   note: API Layer + Permission Engine baseline
+archived: '2026-04-18T01:18:49'
 ---
-
 # P3: Tool + Skill
 
 ## Problem Statement

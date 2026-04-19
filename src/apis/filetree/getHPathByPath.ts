@@ -12,6 +12,16 @@ export const schema: EndpointSchema = {
       path: { type: "string", description: "Document path" },
     },
   },
-  tags: ["read"],
-  guard: { payload: { notebook: "notebook" } },
+  classification: {
+    mode: "read",
+    surface: "content",
+    scope: "single",
+    operation: "inspect",
+  },
+  guard: {
+    payloadTargets: [
+      { path: "notebook", kind: "notebook", access: "read" },
+      { path: "path", kind: "path", access: "read" },
+    ],
+  },
 };

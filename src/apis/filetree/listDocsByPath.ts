@@ -15,9 +15,17 @@ export const schema: EndpointSchema = {
       flashcard: { type: "boolean", description: "Include flashcard-related information" },
     },
   },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "content",
+    scope: "batch",
+    operation: "inspect",
+  },
   guard: {
-    payload: { notebook: "notebook", path: "path" },
+    payloadTargets: [
+      { path: "notebook", kind: "notebook", access: "read" },
+      { path: "path", kind: "path", access: "read" },
+    ],
     filterResponse: (response, engine) => {
       const r = response as { files?: Array<Record<string, unknown>>; data?: { files?: Array<Record<string, unknown>>; box?: string } };
       const files = r.data?.files ?? r.files ?? [];

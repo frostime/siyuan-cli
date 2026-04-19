@@ -4,17 +4,17 @@ status: DONE
 change-type: single
 created: 2026-04-17 12:20:00
 reference:
-- source: .sspec/changes/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/06-module-skill.md
+- source: .sspec/changes/archive/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/06-module-skill.md
   type: doc
   note: skill install target、模板变量替换、uninstall
-- source: .sspec/changes/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/03-module-workspace.md
+- source: .sspec/changes/archive/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/03-module-workspace.md
   type: doc
   note: tokenSource 设计
-- source: .sspec/changes/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/08-roadmap.md
+- source: .sspec/changes/archive/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design/08-roadmap.md
   type: doc
   note: M6/M7 polish 收尾项
+archived: '2026-04-18T01:18:51'
 ---
-
 # P4: Polish
 
 ## Problem Statement

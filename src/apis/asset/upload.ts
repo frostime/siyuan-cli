@@ -21,5 +21,10 @@ export const schema: EndpointSchema = {
     },
   },
   multipart: { fileFields: ["file[]"] },
-  tags: ["write", "upload", "mutation"],
+  classification: {
+    mode: "write",
+    surface: "asset",
+    scope: "single",
+    operation: "upload",
+  },
 };

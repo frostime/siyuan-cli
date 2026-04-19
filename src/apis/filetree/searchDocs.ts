@@ -13,6 +13,21 @@ export const schema: EndpointSchema = {
       path: { type: "string", description: "Path to search under" },
     },
   },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "content",
+    scope: "batch",
+    operation: "search",
+  },
   cli: { primary: "k" },
+  guard: {
+    payloadTargets: [
+      { path: "notebook", kind: "notebook", access: "read" },
+      { path: "path", kind: "path", access: "read" },
+    ],
+    response: {
+      itemsAt: "[*]",
+      fieldMap: { path: "path", notebook: "box" },
+    },
+  },
 };

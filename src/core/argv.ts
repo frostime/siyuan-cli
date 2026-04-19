@@ -190,8 +190,9 @@ export function parsePayload(opts: ParsePayloadOptions): Record<string, unknown>
 export function buildEndpointHelp(endpoint: {
   id: string;
   schema: EndpointSchema;
+  meta?: { tags?: string[] };
 }): string {
-  const { id, schema } = endpoint;
+  const { id, schema, meta } = endpoint;
   const lines: string[] = [];
 
   lines.push(schema.summary);
@@ -208,8 +209,9 @@ export function buildEndpointHelp(endpoint: {
 
   lines.push("ENDPOINT");
   lines.push(`  POST ${schema.endpoint}`);
-  if (schema.tags?.length) {
-    lines.push(`  Tags: ${schema.tags.join(", ")}`);
+  const tags = meta?.tags;
+  if (tags?.length) {
+    lines.push(`  Tags: ${tags.join(", ")}`);
   }
   lines.push("");
 

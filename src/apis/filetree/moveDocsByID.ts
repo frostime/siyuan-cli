@@ -12,5 +12,16 @@ export const schema: EndpointSchema = {
       toID: { type: "string", description: "Target document ID or notebook ID", pattern: "^\\d{14}-[0-9a-z]{7}$" },
     },
   },
-  tags: ["write", "mutation"],
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "batch",
+    operation: "move",
+  },
+  guard: {
+    payloadTargets: [
+      { path: "fromIDs[*]", kind: "id", access: "write" },
+      { path: "toID", kind: "id", access: "write" },
+    ],
+  },
 };

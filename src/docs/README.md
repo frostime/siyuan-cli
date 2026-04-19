@@ -1,48 +1,67 @@
 ---
 title: SiYuan CLI Internal Docs
 slug: internal-docs-index
-summary: Curated internal reference documents for building reliable agents on top of SiYuan.
+summary: Curated internal reference for agents building on and extending the SiYuan CLI.
 ---
 
 # Internal Docs Index
 
-Recommended reading order:
+Two tracks, read the one you need.
 
-1. `siyuan-block.md`
-   - what a block is
-   - the relationship between blocks and Markdown
-   - container blocks vs leaf blocks
-   - block attributes
-   - block-level syntax
-   - agent operation rules
+## `guides/` — SiYuan business knowledge
 
-2. `document-tree-and-paths.md`
-   - `id` / `parent_id` / `root_id`
-   - `box`
-   - `path` vs `hpath`
-   - the difference between the block tree and document file layout
+Read these when reasoning about SiYuan content, not the CLI itself.
 
-3. `sql-query-guide.md`
-   - `blocks`
-   - `refs`
-   - `attributes`
-   - `assets`
-   - `spans`
-   - agent query strategy
+1. `guides/siyuan-block.md` — block as primary data model, block vs Markdown
+2. `guides/document-tree-and-paths.md` — id / parent_id / root_id / box / path / hpath
+3. `guides/sql-query-guide.md` — blocks / refs / attributes / assets / spans
+4. `guides/dailynote-model.md` — daily note path template, attribute marker, date range queries
 
-4. `dailynote-model.md`
-   - daily note path templates
-   - daily note identification via attributes
-   - date-range queries
-   - notebook-level operation rules
+## `extending/` — About `siyuan-cli` itself
 
-## Suggested mental model
+Read these when extending the CLI itself.
 
-When building an agent on top of SiYuan, it is better to understand the system in four layers:
+- `extending/00-overview.md` — architecture map, request lifecycle
+- `extending/10-endpoint-schema.md` — EndpointSchema field-by-field
+- `extending/11-classification-and-risk.md` — mode / surface / scope / operation → risk
+- `extending/12-guard-and-pointer-path.md` — payloadTargets / response / filterResponse / PointerPath
+- `extending/13-cli-behavior.md` — primary / allowSource / @file / @stdin / @env / -j / -f
+- `extending/20-tool-schema.md` — ToolSchema / ToolContext / callEndpoint vs callEndpointRaw
+- `extending/30-config.md` — config.yaml shape, permission model, token sources
+- `extending/40-adding-an-endpoint.md` — step-by-step for a public kernel API
+- `extending/41-adding-a-private-endpoint.md` — reverse-engineering non-public kernel APIs
+- `extending/42-adding-a-tool.md` — tool walkthrough
+- `extending/90-errors-and-exit-codes.md` — CliError, ExitCode, error JSON shape
 
-1. **Block model**
-2. **Tree and path semantics**
-3. **SQL query model**
-4. **Feature-specific models** (for example, daily notes)
+## Mental model
 
-Do not reduce SiYuan to a generic Markdown folder structure.
+```text
+user
+  │
+  ▼
+citty CLI     ◀── src/cli.ts
+  │
+  ▼
+argv parser   ◀── src/core/argv.ts        (payload assembly, @file/@stdin/@env)
+  │
+  ▼
+registry      ◀── src/core/registry.ts    (EndpointSchema → RegisteredEndpoint)
+  │
+  ▼
+permission    ◀── src/core/permission.ts  (endpoint allow/deny, content scope)
+  │
+  ▼
+guard         ◀── src/core/guard.ts       (payloadTargets check, execute, response filter)
+  │
+  ▼
+client        ◀── src/core/client.ts      (HTTP to kernel)
+  │
+  ▼
+kernel response
+  │
+  ▼
+response guard ◀── src/core/guard.ts      (PointerPath filter + write-back)
+  │
+  ▼
+stdout JSON
+```

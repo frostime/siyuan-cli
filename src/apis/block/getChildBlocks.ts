@@ -11,11 +11,18 @@ export const schema: EndpointSchema = {
       id: { type: "string", description: "Parent block ID", pattern: "^\\d{14}-[0-9a-z]{7}$" },
     },
   },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "content",
+    scope: "batch",
+    operation: "inspect",
+  },
   guard: {
-    payload: { id: "id" },
+    payloadTargets: [
+      { path: "id", kind: "id", access: "read" },
+    ],
     response: {
-      itemsAt: "data[*]",
+      itemsAt: "[*]",
       fieldMap: { id: "id", path: "path", notebook: "box" },
     },
   },

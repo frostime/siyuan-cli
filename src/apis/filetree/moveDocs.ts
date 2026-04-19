@@ -13,5 +13,17 @@ export const schema: EndpointSchema = {
       toPath: { type: "string", description: "Target path" },
     },
   },
-  tags: ["write", "mutation"],
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "batch",
+    operation: "move",
+  },
+  guard: {
+    payloadTargets: [
+      { path: "fromPaths[*]", kind: "path", access: "write" },
+      { path: "toNotebook", kind: "notebook", access: "write" },
+      { path: "toPath", kind: "path", access: "write" },
+    ],
+  },
 };

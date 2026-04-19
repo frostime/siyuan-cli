@@ -17,6 +17,15 @@ export const schema: EndpointSchema = {
       },
     },
   },
-  tags: ["write", "mutation"],
-  guard: { payload: { id: "id" } },
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "single",
+    operation: "update",
+  },
+  guard: {
+    payloadTargets: [
+      { path: "id", kind: "id", access: "write" },
+    ],
+  },
 };

@@ -1,4 +1,5 @@
 import type { ToolSchema } from "../core/schema.js";
+import { escapeSqliteLiteral } from "../utils/sql.js";
 
 export const tool: ToolSchema = {
   id: "append-content",
@@ -62,7 +63,7 @@ export const tool: ToolSchema = {
         actualTargetId = daily.id;
       } else if (typeof daily === "string" && daily.length > 0) {
         const rows = await ctx.callEndpoint<Array<{ id: string }>>("query.sql", {
-          stmt: `SELECT id FROM blocks WHERE type='d' AND box='${targetId.replace(/'/g, "''")}' AND path='${daily.replace(/'/g, "''")}' LIMIT 1`,
+          stmt: `SELECT id FROM blocks WHERE type='d' AND box='${escapeSqliteLiteral(targetId)}' AND path='${escapeSqliteLiteral(daily)}' LIMIT 1`,
         });
         if (rows.length === 0) {
           throw new Error(`createDailyNote returned path ${daily} but no matching block was found.`);

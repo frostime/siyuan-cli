@@ -11,6 +11,15 @@ export const schema: EndpointSchema = {
       id: { type: "string", description: "Block ID", pattern: "^\\d{14}-[0-9a-z]{7}$" },
     },
   },
-  tags: ["write", "mutation"],
-  guard: { payload: { id: "id" } },
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "single",
+    operation: "update",
+  },
+  guard: {
+    payloadTargets: [
+      { path: "id", kind: "id", access: "write" },
+    ],
+  },
 };

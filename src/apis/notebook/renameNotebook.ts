@@ -12,6 +12,15 @@ export const schema: EndpointSchema = {
       name: { type: "string", description: "New notebook name" },
     },
   },
-  tags: ["write", "mutation"],
-  guard: { payload: { notebook: "notebook" } },
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "single",
+    operation: "move",
+  },
+  guard: {
+    payloadTargets: [
+      { path: "notebook", kind: "notebook", access: "write" },
+    ],
+  },
 };

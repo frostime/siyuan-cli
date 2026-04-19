@@ -21,7 +21,17 @@ export const schema: EndpointSchema = {
       parentID: { type: "string", description: "Parent block ID", pattern: "^\\d{14}-[0-9a-z]{7}$" },
     },
   },
-  tags: ["write", "mutation"],
-  // #TODO 检查确认，当前的安全机制是否支持同时验证多个字段为ID类型？
-  guard: { payload: { id: "id", previousID: "id", parentID: "id" } },
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "single",
+    operation: "move",
+  },
+  guard: {
+    payloadTargets: [
+      { path: "id", kind: "id", access: "write" },
+      { path: "parentID", kind: "id", access: "write" },
+      { path: "previousID", kind: "id", access: "write" },
+    ],
+  },
 };

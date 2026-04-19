@@ -12,7 +12,12 @@ export const schema: EndpointSchema = {
       stmt: { type: "string", description: "SQL query statement" },
     },
   },
-  tags: ["read", "query"],
+  classification: {
+    mode: "read",
+    surface: "content",
+    scope: "global",
+    operation: "query",
+  },
   cli: {
     primary: "stmt",
     aliases: { stmt: "s" },
@@ -27,7 +32,7 @@ export const schema: EndpointSchema = {
   },
   guard: {
     response: {
-      itemsAt: "data[*]",
+      itemsAt: "[*]",
       fieldMap: { id: "id", path: "path", notebook: "box" },
     },
   },

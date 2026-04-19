@@ -85,6 +85,8 @@ siyuan api query.sql --help
 siyuan api block.appendBlock --help
 ```
 
+`--tag` filters derived endpoint tags such as `mode:read`, `surface:content`, `scope:batch`, `operation:move`, and `risk:sensitive`.
+
 Common flags for all endpoints:
 
 | Flag | Description |
@@ -161,8 +163,16 @@ Override with environment variables:
 Example config:
 
 ```yaml
-schemaVersion: 1
+schemaVersion: 2
 current: local
+
+defaults:
+  permission:
+    confirm:
+      modes: ["write", "invoke"]
+      surfaces: ["workspace", "runtime", "network"]
+      scopes: ["batch", "global"]
+
 workspaces:
   local:
     baseUrl: http://127.0.0.1:6806
@@ -175,19 +185,34 @@ workspaces:
 
 ### Permission Rules
 
-Per-workspace deny/allow rules protect against accidental writes:
+Deny rules are the hard boundary. Confirm rules are an interactive safety rail.
+
+`content.read.paths` and `content.write.paths` match against SiYuan `path` (ID-based document path), not `hpath`.
 
 ```yaml
 workspaces:
   prod:
     baseUrl: http://prod:6806
     permission:
-      guardWrite: true
+      endpoints:
+        deny: ["system.exit", "network.*"]
+      tools:
+        allow: ["append-content", "list-doc-tree"]
       content:
-        notebooks:
-          deny: ["系统日记"]
-        paths:
-          deny: ["/系统/"]
+        read:
+          paths:
+            deny: ["/20260107143325-zbrtqup/**"]
+        write:
+          paths:
+            deny: ["/20260107143325-zbrtqup/**", "/20260108888888-qwertyu/**"]
+      workspace:
+        write:
+          paths:
+            deny: ["**"]
+      confirm:
+        modes: ["write", "invoke"]
+        surfaces: ["workspace", "runtime", "network"]
+        scopes: ["batch", "global"]
 ```
 
 ## Registered API Endpoints

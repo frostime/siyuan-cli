@@ -1,4 +1,5 @@
 import type { ToolSchema } from "../core/schema.js";
+import { escapeSqliteLiteral } from "../utils/sql.js";
 
 type Row = { id: string; box: string; path: string; hpath: string; content?: string };
 
@@ -54,7 +55,7 @@ export const tool: ToolSchema = {
   async run(ctx, input) {
     const { entry, depth } = input as { entry: string; depth?: number; includeMeta?: boolean };
     let rootRows = await ctx.callEndpoint<Row[]>("query.sql", {
-      stmt: `SELECT id, box, path, hpath FROM blocks WHERE id = '${entry.replace(/'/g, "''")}' LIMIT 1`,
+      stmt: `SELECT id, box, path, hpath FROM blocks WHERE id = '${escapeSqliteLiteral(entry)}' LIMIT 1`,
     });
     let rows: Row[];
     let rootPath: string;       // for display / details only
@@ -66,7 +67,7 @@ export const tool: ToolSchema = {
       rootKey = root.path.replace(/\.sy$/, "");
       rootTitle = root.hpath.split("/").filter(Boolean).at(-1) ?? root.id;
       rows = await ctx.callEndpoint<Row[]>("query.sql", {
-        stmt: `SELECT id, box, path, hpath FROM blocks WHERE type='d' AND box = '${root.box}' AND (path = '${root.path.replace(/'/g, "''")}' OR path LIKE '${root.path.replace(/'/g, "''").replace(/\.sy$/, "")}/%') ORDER BY path ASC`,
+        stmt: `SELECT id, box, path, hpath FROM blocks WHERE type='d' AND box = '${root.box}' AND (path = '${escapeSqliteLiteral(root.path)}' OR path LIKE '${escapeSqliteLiteral(root.path).replace(/\.sy$/, "")}/%') ORDER BY path ASC`,
       });
     } else {
       // Notebook mode: SiYuan's blocks.path is notebook-relative, so top-level
@@ -75,7 +76,7 @@ export const tool: ToolSchema = {
       rootKey = "";
       rootTitle = entry;
       rows = await ctx.callEndpoint<Row[]>("query.sql", {
-        stmt: `SELECT id, box, path, hpath FROM blocks WHERE type='d' AND box = '${entry.replace(/'/g, "''")}' ORDER BY path ASC`,
+        stmt: `SELECT id, box, path, hpath FROM blocks WHERE type='d' AND box = '${escapeSqliteLiteral(entry)}' ORDER BY path ASC`,
       });
     }
     const tree = buildTree(rows, rootKey, depth ?? 2);

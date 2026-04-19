@@ -3,5 +3,10 @@ export const schema: EndpointSchema = {
   endpoint: "/api/system/bootProgress",
   summary: "Get SiYuan boot progress (commonly used in Docker scenarios)",
   payload: { type: "object", properties: {} },
-  tags: ["read"],
+  classification: {
+    mode: "read",
+    surface: "meta",
+    scope: "single",
+    operation: "inspect",
+  },
 };

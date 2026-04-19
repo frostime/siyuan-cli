@@ -4,5 +4,10 @@ export const schema: EndpointSchema = {
   endpoint: "/api/sqlite/flushTransaction",
   summary: "Flush SQLite transaction",
   payload: { type: "object", properties: {} },
-  tags: ["write", "mutation"],
+  classification: {
+    mode: "invoke",
+    surface: "runtime",
+    scope: "single",
+    operation: "control",
+  },
 };

@@ -12,5 +12,16 @@ export const schema: EndpointSchema = {
       newPath: { type: "string", description: "New file path" },
     },
   },
-  tags: ["write", "mutation"],
+  classification: {
+    mode: "write",
+    surface: "workspace",
+    scope: "single",
+    operation: "move",
+  },
+  guard: {
+    payloadTargets: [
+      { path: "path", kind: "workspace-path", access: "write" },
+      { path: "newPath", kind: "workspace-path", access: "write" },
+    ],
+  },
 };

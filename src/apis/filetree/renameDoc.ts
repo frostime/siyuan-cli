@@ -13,8 +13,16 @@ export const schema: EndpointSchema = {
       title: { type: "string", description: "新标题" },
     },
   },
-  tags: ["write", "mutation"],
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "single",
+    operation: "move",
+  },
   guard: {
-    payload: { notebook: "notebook", path: "path" },
+    payloadTargets: [
+      { path: "notebook", kind: "notebook", access: "write" },
+      { path: "path", kind: "path", access: "write" },
+    ],
   },
 };

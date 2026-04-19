@@ -14,5 +14,20 @@ export const schema: EndpointSchema = {
       modTime: { type: "integer", description: "File modification timestamp" },
     },
   },
-  tags: ["write", "mutation"],
+  classification: {
+    mode: "write",
+    surface: "workspace",
+    scope: "single",
+    operation: "update",
+  },
+  cli: {
+    // "file" conflicts with the global --file flag (load JSON payload from file).
+    // Pass the file content via --json '{ "path": "...", "file": "..." }' instead.
+    skipFields: ["file"],
+  },
+  guard: {
+    payloadTargets: [
+      { path: "path", kind: "workspace-path", access: "write" },
+    ],
+  },
 };

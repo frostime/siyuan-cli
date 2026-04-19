@@ -2,7 +2,7 @@
 name: do-this-project
 created: 2026-04-16 19:04:19
 status: DOING
-attach-change: .sspec/changes/26-04-17T01-34_siyuan-cli/spec.md
+attach-change: .sspec/changes/archive/26-04-17T01-34_siyuan-cli/spec.md
 tldr: ''
 ---
 <!-- @RULE: Frontmatter Type

@@ -13,7 +13,16 @@ export const schema: EndpointSchema = {
       id: { type: "string", description: "Block ID", pattern: "^\\d{14}-[0-9a-z]{7}$" },
     },
   },
-  tags: ["write", "mutation"],
+  classification: {
+    mode: "write",
+    surface: "content",
+    scope: "single",
+    operation: "update",
+  },
   cli: { allowSource: { data: ["literal", "file", "stdin"] } },
-  guard: { payload: { id: "id" } },
+  guard: {
+    payloadTargets: [
+      { path: "id", kind: "id", access: "write" },
+    ],
+  },
 };
