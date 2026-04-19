@@ -380,7 +380,15 @@ export class PermissionEngine implements PermissionEngineLike {
 
     // ── Response filtering ─────────────────────────────────────────────────
 
-    filterItems<T>(
+    /**
+     * Filter a list of items against the permission rules.
+     *
+     * Items may carry pre-resolved {notebook, path}, a raw {id}, or both.
+     * When only `id` is present (and notebook/path are absent), the engine
+     * resolves the block's containing document in bulk via SQL so that
+     * notebook- and path-based rules can be applied.
+     */
+    async filterItems<T>(
         items: T[],
         extract: (item: T) => {
             id?: string;
@@ -389,18 +397,44 @@ export class PermissionEngine implements PermissionEngineLike {
         },
         caller?: CallerContext,
         access: 'read' | 'write' = 'read'
-    ): FilterResult<T> {
+    ): Promise<FilterResult<T>> {
+        // ── Step 1: collect items that need id→{notebook,path} resolution ──
+        const extracted = items.map(extract);
+        const unresolvedIds = [
+            ...new Set(
+                extracted
+                    .filter((f) => f.id && !f.notebook && !f.path)
+                    .map((f) => f.id!)
+            )
+        ];
+
+        let resolved = new Map<string, { notebook: string; path: string }>();
+        if (unresolvedIds.length > 0) {
+            resolved = await this.resolveContentIds(unresolvedIds);
+        }
+
+        // ── Step 2: evaluate each item ──────────────────────────────────────
         const kept: T[] = [];
         let removed = 0;
         const reasons: Record<string, number> = {};
 
-        for (const item of items) {
-            const fields = extract(item);
+        for (let i = 0; i < items.length; i++) {
+            const fields = extracted[i]!;
+
+            // Prefer pre-resolved notebook/path; fall back to id resolution.
+            let notebook = fields.notebook;
+            let path = fields.path;
+            if (!notebook && !path && fields.id) {
+                const r = resolved.get(fields.id);
+                notebook = r?.notebook;
+                path = r?.path;
+            }
+
             const ctx: PermissionContext = {
                 ...caller,
                 action: access,
-                notebook: fields.notebook,
-                path: fields.path
+                notebook,
+                path
             };
             const { effect, ruleIndex } = this.evaluateVerbose(ctx);
             if (effect === 'deny') {
@@ -411,7 +445,7 @@ export class PermissionEngine implements PermissionEngineLike {
                         : 'default deny';
                 reasons[reason] = (reasons[reason] ?? 0) + 1;
             } else {
-                kept.push(item);
+                kept.push(items[i]!);
             }
         }
         return { kept, removed, reasons };

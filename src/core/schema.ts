@@ -136,7 +136,7 @@ export interface GuardSpec {
     filterResponse?: (
         response: unknown,
         engine: PermissionEngineLike
-    ) => unknown;
+    ) => unknown | Promise<unknown>;
 }
 
 export interface EndpointClassification {
@@ -180,7 +180,7 @@ export interface PermissionEngineLike {
         extract: (item: T) => { id?: string; path?: string; notebook?: string },
         caller?: CallerContext,
         access?: 'read' | 'write'
-    ): { kept: T[]; removed: number; reasons: Record<string, number> };
+    ): Promise<{ kept: T[]; removed: number; reasons: Record<string, number> }>;
     evaluate(ctx: PermissionContext): PermissionEffect;
 }
 

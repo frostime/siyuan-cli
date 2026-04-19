@@ -77,21 +77,21 @@ export async function applyPayloadGuard(
  * Response guards operate on the unwrapped `data` returned by SiyuanClient.
  * They do not see the raw kernel envelope `{ code, msg, data }`.
  */
-export function applyResponseGuard(
+export async function applyResponseGuard(
     schema: EndpointSchema,
     response: unknown,
     engine: PermissionEngineLike,
     caller?: CallerContext
-): unknown {
+): Promise<unknown> {
     const guard = schema.guard;
     if (!guard) return response;
     if (guard.filterResponse) {
-        return guard.filterResponse(response, engine);
+        return await guard.filterResponse(response, engine);
     }
     if (guard.response) {
         const { itemsAt, fieldMap } = guard.response;
         const items = evaluatePointerPath(response, itemsAt);
-        const { kept, removed, reasons } = engine.filterItems(
+        const { kept, removed, reasons } = await engine.filterItems(
             items,
             (item) => {
                 const i = item as Record<string, unknown>;
@@ -232,5 +232,5 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
         response = await client.call(schema.endpoint, payload);
     }
 
-    return applyResponseGuard(schema, response, engine, caller);
+    return await applyResponseGuard(schema, response, engine, caller);
 }
