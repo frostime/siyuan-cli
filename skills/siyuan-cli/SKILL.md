@@ -17,6 +17,28 @@ Use the `siyuan` command to interact with the user's SiYuan kernel.
 siyuan workspace add main --url http://127.0.0.1:6806 [--token <token>]
 ```
 
+## Anchoring workspace to a project
+
+If multiple agents or sessions share this CLI, each relying on `siyuan workspace use` can race — one agent's `use dev` silently changes which workspace the other sees on its next call.
+
+To pin a project to a specific workspace independent of global state, drop a `.siyuan-cli.yaml` at the project root:
+
+```yaml
+# .siyuan-cli.yaml
+schemaVersion: 1
+workspace: <name from `siyuan workspace list`>
+```
+
+When invoked from that directory (or any subdirectory), the CLI uses that workspace regardless of what `siyuan workspace use` was last called with. The file is safe to commit — by construction it cannot contain tokens or URLs; attempting to put `token`, `baseUrl`, `tokenSource`, or `defaults` in it is a hard error at load time.
+
+Inspect what will be used from the current directory:
+
+```bash
+siyuan workspace which
+```
+
+Output includes `source` (one of `flag` / `env` / `project-file` / `global-current` / `ad-hoc`) and, when a project file was found, its absolute path. Use this before write operations to confirm the target is what you expect.
+
 ## Runtime values
 
 - CLI version: `{{cli_version}}`

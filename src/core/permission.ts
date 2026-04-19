@@ -2,7 +2,11 @@
  * Permission Engine — endpoint/tool allow-deny + content/workspace scope checks.
  */
 import micromatch from 'micromatch';
-import type { AppConfig, PermissionConfig } from './config.js';
+import type {
+    AppConfig,
+    PermissionConfig,
+    ResolvedWorkspace
+} from './config.js';
 import type {
     PermissionEngineLike,
     RegisteredEndpoint,
@@ -11,7 +15,7 @@ import type {
 import { CliError, ExitCode } from '../utils/errors.js';
 import type { SiyuanClient } from './client.js';
 
-function getPermission(
+function cascadeWorkspacePermission(
     config: AppConfig,
     workspaceName: string
 ): PermissionConfig {
@@ -31,6 +35,26 @@ function getPermission(
         } as PermissionConfig['workspace'],
         confirm: ws?.permission?.confirm ?? defaults?.confirm
     };
+}
+
+/**
+ * Resolve the PermissionConfig that the engine should enforce.
+ *
+ * If the resolved workspace carries `effectivePermission` (from .siyuan-cli.yaml),
+ * it COMPLETELY REPLACES the cascade — no merge with workspace-level or
+ * defaults-level permission. See docs/extending/31-workspace-resolution.md for
+ * the rationale.
+ *
+ * Otherwise, the standard two-layer cascade (workspace ?? defaults) applies.
+ */
+export function resolveEffectivePermission(
+    config: AppConfig,
+    resolved: ResolvedWorkspace
+): PermissionConfig {
+    if (resolved.effectivePermission) {
+        return resolved.effectivePermission;
+    }
+    return cascadeWorkspacePermission(config, resolved.name);
 }
 
 export class EndpointDisabledError extends CliError {
@@ -100,12 +124,26 @@ export class PermissionEngine implements PermissionEngineLike {
         { notebook: string; path: string }
     >();
 
+    /**
+     * Construct a permission engine.
+     *
+     * Signature `(config, workspaceName, client, permissionOverride?)`:
+     *  - The first three arguments preserve direct instantiation from tests
+     *    and from any caller that holds (AppConfig + workspace name + client).
+     *  - `permissionOverride` is populated by `createPermissionEngine` when a
+     *    `.siyuan-cli.yaml` declared a `permission` block. That block
+     *    COMPLETELY REPLACES the cascade (workspace ?? defaults); see
+     *    docs/extending/31-workspace-resolution.md for the rationale.
+     */
     constructor(
         config: AppConfig,
         workspaceName: string,
-        client: SiyuanClient
+        client: SiyuanClient,
+        permissionOverride?: PermissionConfig
     ) {
-        this.perm = getPermission(config, workspaceName);
+        this.perm =
+            permissionOverride ??
+            cascadeWorkspacePermission(config, workspaceName);
         this.client = client;
     }
 
@@ -330,8 +368,13 @@ export class PermissionEngine implements PermissionEngineLike {
 
 export function createPermissionEngine(
     config: AppConfig,
-    workspaceName: string,
+    resolved: ResolvedWorkspace,
     client: SiyuanClient
 ): PermissionEngine {
-    return new PermissionEngine(config, workspaceName, client);
+    return new PermissionEngine(
+        config,
+        resolved.name,
+        client,
+        resolved.effectivePermission
+    );
 }

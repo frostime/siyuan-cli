@@ -1,0 +1,52 @@
+# .siyuan-cli.yaml — project-level siyuan-cli config
+#
+# Copy this file to `.siyuan-cli.yaml` in your project root and edit to taste.
+# Once present, `siyuan api ...` and `siyuan tool ...` invoked from this directory
+# (or any subdirectory) will use the settings below to resolve workspace and
+# enforce permissions — overriding the global config.current.
+#
+# IMPORTANT: this file is safe to commit. siyuan-cli hard-errors if you try to
+# put `token`, `baseUrl`, `tokenSource`, or `defaults` here. Connection details
+# belong in the global config (~/.config/siyuan-cli/config.yaml) only.
+#
+# Two usage patterns:
+#   1) Shared — commit .siyuan-cli.yaml; all collaborators share workspace choice.
+#   2) Personal — gitignore .siyuan-cli.yaml, commit .siyuan-cli.yaml.example only.
+#
+# Validated at load time:
+#   - schemaVersion must be 1
+#   - workspace (if set) must exist in global config.workspaces
+#   - token/baseUrl/tokenSource/defaults → hard error
+#   - unknown top-level keys → stderr warning
+#   - permission rules that look like hpath → stderr warning
+
+schemaVersion: 1
+
+# (Optional) Which workspace from the global config to use when invoked here.
+# If omitted, the fallback chain continues: $SIYUAN_CLI_WORKSPACE > config.current.
+workspace: prod
+
+# (Optional) Permission block. If present, it COMPLETELY REPLACES the
+# cascade workspaces[name].permission ?? defaults.permission for this invocation.
+# Shape is identical to the global permission block (see docs/extending/30-config.md).
+permission:
+  endpoints:
+    deny:
+      - block.delete*
+      - system.exit
+
+  # Notebook ids and id-based paths only — NOT human-readable hpath.
+  content:
+    read:
+      notebooks:
+        allow:
+          - 20260101215354-j0c5gvk
+    write:
+      paths:
+        deny:
+          - /20260107143325-zbrtqup/**
+
+  # Extra confirmation triggers (on top of risk-derived auto-confirm)
+  confirm:
+    modes: [write, invoke]
+    surfaces: [workspace, network]

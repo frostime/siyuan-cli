@@ -28,6 +28,7 @@ Read these when extending the CLI itself.
 - `extending/13-cli-behavior.md` — primary / allowSource / @file / @stdin / @env / -j / -f
 - `extending/20-tool-schema.md` — ToolSchema / ToolContext / callEndpoint vs callEndpointRaw
 - `extending/30-config.md` — config.yaml shape, permission model, token sources
+- `extending/31-workspace-resolution.md` — resolution chain, `.siyuan-cli.yaml`, permission override, `workspace which`
 - `extending/40-adding-an-endpoint.md` — step-by-step for a public kernel API
 - `extending/41-adding-a-private-endpoint.md` — reverse-engineering non-public kernel APIs
 - `extending/42-adding-a-tool.md` — tool walkthrough

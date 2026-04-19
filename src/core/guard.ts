@@ -15,6 +15,31 @@ import {
     type PermissionEngine
 } from './permission.js';
 import type { SiyuanClient } from './client.js';
+import type { ResolvedWorkspace } from './config.js';
+
+const RISK_TRIGGERS_IMPLICIT_WARNING = new Set<string>([
+    'elevated',
+    'destructive',
+    'critical'
+]);
+
+function maybeWarnImplicitWorkspace(
+    entry: RegisteredEndpoint,
+    workspace: ResolvedWorkspace | undefined
+): void {
+    if (!workspace) return;
+    if (workspace.source !== 'global-current') return;
+    if (!RISK_TRIGGERS_IMPLICIT_WARNING.has(entry.meta.risk)) return;
+    process.stderr.write(
+        JSON.stringify({
+            warning: 'IMPLICIT_WORKSPACE',
+            endpoint: entry.id,
+            workspace: workspace.name,
+            risk: entry.meta.risk,
+            hint: 'Resolved from global config.current. Pass --workspace, set $SIYUAN_CLI_WORKSPACE, or add .siyuan-cli.yaml to anchor the target.'
+        }) + '\n'
+    );
+}
 
 export async function applyPayloadGuard(
     schema: EndpointSchema,
@@ -103,6 +128,8 @@ export interface ExecuteOptions {
     payload: unknown;
     client: SiyuanClient;
     engine: PermissionEngine;
+    /** Optional — when supplied, enables IMPLICIT_WORKSPACE warning on write-like risks. */
+    workspace?: ResolvedWorkspace;
     dryRun?: boolean;
     yes?: boolean;
     debug?: boolean;
@@ -126,10 +153,20 @@ function isWriteLike(entry: RegisteredEndpoint): boolean {
 }
 
 export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
-    const { entry, payload, client, engine, dryRun, yes, debug } = opts;
+    const {
+        entry,
+        payload,
+        client,
+        engine,
+        workspace,
+        dryRun,
+        yes,
+        debug
+    } = opts;
     const { schema } = entry;
     const { id } = deriveEndpointId(schema.endpoint);
 
+    maybeWarnImplicitWorkspace(entry, workspace);
     engine.checkEndpoint(id);
     await applyPayloadGuard(
         schema,

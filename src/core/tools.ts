@@ -1,5 +1,5 @@
 import { registry as endpointRegistry } from './registry.js';
-import { loadConfig, resolveWorkspace } from './config.js';
+import { loadConfig, resolveEffectiveWorkspace } from './config.js';
 import { SiyuanClient } from './client.js';
 import { createPermissionEngine } from './permission.js';
 import { executeEndpoint } from './guard.js';
@@ -40,13 +40,13 @@ export async function createToolContext(
     toolId?: string
 ): Promise<ToolContext> {
     const config = loadConfig(args.config);
-    const workspace = resolveWorkspace(config, {
+    const workspace = resolveEffectiveWorkspace(config, {
         workspace: args.workspace,
         baseUrl: args.baseUrl,
         token: args.token
     });
     const client = new SiyuanClient(workspace);
-    const permission = createPermissionEngine(config, workspace.name, client);
+    const permission = createPermissionEngine(config, workspace, client);
     if (toolId) permission.checkTool(toolId);
 
     const callEndpoint: ToolContext['callEndpoint'] = async <T = unknown>(
@@ -60,6 +60,7 @@ export async function createToolContext(
             payload,
             client,
             engine: permission,
+            workspace,
             dryRun: args.dryRun,
             yes: args.yes,
             debug: args.debug
