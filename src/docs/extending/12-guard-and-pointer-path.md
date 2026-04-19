@@ -203,11 +203,14 @@ guard: {
 - `evaluatePointerPath(root, path, policy?)` → same, compiles inline
 - `runPointerFilterTerminal(root, path, filter, policy?)` → terminal array replacement with in-place write-back
 - `pointerPathRoot(path)` → top-level property name, or `undefined` for root `[*]`
+- `isTerminalFilterCompatiblePointerPath(path)` → whether a `response.itemsAt` path is write-back safe; used by registry startup validation
 
 `runPointerFilterTerminal` enforces two extra invariants:
 
 - terminal segment must be an array expansion
 - at most one array expansion in the whole path (multi-expand filter semantics are ambiguous; rejected fail-loud)
+
+These invariants are also enforced at **startup** for `guard.response.itemsAt` by `registry.ts::validateSchema()` via `isTerminalFilterCompatiblePointerPath`. An incompatible `itemsAt` fails the registry import, not the first actual call. `filterResponse` (the imperative form) is not subject to this check.
 
 ## One-line summary
 

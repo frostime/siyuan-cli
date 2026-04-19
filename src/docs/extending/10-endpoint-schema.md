@@ -129,10 +129,11 @@ Informational. No runtime effect yet.
 
 `registry.register(schema)` calls `validateSchema()`:
 
-1. endpoint id matches `/api/<group>/<name>`
+1. endpoint id matches `/api/<group>/<n>`
 2. `classification` is present
 3. global-read endpoints have `guard.response` or `guard.filterResponse`
 4. every `payloadTargets[*].path`'s root segment is a declared payload property
+5. `guard.response.itemsAt` is terminal-filter compatible (at most one array expansion, which must be the terminal segment)
 
 A bad schema throws at `import "./apis/index.js"`, so bugs surface before any command runs.
 
