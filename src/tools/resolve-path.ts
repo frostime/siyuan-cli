@@ -1,4 +1,5 @@
 import type { ToolSchema } from "../core/schema.js";
+import { escapeSqliteLiteral } from "../utils/sql.js";
 
 export const tool: ToolSchema = {
   id: "resolve-path",
@@ -25,7 +26,7 @@ export const tool: ToolSchema = {
     }
     // SiYuan's /api/query/sql takes a literal SQL string (no placeholders).
     // Build the query directly, escaping only single quotes per SQLite rules.
-    const value = (hpath ?? id)!.replace(/'/g, "''");
+    const value = escapeSqliteLiteral((hpath ?? id)!);
     const stmt = hpath
       ? `SELECT id, box, path, hpath FROM blocks WHERE type='d' AND hpath = '${value}'`
       : `SELECT id, box, path, hpath FROM blocks WHERE id = '${value}'`;

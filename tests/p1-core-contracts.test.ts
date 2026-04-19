@@ -212,7 +212,7 @@ test("resolveContentIds caches and throws BlockNotFoundError for missing ids", a
   assert.equal(calls, 2);
 });
 
-test("workspace surface-aware heuristic treats path as workspace-path", async () => {
+test("endpoint without payloadTargets has no payload guard", async () => {
   const seen: Array<{ kind: string; value: string; access: string }> = [];
   const engine: PermissionEngineLike = {
     checkEndpoint() {},
@@ -229,6 +229,7 @@ test("workspace surface-aware heuristic treats path as workspace-path", async ()
     filterItems(items) {
       return { kept: items, removed: 0, reasons: {} };
     },
+    requiresConfirmation() { return false; },
   };
 
   await applyPayloadGuard(
@@ -237,6 +238,7 @@ test("workspace surface-aware heuristic treats path as workspace-path", async ()
       summary: "Put",
       payload: { type: "object", properties: { path: { type: "string" } } },
       classification: { mode: "write", surface: "workspace", scope: "single", operation: "update" },
+      // no guard.payloadTargets — nothing is checked
     },
     { path: "/workspace/notes.txt" },
     engine,
@@ -244,8 +246,9 @@ test("workspace surface-aware heuristic treats path as workspace-path", async ()
     "workspace",
   );
 
-  assert.deepEqual(seen, [{ kind: "workspace-path", value: "/workspace/notes.txt", access: "write" }]);
+  assert.deepEqual(seen, []);
 });
+
 
 test("array payload targets reject non-array payload values", async () => {
   const engine: PermissionEngineLike = {

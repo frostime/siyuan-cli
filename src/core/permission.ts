@@ -201,13 +201,14 @@ export class PermissionEngine implements PermissionEngineLike {
   filterItems<T>(
     items: T[],
     extract: (item: T) => { id?: string; path?: string; notebook?: string },
+    access: "read" | "write" = "read",
   ): FilterResult<T> {
     const kept: T[] = [];
     let removed = 0;
     const reasons: Record<string, number> = {};
 
     for (const item of items) {
-      const res = this.checkDeny(extract(item), "read");
+      const res = this.checkDeny(extract(item), access);
       if (res.allowed) kept.push(item);
       else {
         removed++;

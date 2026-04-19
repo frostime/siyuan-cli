@@ -5,32 +5,6 @@ import { deriveEndpointId, evaluatePointerPath, runPointerFilterTerminal, type E
 import { ConfirmationRequiredError, ContentAccessDeniedError, type PermissionEngine } from "./permission.js";
 import type { SiyuanClient } from "./client.js";
 
-const HEURISTIC_FIELDS = {
-  id: "id",
-  blockId: "id", blockID: "id",
-  parentID: "id", parentId: "id",
-  rootID: "id", rootId: "id",
-  docID: "id", docId: "id",
-  path: "path",
-  notebook: "notebook", box: "notebook", notebookID: "notebook",
-} as const;
-
-export async function heuristicPayloadGuard(
-  payload: unknown,
-  engine: PermissionEngineLike,
-  access: "read" | "write",
-  surface?: "meta" | "content" | "asset" | "workspace" | "runtime" | "network",
-): Promise<void> {
-  if (!payload || typeof payload !== "object") return;
-  const p = payload as Record<string, unknown>;
-  for (const [key, kind] of Object.entries(HEURISTIC_FIELDS)) {
-    if (typeof p[key] === "string") {
-      const actualKind = key === "path" && surface === "workspace" ? "workspace-path" : kind;
-      await engine.checkContentRef({ kind: actualKind, value: p[key] as string, access });
-    }
-  }
-}
-
 export async function applyPayloadGuard(
   schema: EndpointSchema,
   payload: unknown,
@@ -58,18 +32,6 @@ export async function applyPayloadGuard(
     return;
   }
 
-  const guardPayload = schema.guard?.payload;
-  if (guardPayload) {
-    for (const [field, kind] of Object.entries(guardPayload)) {
-      const value = p[field];
-      if (typeof value === "string") {
-        await engine.checkContentRef({ kind: kind as any, value, access });
-      }
-    }
-    return;
-  }
-
-  await heuristicPayloadGuard(payload, engine, access, surface);
 }
 
 /**

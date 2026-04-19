@@ -2,16 +2,17 @@ import type { EndpointSchema } from "../../core/schema.js";
 
 export const schema: EndpointSchema = {
   endpoint: "/api/convert/pandoc",
-  summary: "Convert content using Pandoc",
+  summary: "Execute pandoc to convert content",
   payload: {
     type: "object",
-    required: ["content", "from", "to"],
+    required: ["args"],
     additionalProperties: false,
     properties: {
-      content: { type: "string", description: "Content to convert" },
-      from: { type: "string", description: "Source format" },
-      to: { type: "string", description: "Target format" },
-      args: { type: "string", description: "Additional Pandoc arguments" },
+      // args is the full pandoc command-line parameter list passed directly to the pandoc binary.
+      // The kernel constrains the working directory to workspace/temp/convert/pandoc/:dir,
+      // so local file access outside the workspace sandbox is not possible via this API.
+      args: { type: "array", description: "Pandoc command-line parameter list", items: { type: "string" } },
+      dir: { type: "string", description: "Working dir name under workspace/temp/convert/pandoc/; random if unset" },
     },
   },
   classification: {
@@ -19,9 +20,5 @@ export const schema: EndpointSchema = {
     surface: "meta",
     scope: "single",
     operation: "inspect",
-  },
-  cli: {
-    primary: "content",
-    allowSource: { content: ["literal", "file", "stdin"] },
   },
 };

@@ -20,6 +20,11 @@ export const schema: EndpointSchema = {
     scope: "single",
     operation: "update",
   },
+  cli: {
+    // "file" conflicts with the global --file flag (load JSON payload from file).
+    // Pass the file content via --json '{ "path": "...", "file": "..." }' instead.
+    skipFields: ["file"],
+  },
   guard: {
     payloadTargets: [
       { path: "path", kind: "workspace-path", access: "write" },

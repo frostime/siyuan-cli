@@ -54,6 +54,8 @@ export interface CliBehavior {
   examples?: Array<{ command: string; description?: string }>;
   /** Short-flag aliases, e.g. { stmt: "s" }. */
   aliases?: Record<string, string>;
+  /** Fields to exclude from individual CLI flags; pass them via --json instead. */
+  skipFields?: string[];
   /** Allowed input sources per field. Missing entries default to ["literal"]. */
   allowSource?: Record<string, InputSource[]>;
 }
@@ -68,7 +70,7 @@ export interface PayloadTargetSpec {
 export interface GuardSpec {
   /** New payload guard contract (P1+). */
   payloadTargets?: PayloadTargetSpec[];
-  /** Legacy payload guard contract accepted during rollout. */
+  /** @deprecated Legacy payload guard — no endpoint uses this; kept for type compat only. Will be removed. */
   payload?: Record<string, GuardFieldKind>;
 
   /**
@@ -117,6 +119,7 @@ export interface PermissionEngineLike {
   filterItems<T>(
     items: T[],
     extract: (item: T) => { id?: string; path?: string; notebook?: string },
+    access?: "read" | "write",
   ): { kept: T[]; removed: number; reasons: Record<string, number> };
 }
 

@@ -1,4 +1,5 @@
 import type { ToolSchema } from "../core/schema.js";
+import { escapeSqliteLiteral } from "../utils/sql.js";
 
 type DailyRow = { id: string; box: string; hpath: string; path: string; created: string };
 
@@ -63,7 +64,7 @@ export const tool: ToolSchema = {
     }
 
     let stmt = "SELECT id, box, hpath, path, created FROM blocks WHERE type='d' AND hpath LIKE '%/daily note/%'";
-    if (notebookId) stmt += ` AND box = '${notebookId.replace(/'/g, "''")}'`;
+    if (notebookId) stmt += ` AND box = '${escapeSqliteLiteral(notebookId)}'`;
     stmt += " ORDER BY created DESC LIMIT 200";
 
     const rows = await ctx.callEndpoint<DailyRow[]>("query.sql", { stmt });

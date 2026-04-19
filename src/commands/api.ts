@@ -41,7 +41,9 @@ export function describeEndpoint(id: string): void {
   const { schema } = entry;
   const serializable = {
     ...schema,
-    guard: schema.guard ? { ...schema.guard, filterResponse: schema.guard.filterResponse ? "[Function]" : undefined } : undefined,
+    guard: schema.guard
+      ? { ...schema.guard, ...(schema.guard.filterResponse ? { filterResponse: "[Function]" } : {}) }
+      : undefined,
   };
   out({ ...entry, schema: serializable });
 }
@@ -70,7 +72,19 @@ async function callEndpoint(entry: RegisteredEndpoint, rawArgs: Record<string, u
   out(result);
 }
 
+const RESERVED_CLI_ARGS = new Set(["workspace", "dry-run", "yes", "debug", "json", "file", "primary", "config", "baseUrl", "token"]);
+
 function buildEndpointSubCommand(entry: RegisteredEndpoint) {
+  const payloadFields = Object.keys(entry.schema.payload.properties);
+  // Skip collision check for multipart endpoints: their file fields are intentionally
+  // named after what they upload and --file (load JSON payload) doesn't apply to them anyway.
+  if (!entry.schema.multipart) {
+    const skipFields = new Set(entry.schema.cli?.skipFields ?? []);
+    const collision = payloadFields.filter((f) => RESERVED_CLI_ARGS.has(f) && !skipFields.has(f));
+    if (collision.length > 0) {
+      throw new Error(`Endpoint "${entry.id}" payload fields conflict with reserved CLI args: ${collision.join(", ")}`);
+    }
+  }
   return defineCommand({
     meta: { name: entry.id, description: entry.schema.summary },
     args: {
@@ -86,7 +100,9 @@ function buildEndpointSubCommand(entry: RegisteredEndpoint) {
         required: false,
       },
       ...Object.fromEntries(
-        Object.entries(entry.schema.payload.properties).map(([field, prop]) => [field, { type: "string", description: prop.description ?? field }]),
+        Object.entries(entry.schema.payload.properties)
+          .filter(([field]) => !(entry.schema.cli?.skipFields ?? []).includes(field))
+          .map(([field, prop]) => [field, { type: "string", description: prop.description ?? field }]),
       ),
     },
     run: async ({ args }) => {
