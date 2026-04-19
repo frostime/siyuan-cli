@@ -1,61 +1,64 @@
 {
-  "name": "siyuan-cli",
-  "version": "0.3.0",
-  "description": "Agent-first CLI for SiYuan Note — workspace management, kernel API proxy, workflow tools, and agent skill install",
-  "type": "module",
-  "bin": {
-    "siyuan": "./bin/siyuan.mjs"
-  },
-  "files": [
-    "bin/**",
-    "dist/**",
-    "skills/**"
-  ],
-  "engines": {
-    "node": ">=20"
-  },
-  "scripts": {
-    "build": "tsdown src/cli.ts --format esm --out-dir dist --no-dts",
-    "dev": "tsdown src/cli.ts --format esm --out-dir dist --no-dts --watch",
-    "siyuan": "node bin/siyuan.mjs",
-    "typecheck": "tsc --noEmit",
-    "test": "node --test",
-    "prepublishOnly": "pnpm run build",
-    "prelink": "pnpm run build"
-  },
-  "keywords": [
-    "siyuan",
-    "思源笔记",
-    "cli",
-    "note-taking",
-    "agent",
-    "kernel-api"
-  ],
-  "author": "frostime",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/frostime/siyuan-cli.git"
-  },
-  "homepage": "https://github.com/frostime/siyuan-cli#readme",
-  "bugs": {
-    "url": "https://github.com/frostime/siyuan-cli/issues"
-  },
-  "dependencies": {
-    "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1",
-    "citty": "^0.1.6",
-    "consola": "^3.2.3",
-    "defu": "^6.1.4",
-    "micromatch": "^4.0.8",
-    "pathe": "^1.1.2",
-    "yaml": "^2.5.1"
-  },
-  "devDependencies": {
-    "@types/micromatch": "^4.0.9",
-    "@types/node": "^22.9.0",
-    "tsdown": "^0.21.9",
-    "typescript": "^5.6.3"
-  },
-  "packageManager": "pnpm@10.24.0"
+    "name": "@frostime/siyuan-cli",
+    "version": "0.3.0",
+    "description": "Agent-first CLI for SiYuan Note — workspace management, kernel API proxy, workflow tools, and agent skill install",
+    "type": "module",
+    "bin": {
+        "siyuan": "./bin/siyuan.mjs"
+    },
+    "files": [
+        "bin/**",
+        "dist/**",
+        "skills/**"
+    ],
+    "engines": {
+        "node": ">=20"
+    },
+    "scripts": {
+        "build": "tsdown src/cli.ts --format esm --out-dir dist --no-dts",
+        "dev": "tsdown src/cli.ts --format esm --out-dir dist --no-dts --watch",
+        "siyuan": "node bin/siyuan.mjs",
+        "typecheck": "tsc --noEmit",
+        "test": "tsx --test tests/*.test.ts",
+        "prepublishOnly": "pnpm run build",
+        "prelink": "pnpm run build",
+        "format": "prettier --write ."
+    },
+    "keywords": [
+        "siyuan",
+        "思源笔记",
+        "cli",
+        "note-taking",
+        "agent",
+        "kernel-api"
+    ],
+    "author": "frostime",
+    "license": "GPL-3.0-only",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/frostime/siyuan-cli.git"
+    },
+    "homepage": "https://github.com/frostime/siyuan-cli#readme",
+    "bugs": {
+        "url": "https://github.com/frostime/siyuan-cli/issues"
+    },
+    "dependencies": {
+        "ajv": "^8.17.1",
+        "ajv-formats": "^3.0.1",
+        "citty": "^0.1.6",
+        "consola": "^3.2.3",
+        "defu": "^6.1.4",
+        "micromatch": "^4.0.8",
+        "pathe": "^1.1.2",
+        "yaml": "^2.5.1"
+    },
+    "devDependencies": {
+        "@types/micromatch": "^4.0.9",
+        "@types/node": "^22.9.0",
+        "prettier": "^3.8.3",
+        "tsdown": "^0.21.9",
+        "tsx": "^4.21.0",
+        "typescript": "^5.6.3"
+    },
+    "packageManager": "pnpm@10.24.0"
 }

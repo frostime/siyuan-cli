@@ -1,25 +1,27 @@
-import type { EndpointSchema } from "../../core/schema.js";
+import type { EndpointSchema } from '../../core/schema.js';
 
 export const schema: EndpointSchema = {
-  endpoint: "/api/block/unfoldBlock",
-  summary: "Unfold a block",
-  payload: {
-    type: "object",
-    required: ["id"],
-    additionalProperties: false,
-    properties: {
-      id: { type: "string", description: "Block ID", pattern: "^\\d{14}-[0-9a-z]{7}$" },
+    endpoint: '/api/block/unfoldBlock',
+    summary: 'Unfold a block',
+    payload: {
+        type: 'object',
+        required: ['id'],
+        additionalProperties: false,
+        properties: {
+            id: {
+                type: 'string',
+                description: 'Block ID',
+                pattern: '^\\d{14}-[0-9a-z]{7}$'
+            }
+        }
     },
-  },
-  classification: {
-    mode: "write",
-    surface: "content",
-    scope: "single",
-    operation: "update",
-  },
-  guard: {
-    payloadTargets: [
-      { path: "id", kind: "id", access: "write" },
-    ],
-  },
+    classification: {
+        mode: 'write',
+        surface: 'content',
+        scope: 'single',
+        operation: 'update'
+    },
+    guard: {
+        payloadTargets: [{ path: 'id', kind: 'id', access: 'write' }]
+    }
 };

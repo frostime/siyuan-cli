@@ -9,5 +9,5 @@
  * Usage: `stmt: \`WHERE box = '${escapeSqliteLiteral(id)}'\``
  */
 export function escapeSqliteLiteral(value: string): string {
-  return value.replace(/'/g, "''");
+    return value.replace(/'/g, "''");
 }
