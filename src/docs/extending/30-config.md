@@ -113,6 +113,30 @@ evaluate(context, rules, default):
 
 A condition is "declared" if the field is present in the rule. Absent fields match anything (wildcard). A rule with no conditions matches every context — useful as a final catch-all.
 
+**Order is the only priority mechanism.** There is no "deny beats allow" override. Two patterns:
+
+```yaml
+# Pattern A: broad allow + specific deny
+# Specific deny MUST come before the broad allow, or it will never be reached.
+rules:
+  - notebook: "A"
+    path: "/secret/**"
+    effect: deny      # ① specific — checked first
+  - notebook: "A"
+    effect: allow     # ② broad — only reached when ① doesn't match
+
+# Pattern B: broad deny + specific allow
+# Specific allow MUST come before the catch-all deny.
+rules:
+  - tool: "append-content"
+    notebook: "A"
+    effect: allow     # ① specific allow — checked first
+  - action: write
+    effect: deny      # ② broad write deny — reached for everything else
+```
+
+If you reverse the order in either pattern, the broad rule matches first and the specific rule is unreachable.
+
 ### Two-phase evaluation
 
 Permission checks happen in two phases because the available context differs:

@@ -23,6 +23,19 @@ guard: {
 
 Before the kernel is called, `applyPayloadGuard()` evaluates each `path` against the payload and passes every resolved string value to `engine.checkContentRef({kind, value, access})`.
 
+#### `kind` values and how each is resolved
+
+| `kind` | What the value is | How the engine resolves it | Context fields populated |
+|--------|------------------|---------------------------|-------------------------|
+| `id` | A SiYuan block id | SQL: `SELECT box, path FROM blocks WHERE id = ?` — gets the **containing document's** notebook and path | `notebook` + `path` |
+| `notebook` | A notebook id | Used directly | `notebook` |
+| `path` | An id-based document path (e.g. `/abc-xxx/def-yyy.sy`) | Used directly | `path` |
+| `workspace-path` | A filesystem path under the workspace root | Caller + action check only; `path`-condition rules are not yet applied | (reserved) |
+
+**`kind: "id"` resolution detail**: the SQL query returns `box` (notebook id) and `path` (the `.sy` file path of the document that owns the block). For non-document blocks (paragraphs, headings, list items), `path` is the path of their *containing document*, not a path unique to that block — consistent with SiYuan's block tree semantics. See `guides/document-tree-and-paths.md`.
+
+Once the context is populated, the full rule list is evaluated with `{endpoint, tool, action, notebook, path}`. Rules with `notebook` / `path` conditions are matched against these resolved values.
+
 ### 2. `response` — declarative post-call filter
 
 ```ts
