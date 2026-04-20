@@ -1,79 +1,101 @@
 /**
- * Permission Engine — endpoint/tool allow-deny + content/workspace scope checks.
+ * Permission Engine — unified rule-list model.
+ *
+ * Rules are evaluated top-to-bottom; first full match wins.
+ * Each rule has optional conditions (endpoint, tool, action, notebook, path)
+ * and a mandatory effect (allow | deny | confirm).
+ * Omitted conditions act as wildcards.
+ *
+ * Two-phase evaluation:
+ *   Phase 1 (checkEndpoint/checkTool): only caller info available, no resource.
+ *     - Pure caller rules (no resource conditions) produce immediate verdicts.
+ *     - If resource-qualified rules exist for this caller, defer to Phase 2.
+ *   Phase 2 (checkContentRef / filterItems): full context available.
+ *     - First full-match rule wins.
+ *     - No match → default effect.
+ *
+ * Risk-auto confirm is a post-processing step in guard.ts:
+ *   if evaluate() returns 'allow' but the endpoint's derived risk demands
+ *   confirmation, the result is upgraded to 'confirm'.
  */
 import micromatch from 'micromatch';
+import type { AppConfig, ResolvedWorkspace } from './config.js';
 import type {
-    AppConfig,
+    CallerContext,
     PermissionConfig,
-    ResolvedWorkspace
-} from './config.js';
-import type {
+    PermissionContext,
+    PermissionEffect,
     PermissionEngineLike,
+    PermissionRule,
     RegisteredEndpoint,
     ResourceKind
 } from './schema.js';
 import { CliError, ExitCode } from '../utils/errors.js';
 import type { SiyuanClient } from './client.js';
 
-function cascadeWorkspacePermission(
-    config: AppConfig,
-    workspaceName: string
-): PermissionConfig {
-    const ws = config.workspaces[workspaceName];
-    const defaults = config.defaults?.permission;
-    return {
-        endpoints: ws?.permission?.endpoints ?? defaults?.endpoints,
-        tools: ws?.permission?.tools ?? defaults?.tools,
-        content: {
-            read: ws?.permission?.content?.read ?? defaults?.content?.read,
-            write: ws?.permission?.content?.write ?? defaults?.content?.write
-        },
-        workspace: {
-            read: ws?.permission?.workspace?.read ?? defaults?.workspace?.read,
-            write:
-                ws?.permission?.workspace?.write ?? defaults?.workspace?.write
-        } as PermissionConfig['workspace'],
-        confirm: ws?.permission?.confirm ?? defaults?.confirm
-    };
-}
+// ─── Rule cascade ────────────────────────────────────────────────────────────
 
 /**
- * Resolve the PermissionConfig that the engine should enforce.
- *
- * If the resolved workspace carries `effectivePermission` (from .siyuan-cli.yaml),
- * it COMPLETELY REPLACES the cascade — no merge with workspace-level or
- * defaults-level permission. See docs/extending/31-workspace-resolution.md for
- * the rationale.
- *
- * Otherwise, the standard two-layer cascade (workspace ?? defaults) applies.
+ * Assemble the final rule list and default effect by concatenating layers.
+ * Order: project (highest priority) > workspace > defaults (lowest).
  */
+export function cascadePermission(
+    config: AppConfig,
+    workspaceName: string,
+    projectPermission?: PermissionConfig
+): { defaultEffect: PermissionEffect; rules: PermissionRule[] } {
+    const ws = config.workspaces[workspaceName];
+    const rules: PermissionRule[] = [
+        ...(projectPermission?.rules ?? []),
+        ...(ws?.permission?.rules ?? []),
+        ...(config.defaults?.permission?.rules ?? [])
+    ];
+    const defaultEffect: PermissionEffect =
+        projectPermission?.default ??
+        ws?.permission?.default ??
+        config.defaults?.permission?.default ??
+        'deny';
+    return { defaultEffect, rules };
+}
+
 export function resolveEffectivePermission(
     config: AppConfig,
     resolved: ResolvedWorkspace
-): PermissionConfig {
-    if (resolved.effectivePermission) {
-        return resolved.effectivePermission;
-    }
-    return cascadeWorkspacePermission(config, resolved.name);
+): { defaultEffect: PermissionEffect; rules: PermissionRule[] } {
+    return cascadePermission(
+        config,
+        resolved.name,
+        resolved.effectivePermission
+    );
 }
 
-export class EndpointDisabledError extends CliError {
-    constructor(endpoint: string, reason: string) {
+// ─── Errors ──────────────────────────────────────────────────────────────────
+
+export class PermissionDeniedError extends CliError {
+    constructor(reason: string, ruleIndex?: number) {
+        const source =
+            ruleIndex !== undefined ? ` (rule #${ruleIndex})` : ' (default)';
         super(
             ExitCode.PERMISSION,
-            'ENDPOINT_DISABLED',
-            `Endpoint "${endpoint}" is disabled: ${reason}`
+            'PERMISSION_DENIED',
+            `${reason}${source}`
         );
     }
 }
 
-export class ToolDisabledError extends CliError {
-    constructor(tool: string, reason: string) {
+export class EndpointDeniedError extends CliError {
+    constructor(label: string, reason: string) {
         super(
             ExitCode.PERMISSION,
-            'TOOL_DISABLED',
-            `Tool "${tool}" is disabled: ${reason}`
+            'ENDPOINT_DENIED',
+            `${label} denied: ${reason}`
         );
+    }
+}
+
+export class ContentDeniedError extends CliError {
+    constructor(reason: string) {
+        super(ExitCode.PERMISSION, 'CONTENT_DENIED', reason);
     }
 }
 
@@ -84,18 +106,6 @@ export class BlockNotFoundError extends CliError {
             'BLOCK_NOT_FOUND',
             `Block id not found: ${ids.join(', ')}`
         );
-    }
-}
-
-export class ContentAccessDeniedError extends CliError {
-    constructor(reason: string) {
-        super(ExitCode.PERMISSION, 'CONTENT_ACCESS_DENIED', reason);
-    }
-}
-
-export class WorkspaceAccessDeniedError extends CliError {
-    constructor(reason: string) {
-        super(ExitCode.PERMISSION, 'WORKSPACE_ACCESS_DENIED', reason);
     }
 }
 
@@ -110,6 +120,52 @@ export class ConfirmationRequiredError extends CliError {
     }
 }
 
+// ─── Matching ────────────────────────────────────────────────────────────────
+
+function matchGlob(pattern: string, value: string): boolean {
+    return micromatch.isMatch(value, pattern);
+}
+
+function hasResourceCondition(rule: PermissionRule): boolean {
+    return rule.notebook !== undefined || rule.path !== undefined;
+}
+
+function matchesCaller(rule: PermissionRule, ctx: PermissionContext): boolean {
+    if (rule.endpoint !== undefined) {
+        if (!ctx.endpoint || !matchGlob(rule.endpoint, ctx.endpoint))
+            return false;
+    }
+    if (rule.tool !== undefined) {
+        if (!ctx.tool || !matchGlob(rule.tool, ctx.tool)) return false;
+    }
+    if (rule.action !== undefined) {
+        if (ctx.action !== undefined && rule.action !== ctx.action)
+            return false;
+    }
+    return true;
+}
+
+function matchesResource(
+    rule: PermissionRule,
+    ctx: PermissionContext
+): boolean {
+    if (rule.notebook !== undefined) {
+        if (ctx.notebook === undefined || rule.notebook !== ctx.notebook)
+            return false;
+    }
+    if (rule.path !== undefined) {
+        if (ctx.path === undefined || !matchGlob(rule.path, ctx.path))
+            return false;
+    }
+    return true;
+}
+
+function matchesFull(rule: PermissionRule, ctx: PermissionContext): boolean {
+    return matchesCaller(rule, ctx) && matchesResource(rule, ctx);
+}
+
+// ─── Engine ──────────────────────────────────────────────────────────────────
+
 export interface FilterResult<T> {
     kept: T[];
     removed: number;
@@ -117,137 +173,167 @@ export interface FilterResult<T> {
 }
 
 export class PermissionEngine implements PermissionEngineLike {
-    private readonly perm: PermissionConfig;
+    private readonly rules: PermissionRule[];
+    private readonly defaultEffect: PermissionEffect;
     private readonly client: SiyuanClient;
     private readonly idCache = new Map<
         string,
         { notebook: string; path: string }
     >();
 
-    /**
-     * Construct a permission engine.
-     *
-     * Signature `(config, workspaceName, client, permissionOverride?)`:
-     *  - The first three arguments preserve direct instantiation from tests
-     *    and from any caller that holds (AppConfig + workspace name + client).
-     *  - `permissionOverride` is populated by `createPermissionEngine` when a
-     *    `.siyuan-cli.yaml` declared a `permission` block. That block
-     *    COMPLETELY REPLACES the cascade (workspace ?? defaults); see
-     *    docs/extending/31-workspace-resolution.md for the rationale.
-     */
     constructor(
-        config: AppConfig,
-        workspaceName: string,
-        client: SiyuanClient,
-        permissionOverride?: PermissionConfig
+        rules: PermissionRule[],
+        defaultEffect: PermissionEffect,
+        client: SiyuanClient
     ) {
-        this.perm =
-            permissionOverride ??
-            cascadeWorkspacePermission(config, workspaceName);
+        this.rules = rules;
+        this.defaultEffect = defaultEffect;
         this.client = client;
     }
 
+    // ── Core evaluation ────────────────────────────────────────────────────
+
+    evaluate(ctx: PermissionContext): PermissionEffect {
+        for (const rule of this.rules) {
+            if (matchesFull(rule, ctx)) {
+                return rule.effect;
+            }
+        }
+        return this.defaultEffect;
+    }
+
+    /**
+     * Like evaluate(), but also reports which rule matched and at what index.
+     * Used by `permission check` command and debug output.
+     */
+    evaluateVerbose(
+        ctx: PermissionContext
+    ): {
+        effect: PermissionEffect;
+        ruleIndex: number | null;
+        source: string;
+    } {
+        for (let i = 0; i < this.rules.length; i++) {
+            if (matchesFull(this.rules[i]!, ctx)) {
+                return {
+                    effect: this.rules[i]!.effect,
+                    ruleIndex: i,
+                    source: 'rule'
+                };
+            }
+        }
+        return {
+            effect: this.defaultEffect,
+            ruleIndex: null,
+            source: 'default'
+        };
+    }
+
+    // ── Phase 1: caller-level gate ─────────────────────────────────────────
+
+    /**
+     * Phase 1 check for endpoints.
+     *
+     * Three outcomes:
+     *  - A pure-caller deny rule matches → throw immediately
+     *  - Resource-qualified rules exist for this caller → defer (return void)
+     *  - No rules match → apply default
+     */
     checkEndpoint(id: string): void {
-        const api = this.perm.endpoints;
-        if (!api) return;
-        if (api.allow?.length && !micromatch.isMatch(id, api.allow)) {
-            throw new EndpointDisabledError(id, 'not in allow list');
-        }
-        if (api.deny?.length && micromatch.isMatch(id, api.deny)) {
-            throw new EndpointDisabledError(id, 'in deny list');
-        }
+        this._checkCaller({ endpoint: id }, `endpoint "${id}"`);
     }
 
     checkTool(id: string): void {
-        const tools = this.perm.tools;
-        if (!tools) return;
-        if (tools.allow?.length && !micromatch.isMatch(id, tools.allow)) {
-            throw new ToolDisabledError(id, 'not in allow list');
-        }
-        if (tools.deny?.length && micromatch.isMatch(id, tools.deny)) {
-            throw new ToolDisabledError(id, 'in deny list');
-        }
+        this._checkCaller({ tool: id }, `tool "${id}"`);
     }
 
-    /** @internal content scope predicate; prefer checkContentRef() outside this class. */
-    private checkDeny(
-        item: { id?: string; path?: string; notebook?: string },
-        access: 'read' | 'write' = 'read'
-    ): { allowed: boolean; reason?: string } {
-        const content = this.perm.content?.[access];
-        if (!content) return { allowed: true };
+    private _checkCaller(ctx: PermissionContext, label: string): void {
+        // Gather all rules whose caller conditions match
+        const candidates = this.rules.filter((r) => matchesCaller(r, ctx));
 
-        if (item.notebook && content.notebooks) {
-            if (
-                content.notebooks.allow?.length &&
-                !content.notebooks.allow.includes(item.notebook)
-            ) {
-                return {
-                    allowed: false,
-                    reason: `notebook ${item.notebook} not in ${access} allow list`
-                };
+        if (candidates.length === 0) {
+            // No rules mention this caller at all → fall through to default
+            if (this.defaultEffect === 'deny') {
+                throw new EndpointDeniedError(
+                    label,
+                    'no matching rule; default deny'
+                );
             }
-            if (
-                content.notebooks.deny?.length &&
-                content.notebooks.deny.includes(item.notebook)
-            ) {
-                return {
-                    allowed: false,
-                    reason: `notebook ${item.notebook} in ${access} deny list`
-                };
-            }
+            return;
         }
 
-        if (item.path && content.paths) {
-            if (
-                content.paths.allow?.length &&
-                !micromatch.isMatch(item.path, content.paths.allow)
-            ) {
-                return {
-                    allowed: false,
-                    reason: `path ${item.path} not in ${access} allow list`
-                };
+        // Separate pure-caller rules from resource-qualified ones
+        const pureCaller = candidates.filter(
+            (r) => !hasResourceCondition(r)
+        );
+        const resourceQualified = candidates.filter((r) =>
+            hasResourceCondition(r)
+        );
+
+        if (pureCaller.length > 0) {
+            // Find the first pure-caller rule in the original order
+            const firstPureIndex = this.rules.findIndex(
+                (r) => matchesCaller(r, ctx) && !hasResourceCondition(r)
+            );
+            const firstPure = this.rules[firstPureIndex]!;
+            if (firstPure.effect === 'deny') {
+                throw new EndpointDeniedError(
+                    label,
+                    `denied by rule #${firstPureIndex}`
+                );
             }
-            if (
-                content.paths.deny?.length &&
-                micromatch.isMatch(item.path, content.paths.deny)
-            ) {
-                return {
-                    allowed: false,
-                    reason: `path ${item.path} in ${access} deny list`
-                };
-            }
+            // allow or confirm → pass through to Phase 2 / confirm handling
+            return;
         }
 
-        return { allowed: true };
+        // Only resource-qualified rules matched caller → defer to Phase 2.
+        // Do NOT apply default here — Phase 2 will make the final call once
+        // it has resource information.
     }
 
-    private checkWorkspacePath(
-        path: string,
-        access: 'read' | 'write'
-    ): { allowed: boolean; reason?: string } {
-        const workspace = this.perm.workspace?.[access];
-        if (!workspace?.paths) return { allowed: true };
-        if (
-            workspace.paths.allow?.length &&
-            !micromatch.isMatch(path, workspace.paths.allow)
-        ) {
-            return {
-                allowed: false,
-                reason: `workspace path ${path} not in ${access} allow list`
-            };
+    // ── Phase 2: content ref check ─────────────────────────────────────────
+
+    async checkContentRef(
+        ref: {
+            kind: ResourceKind;
+            value: string;
+            access: 'read' | 'write';
+        },
+        caller?: CallerContext
+    ): Promise<void> {
+        const ctx: PermissionContext = {
+            ...caller,
+            action: ref.access
+        };
+
+        if (ref.kind === 'notebook') {
+            ctx.notebook = ref.value;
+        } else if (ref.kind === 'path') {
+            ctx.path = ref.value;
+        } else if (ref.kind === 'workspace-path') {
+            // For now, workspace-path checks only the caller+action.
+            // workspacePath condition is reserved for Phase 2.
+        } else {
+            // kind === 'id': resolve to {notebook, path} first
+            const resolved = await this.resolveContentId(ref.value);
+            ctx.notebook = resolved.notebook;
+            ctx.path = resolved.path;
         }
-        if (
-            workspace.paths.deny?.length &&
-            micromatch.isMatch(path, workspace.paths.deny)
-        ) {
-            return {
-                allowed: false,
-                reason: `workspace path ${path} in ${access} deny list`
-            };
+
+        const { effect, ruleIndex } = this.evaluateVerbose(ctx);
+        if (effect === 'deny') {
+            const reason =
+                ruleIndex !== null
+                    ? `denied by rule #${ruleIndex}`
+                    : 'denied by default policy';
+            throw new ContentDeniedError(
+                `${ref.kind} "${ref.value}" (access: ${ref.access}) ${reason}`
+            );
         }
-        return { allowed: true };
+        // allow or confirm → pass (confirm handled in executeEndpoint)
     }
+
+    // ── ID resolution ──────────────────────────────────────────────────────
 
     async resolveContentIds(
         ids: string[]
@@ -292,89 +378,91 @@ export class PermissionEngine implements PermissionEngineLike {
         return map.get(id)!;
     }
 
-    async checkContentRef(ref: {
-        kind: ResourceKind;
-        value: string;
-        access: 'read' | 'write';
-    }): Promise<void> {
-        if (ref.kind === 'workspace-path') {
-            const res = this.checkWorkspacePath(ref.value, ref.access);
-            if (!res.allowed)
-                throw new WorkspaceAccessDeniedError(
-                    res.reason ?? 'workspace access denied'
-                );
-            return;
-        }
-        if (ref.kind === 'notebook') {
-            const res = this.checkDeny({ notebook: ref.value }, ref.access);
-            if (!res.allowed)
-                throw new ContentAccessDeniedError(
-                    res.reason ?? 'content access denied'
-                );
-            return;
-        }
-        if (ref.kind === 'path') {
-            const res = this.checkDeny({ path: ref.value }, ref.access);
-            if (!res.allowed)
-                throw new ContentAccessDeniedError(
-                    res.reason ?? 'content access denied'
-                );
-            return;
-        }
-        const resolved = await this.resolveContentId(ref.value);
-        const res = this.checkDeny(
-            { notebook: resolved.notebook, path: resolved.path },
-            ref.access
-        );
-        if (!res.allowed)
-            throw new ContentAccessDeniedError(
-                res.reason ?? 'content access denied'
-            );
-    }
+    // ── Response filtering ─────────────────────────────────────────────────
 
-    filterItems<T>(
+    /**
+     * Filter a list of items against the permission rules.
+     *
+     * Items may carry pre-resolved {notebook, path}, a raw {id}, or both.
+     * When only `id` is present (and notebook/path are absent), the engine
+     * resolves the block's containing document in bulk via SQL so that
+     * notebook- and path-based rules can be applied.
+     */
+    async filterItems<T>(
         items: T[],
-        extract: (item: T) => { id?: string; path?: string; notebook?: string },
+        extract: (item: T) => {
+            id?: string;
+            path?: string;
+            notebook?: string;
+        },
+        caller?: CallerContext,
         access: 'read' | 'write' = 'read'
-    ): FilterResult<T> {
+    ): Promise<FilterResult<T>> {
+        // ── Step 1: collect items that need id→{notebook,path} resolution ──
+        const extracted = items.map(extract);
+        const unresolvedIds = [
+            ...new Set(
+                extracted
+                    .filter((f) => f.id && !f.notebook && !f.path)
+                    .map((f) => f.id!)
+            )
+        ];
+
+        let resolved = new Map<string, { notebook: string; path: string }>();
+        if (unresolvedIds.length > 0) {
+            resolved = await this.resolveContentIds(unresolvedIds);
+        }
+
+        // ── Step 2: evaluate each item ──────────────────────────────────────
         const kept: T[] = [];
         let removed = 0;
         const reasons: Record<string, number> = {};
 
-        for (const item of items) {
-            const res = this.checkDeny(extract(item), access);
-            if (res.allowed) kept.push(item);
-            else {
+        for (let i = 0; i < items.length; i++) {
+            const fields = extracted[i]!;
+
+            // Prefer pre-resolved notebook/path; fall back to id resolution.
+            let notebook = fields.notebook;
+            let path = fields.path;
+            if (!notebook && !path && fields.id) {
+                const r = resolved.get(fields.id);
+                notebook = r?.notebook;
+                path = r?.path;
+            }
+
+            const ctx: PermissionContext = {
+                ...caller,
+                action: access,
+                notebook,
+                path
+            };
+            const { effect, ruleIndex } = this.evaluateVerbose(ctx);
+            if (effect === 'deny') {
                 removed++;
-                const reason = res.reason ?? 'unknown';
+                const reason =
+                    ruleIndex !== null
+                        ? `rule #${ruleIndex}`
+                        : 'default deny';
                 reasons[reason] = (reasons[reason] ?? 0) + 1;
+            } else {
+                kept.push(items[i]!);
             }
         }
         return { kept, removed, reasons };
     }
-
-    requiresConfirmation(entry: RegisteredEndpoint): boolean {
-        const riskAuto = entry.meta.requiresConfirmation;
-        const confirm = this.perm.confirm;
-        if (!confirm) return riskAuto;
-        const c = entry.meta.classification;
-        const policyMatch =
-            (confirm.modes?.includes(c.mode) ?? false) ||
-            (confirm.surfaces?.includes(c.surface) ?? false) ||
-            (confirm.scopes?.includes(c.scope) ?? false);
-        return riskAuto || policyMatch;
-    }
 }
+
+// ─── Factory ─────────────────────────────────────────────────────────────────
 
 export function createPermissionEngine(
     config: AppConfig,
     resolved: ResolvedWorkspace,
     client: SiyuanClient
 ): PermissionEngine {
-    return new PermissionEngine(
+    const { rules, defaultEffect } = cascadePermission(
         config,
         resolved.name,
-        client,
         resolved.effectivePermission
     );
+    return new PermissionEngine(rules, defaultEffect, client);
 }

@@ -71,12 +71,13 @@ Resolution does **not** merge files found on the way up — first hit wins.
 schemaVersion: 1            # required; must equal 1
 workspace: prod             # optional; must exist in global config.workspaces
 permission:                 # optional; same shape as global permission block
-  endpoints:
-    deny: ["system.exit"]
-  content:
-    write:
-      paths:
-        deny: ["/20260107143325-zbrtqup/**"]
+  default: deny
+  rules:
+    - endpoint: "system.exit"
+      effect: deny
+    - notebook: "20260101-aaa"
+      path: "/20260107143325-zbrtqup/**"
+      effect: deny
 ```
 
 ## Field rules (hard-enforced at load time)
@@ -87,19 +88,24 @@ permission:                 # optional; same shape as global permission block
 | `workspace` | must be a string and exist in `config.workspaces` | `PROJECT_CONFIG_WORKSPACE_NOT_FOUND` (exit 2) |
 | `token` / `baseUrl` / `tokenSource` / `defaults` | never allowed | `PROJECT_CONFIG_REJECTED_FIELD` (exit 2) |
 | unknown top-level keys | allowed but flagged | stderr warning `UNKNOWN_PROJECT_CONFIG_KEY` |
-| `permission.content.notebooks.*` entries | must match kernel id pattern `^\d{14}-[0-9a-z]{7}$` | stderr warning `LIKELY_HPATH_NOT_ID` |
-| `permission.content.paths.*` entries | must contain a kernel id segment | stderr warning `LIKELY_HPATH_NOT_ID_IN_PATH` |
+| `permission.rules[*].notebook` entries | must match kernel id pattern `^\d{14}-[0-9a-z]{7}$` | stderr warning `LIKELY_HPATH_NOT_ID` |
+| `permission.rules[*].path` entries | must contain a kernel id segment | stderr warning `LIKELY_HPATH_NOT_ID_IN_PATH` |
 | YAML parse failure | never OK | `PROJECT_CONFIG_PARSE_ERROR` (exit 2) |
 
 **Rationale for rejecting connection fields**: by construction, the project file cannot hold credentials. It is safe to commit. The global config (`~/.config/siyuan-cli/config.yaml`) is the sole source of `baseUrl` / `token`.
 
 ## Permission override semantics
 
-When a project file declares `permission`, it **completely replaces** the cascade `workspaces[name].permission ?? defaults.permission`. There is **no merge** with either layer.
+When a project file declares `permission`, its rules are **prepended** to the cascade:
 
-Rationale: a project config expresses "in this directory, operations must satisfy these rules" as a complete assertion. Merging would allow unrelated global rules to leak in and dilute the project's intent. This mirrors the existing `workspace ?? defaults` two-layer replacement — consistency matters.
+```
+final rules   = project.rules ++ workspace.rules ++ defaults.rules
+final default = project.default ?? workspace.default ?? defaults.default ?? "deny"
+```
 
-If you find yourself duplicating rules across many project files, that is the signal for a future `extends:` mechanism (Phase 3, not currently implemented). Open an issue with concrete examples.
+Project rules come first → highest priority. Global workspace and defaults rules still apply after them. This means a project file can add targeted exceptions (deny a specific subtree, require confirm for a tool) without having to re-declare everything.
+
+If you want the project to completely seal off everything not explicitly allowed, set `default: deny` in the project file and write an explicit allow list in `rules`.
 
 ## Independence of workspace selection and permission
 
@@ -152,13 +158,13 @@ $ siyuan workspace which
   "projectConfigPath": "/home/user/projects/myproj/.siyuan-cli.yaml",
   "permissionOverriddenByProject": true,
   "permission": {
-    "hasEndpointsRule": true,
-    "hasToolsRule": false,
-    "hasContentRead": false,
-    "hasContentWrite": true,
-    "hasWorkspaceRead": false,
-    "hasWorkspaceWrite": false,
-    "hasConfirmPolicy": false
+    "default": "deny",
+    "ruleCount": 3,
+    "rules": [
+      { "index": 0, "endpoint": "block.delete*", "effect": "deny" },
+      { "index": 1, "notebook": "20260101-aaa", "action": "read", "effect": "allow" },
+      { "index": 2, "effect": "deny" }
+    ]
   }
 }
 ```

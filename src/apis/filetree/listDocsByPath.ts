@@ -39,14 +39,14 @@ export const schema: EndpointSchema = {
             { path: 'notebook', kind: 'notebook', access: 'read' },
             { path: 'path', kind: 'path', access: 'read' }
         ],
-        filterResponse: (response, engine) => {
+        filterResponse: async (response, engine) => {
             const r = response as {
                 files?: Array<Record<string, unknown>>;
                 data?: { files?: Array<Record<string, unknown>>; box?: string };
             };
             const files = r.data?.files ?? r.files ?? [];
             const box = r.data?.box;
-            const { kept } = engine.filterItems(files, (f) => ({
+            const { kept } = await engine.filterItems(files, (f) => ({
                 id: typeof f.id === 'string' ? f.id : undefined,
                 path: typeof f.path === 'string' ? f.path : undefined,
                 notebook: typeof f.box === 'string' ? f.box : box

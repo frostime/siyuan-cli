@@ -418,15 +418,6 @@ const whichCommand = defineCommand({
                 args.cwd ?? process.cwd()
             );
             const effectivePerm = resolveEffectivePermission(config, resolved);
-            const permissionSummary = {
-                hasEndpointsRule: !!effectivePerm.endpoints,
-                hasToolsRule: !!effectivePerm.tools,
-                hasContentRead: !!effectivePerm.content?.read,
-                hasContentWrite: !!effectivePerm.content?.write,
-                hasWorkspaceRead: !!effectivePerm.workspace?.read,
-                hasWorkspaceWrite: !!effectivePerm.workspace?.write,
-                hasConfirmPolicy: !!effectivePerm.confirm
-            };
             out({
                 workspace: resolved.name,
                 source: resolved.source,
@@ -434,7 +425,14 @@ const whichCommand = defineCommand({
                 hasToken: !!resolved.token,
                 projectConfigPath: resolved.projectConfigPath ?? null,
                 permissionOverriddenByProject: !!resolved.effectivePermission,
-                permission: permissionSummary
+                permission: {
+                    default: effectivePerm.defaultEffect,
+                    ruleCount: effectivePerm.rules.length,
+                    rules: effectivePerm.rules.map((r, i) => ({
+                        index: i,
+                        ...r
+                    }))
+                }
             });
         })
 });

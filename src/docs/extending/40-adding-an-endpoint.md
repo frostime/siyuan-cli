@@ -81,15 +81,15 @@ guard: {
   ],
   // refIDs / defIDs are parallel arrays at the root — neither is a single root-array.
   // filterResponse is the right tool here because of the two parallel arrays.
-  filterResponse: (response, engine) => {
+  filterResponse: async (response, engine) => {
     const r = response as { refIDs?: string[]; defIDs?: string[] };
-    const filterIds = (ids?: string[]) => {
+    const filterIds = async (ids?: string[]) => {
       if (!ids?.length) return ids;
-      const { kept } = engine.filterItems(ids, (id) => ({ id: typeof id === "string" ? id : undefined }));
+      const { kept } = await engine.filterItems(ids, (id) => ({ id: typeof id === "string" ? id : undefined }));
       return kept as string[];
     };
-    r.refIDs = filterIds(r.refIDs);
-    r.defIDs = filterIds(r.defIDs);
+    r.refIDs = await filterIds(r.refIDs);
+    r.defIDs = await filterIds(r.defIDs);
     return response;
   },
 },

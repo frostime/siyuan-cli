@@ -147,8 +147,6 @@ async function probeHttp(
                     data?: { ver?: string } | null;
                     msg?: string;
                 };
-                // SiYuan envelope: { code: number, msg, data }. Works for both
-                // 200 OK (code=0) and auth failures (401 with code=-1).
                 if (
                     typeof body?.code === 'number' &&
                     ('data' in body || 'msg' in body)
@@ -215,7 +213,6 @@ function tryGetProcessNameWindows(pid: number): string | undefined {
 function probePortOwnerWindows(port: number): PortOwner | undefined {
     const out = runCommand(`netstat -ano -p TCP`);
     if (!out) return undefined;
-    // Match both IPv4 (127.0.0.1:PORT) and IPv6 ([::1]:PORT) listeners.
     const re = new RegExp(
         `^\\s*TCP\\s+\\S*:${port}\\s+\\S+\\s+LISTENING\\s+(\\d+)`,
         'm'
@@ -228,8 +225,6 @@ function probePortOwnerWindows(port: number): PortOwner | undefined {
 }
 
 function probePortOwnerUnix(port: number): PortOwner | undefined {
-    // Prefer lsof — available on macOS by default and most Linux distros.
-    // -Fpcn outputs one field per line: p<pid>, c<command>, n<name>.
     const lsofOut = runCommand(
         `lsof -iTCP:${port} -sTCP:LISTEN -nP -Fpcn 2>/dev/null`
     )?.trim();
@@ -247,12 +242,10 @@ function probePortOwnerUnix(port: number): PortOwner | undefined {
         }
     }
 
-    // Linux fallback: ss. `-H` suppresses header; filter by source port.
     const ssOut = runCommand(
         `ss -tlnpH 'sport = :${port}' 2>/dev/null`
     )?.trim();
     if (ssOut) {
-        // users:(("siyuan-kernel",pid=4521,fd=12))
         const m = /users:\(\("([^"]+)",pid=(\d+),/.exec(ssOut);
         if (m) return { pid: Number(m[2]), name: m[1] };
     }
@@ -287,13 +280,9 @@ export async function diagnoseConnection(
     const hints: string[] = [];
 
     if (!tcp.reachable) {
-        // No TCP — nothing listening we can reach, or something blocks the handshake.
         const owner = local ? probePortOwner(port) : undefined;
 
         if (owner) {
-            // Rare: port IS bound locally but our TCP still failed.
-            // Most likely local firewall / AV, or the service hasn't reached
-            // listen-accept state yet.
             hints.push(
                 `Port ${port} on ${host} is bound by pid=${owner.pid}${
                     owner.name ? ` (${owner.name})` : ''
@@ -349,16 +338,12 @@ export async function diagnoseConnection(
     const http = await probeHttp(baseUrl);
 
     if (http.ok) {
-        // It IS SiYuan and /api/system/version returned 200. The original ping
-        // must have failed for a subtler reason — say so, don't invent.
         hints.push(
             `SiYuan kernel responded at ${baseUrl}${
                 http.kernelVersion ? ` (version ${http.kernelVersion})` : ''
             }. The original failure may be transient; if it recurs, re-check the token.`
         );
     } else if (http.isSiyuan) {
-        // SiYuan envelope came back but not a 200 from /api/system/version —
-        // typically a 401 when auth is enabled and we probed without a token.
         if (http.status === 401) {
             hints.push(
                 `SiYuan kernel at ${baseUrl} requires authentication (HTTP 401).`,
@@ -371,7 +356,6 @@ export async function diagnoseConnection(
             );
         }
     } else if (http.status !== undefined) {
-        // Something HTTP answers, but it is NOT SiYuan.
         const preview = http.bodyPreview?.replace(/\s+/g, ' ').slice(0, 120);
         const owner = local ? probePortOwner(port) : undefined;
         hints.push(
@@ -399,7 +383,6 @@ export async function diagnoseConnection(
             hints
         };
     } else {
-        // TCP succeeded, HTTP failed (SSL mismatch, abrupt close, reset, etc.)
         hints.push(
             `TCP connect to ${host}:${port} succeeded, but the HTTP exchange failed (${http.errorCode ?? 'unknown'})${http.errorMsg ? `: ${http.errorMsg}` : ''}.`,
             'Verify the URL scheme (http vs https) — a plain-HTTP kernel cannot be reached with an https:// baseUrl, and vice versa.'

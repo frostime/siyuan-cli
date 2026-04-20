@@ -155,8 +155,8 @@ Tools should honor:
 
 When a tool is invoked:
 
-1. `createToolContext()` calls `permission.checkTool(id)` → rejects if tool is denied
-2. Each `ctx.callEndpoint(...)` runs full endpoint guards (content scope, confirmation)
+1. `createToolContext()` calls `permission.checkTool(id)` → Phase 1 check; rejects if a pure-caller deny rule matches or default is deny
+2. Each `ctx.callEndpoint(...)` runs full endpoint guards (Phase 2 content check, confirm gate) with `callerTool` threaded through for rule matching
 3. `ctx.callEndpointRaw(...)` skips endpoint guards — use only for internal read probes
 
 The tool itself doesn't need to call `permission.checkContentRef()` directly — delegating to `callEndpoint` is enough.

@@ -1,12 +1,12 @@
 ---
 title: Config and Permission Model
 slug: config-and-permission
-summary: config.yaml structure, workspace entries, token sources, and the permission model that guards enforce.
+summary: config.yaml structure, workspace entries, token sources, and the unified rule-list permission model that guards enforce.
 ---
 
 # Config and Permission Model
 
-GATE: read this before writing a new guard or debugging a `CONTENT_ACCESS_DENIED` error.
+GATE: read this before writing a new guard or debugging a `CONTENT_DENIED` or `ENDPOINT_DENIED` error.
 
 ## File location
 
@@ -68,109 +68,179 @@ Workspace override: `--workspace <name>` or `SIYUAN_CLI_WORKSPACE` env var.
 
 ```yaml
 permission:
-  endpoints:
-    allow: ["query.*", "block.get*", "filetree.list*"]
-    deny:  ["system.exit"]
-  tools:
-    allow: ["resolve-path", "list-doc-tree"]
-    deny:  ["append-content"]
-  content:
-    read:
-      notebooks:
-        allow: ["20260101215354-j0c5gvk"]
-        deny:  []
-      paths:
-        allow: ["/journal/**"]
-        deny:  ["/journal/private/**"]
-    write:
-      notebooks:
-        deny: ["20260101215354-j0c5gvk"]
-  workspace:
-    read:
-      paths:
-        allow: ["/assets/**"]
-        deny:  ["/conf/**"]
-    write:
-      paths:
-        deny: ["/**"]                   # read-only workspace
-  confirm:
-    modes: [write, invoke]
-    surfaces: [workspace, network]
-    scopes: [global, batch]
+  default: deny          # fallback when no rule matches; default is 'deny'
+
+  rules:
+    - endpoint: "query.sql"      # glob on endpoint id (micromatch)
+      action: read               # read | write  (omit = any action)
+      effect: allow              # allow | deny | confirm
+
+    - tool: "append-content"     # glob on tool id
+      notebook: "20260101-life"  # exact notebook id
+      effect: allow              # this tool may write to this notebook
+
+    - notebook: "20260101-work"
+      path: "/20260107143325-zbrtqup/**"   # glob on SiYuan id-based path
+      effect: deny
+
+    - action: write
+      effect: confirm            # all writes require --yes
 ```
 
-### `endpoints` / `tools`
+### Rule fields
 
-- matched by `micromatch` against endpoint id (`query.sql`, `block.updateBlock`) or tool id (`list-doc-tree`)
-- `allow` (if non-empty) is a whitelist: only matching ids pass
-- `deny` removes matching ids from what `allow` admits
-- leaving the whole block out means "no restriction"
+| Field | Type | Match method | Omitted means |
+|-------|------|-------------|---------------|
+| `endpoint` | string | glob (micromatch) | any endpoint |
+| `tool` | string | glob (micromatch) | any tool (or no tool) |
+| `action` | `"read"` \| `"write"` | exact | any action |
+| `notebook` | string | exact match | any notebook |
+| `path` | string | glob (micromatch) | any path |
+| `effect` | `"allow"` \| `"deny"` \| `"confirm"` | — | (required) |
+| `note` | string | — | ignored; human annotation |
 
-### `content.{read,write}` — block/doc/notebook scope
+### Evaluation
 
-Applies to `ResourceKind` values `id`, `notebook`, `path`. When a guard calls `engine.checkContentRef({kind, value, access})`:
+Rules are evaluated top-to-bottom. First matching rule wins.
 
-- `notebooks.{allow,deny}` use exact id match
-- `paths.{allow,deny}` use `micromatch` glob match against the SiYuan-internal `path` (`/abc-xxx/def-yyy.sy`)
+```
+evaluate(context, rules, default):
+  for rule in rules:
+    if every declared condition in rule matches context:
+      return rule.effect
+  return default
+```
 
-For a block id, the engine resolves to `{notebook, path}` via SQL lookup (cached per engine instance), then applies the same checks.
+A condition is "declared" if the field is present in the rule. Absent fields match anything (wildcard). A rule with no conditions matches every context — useful as a final catch-all.
 
-### `workspace.{read,write}` — filesystem scope
+**Order is the only priority mechanism.** There is no "deny beats allow" override. Two patterns:
 
-Applies to `ResourceKind = "workspace-path"`, used by `/api/file/*`, `/api/export/*`, `/api/template/render`. Same `paths.{allow,deny}` glob syntax.
+```yaml
+# Pattern A: broad allow + specific deny
+# Specific deny MUST come before the broad allow, or it will never be reached.
+rules:
+  - notebook: "A"
+    path: "/secret/**"
+    effect: deny      # ① specific — checked first
+  - notebook: "A"
+    effect: allow     # ② broad — only reached when ① doesn't match
 
-### `confirm` — additional confirmation triggers
+# Pattern B: broad deny + specific allow
+# Specific allow MUST come before the catch-all deny.
+rules:
+  - tool: "append-content"
+    notebook: "A"
+    effect: allow     # ① specific allow — checked first
+  - action: write
+    effect: deny      # ② broad write deny — reached for everything else
+```
 
-`engine.requiresConfirmation(entry)` returns `true` if **either**:
+If you reverse the order in either pattern, the broad rule matches first and the specific rule is unreachable.
 
-- `entry.meta.requiresConfirmation` (risk-derived: `destructive` or `critical`), **or**
-- any of `confirm.modes` / `confirm.surfaces` / `confirm.scopes` contains the endpoint's classification value
+### Two-phase evaluation
 
-The user's `confirm` block can only **add** confirmation points, never remove them. Use it to, for example, also confirm every `write` even when the risk is merely `elevated`.
+Permission checks happen in two phases because the available context differs:
+
+**Phase 1** (`checkEndpoint` / `checkTool`): only caller info (`endpoint`, `tool`, `action`) is known, no resource.
+
+- Pure caller rules (no `notebook` / `path` conditions) produce immediate verdicts.
+- If resource-qualified rules exist whose caller conditions match → defer; Phase 2 decides once the resource is known.
+- If no rules match and `default: deny` → deny immediately.
+
+**Phase 2** (`checkContentRef` / `filterItems`): full context `{endpoint, tool, action, notebook, path}`.
+
+- First full-match rule wins.
+- No match → `default` effect.
+
+### Risk-auto confirm (post-processing in guard.ts)
+
+If the rule evaluation returns `allow` but the endpoint's derived risk is `destructive` or `critical` (`meta.requiresConfirmation = true`), the effect is upgraded to `confirm`. User rules that return `deny` are never overridden (deny is always honored).
+
+This post-processing lives in `guard.ts::executeEndpoint`, not inside the engine. The engine's `evaluate()` always returns the raw rule result.
+
+## Permission cascade
+
+Final rules and default are assembled by concatenating layers:
+
+```
+final rules   = project.rules ++ workspace.rules ++ defaults.rules
+final default = project.default ?? workspace.default ?? defaults.default ?? "deny"
+```
+
+Project rules come first → highest priority. No replace-vs-merge ambiguity: list order is priority.
+
+If a project `.siyuan-cli.yaml` declares `permission`, its rules are prepended. See `31-workspace-resolution.md`.
 
 ## Permission error taxonomy
 
 | Error | Source | Cause |
 |---|---|---|
-| `ENDPOINT_DISABLED` | `checkEndpoint()` | endpoint id blocked by `endpoints.allow/deny` |
-| `TOOL_DISABLED` | `checkTool()` | tool id blocked by `tools.allow/deny` |
-| `CONTENT_ACCESS_DENIED` | `checkContentRef()` with `kind in {id, notebook, path}` | content scope violation |
-| `WORKSPACE_ACCESS_DENIED` | `checkContentRef()` with `kind = workspace-path` | workspace scope violation |
-| `CONFIRMATION_REQUIRED` | `executeEndpoint()` | needs `--yes` |
+| `ENDPOINT_DENIED` | `checkEndpoint()` / `checkTool()` | caller denied by a pure-caller rule or default |
+| `CONTENT_DENIED` | `checkContentRef()` | content access denied by a resource-matching rule or default |
+| `CONFIRMATION_REQUIRED` | `executeEndpoint()` | needs `--yes` (rule effect = `confirm`, or risk-auto) |
 | `BLOCK_NOT_FOUND` | id resolution | id doesn't exist in the kernel |
 
-Exit code `5` (`ExitCode.PERMISSION`) applies to hard policy denials: `ENDPOINT_DISABLED`, `TOOL_DISABLED`, `CONTENT_ACCESS_DENIED`, and `WORKSPACE_ACCESS_DENIED`.
-`BLOCK_NOT_FOUND` and `CONFIRMATION_REQUIRED` are categorized as general failures and exit with code `1`.
+Exit code `5` (`ExitCode.PERMISSION`) applies to hard policy denials: `ENDPOINT_DENIED` and `CONTENT_DENIED`.
+`BLOCK_NOT_FOUND` and `CONFIRMATION_REQUIRED` are general failures (exit code `1`).
 
-## Defaults cascade
+## Full config example
 
-Workspace resolution for `PermissionConfig`:
+```yaml
+defaults:
+  permission:
+    default: deny
+    rules:
+      # Allow essential read endpoints for all workspaces
+      - endpoint: "query.sql"
+        action: read
+        effect: allow
 
-```ts
-// src/core/permission.ts
-const merged = {
-  endpoints: ws.permission?.endpoints ?? defaults?.endpoints,
-  tools:     ws.permission?.tools     ?? defaults?.tools,
-  content: {
-    read:  ws.permission?.content?.read  ?? defaults?.content?.read,
-    write: ws.permission?.content?.write ?? defaults?.content?.write,
-  },
-  workspace: {
-    read:  ws.permission?.workspace?.read  ?? defaults?.workspace?.read,
-    write: ws.permission?.workspace?.write ?? defaults?.workspace?.write,
-  },
-  confirm:   ws.permission?.confirm   ?? defaults?.confirm,
-};
+      - endpoint: "block.get*"
+        action: read
+        effect: allow
+
+      # Hard deny dangerous system operations
+      - endpoint: "system.exit"
+        effect: deny
+
+workspaces:
+  main:
+    baseUrl: http://127.0.0.1:6806
+    tokenSource: { type: env, value: SIYUAN_TOKEN }
+    permission:
+      rules:
+        # notebook A: readable, writes allowed only via append-content tool
+        - tool: "append-content"
+          notebook: "20260101-aaa"
+          effect: allow
+
+        - notebook: "20260101-aaa"
+          action: read
+          effect: allow
+
+        - notebook: "20260101-aaa"
+          action: write
+          effect: deny
+
+        # notebook B: deny a specific subtree, allow the rest
+        - notebook: "20260101-bbb"
+          path: "/20260107143325-zbrtqup/**"
+          effect: deny
+
+        - notebook: "20260101-bbb"
+          effect: allow
 ```
 
-Each block is all-or-nothing: declaring workspace-level `content.read` replaces the default completely for that field. There is no deep merge.
+Final rule chain for workspace `main`: `workspace.rules ++ defaults.rules` (9 rules total, evaluated top-to-bottom).
 
-## Debugging a permission denial
+## Smoke warnings
 
-1. `siyuan api <id> --debug` — shows the endpoint id and payload
-2. note the kind/value printed in the error message (e.g. "path /foo in read deny list")
-3. look up `workspaces.<name>.permission` or `defaults.permission` in the config
-4. `micromatch` rules: `**` matches across `/`, `*` does not cross `/`, `?` matches one char
+On config load, `warnRulesSmoke` scans each rule for likely mistakes:
+
+- `notebook` value that doesn't match `^\d{14}-[0-9a-z]{7}$` → `LIKELY_HPATH_NOT_ID`
+- `path` value with no id-segment anywhere → `LIKELY_HPATH_NOT_ID_IN_PATH`
+
+Both are stderr warnings, not errors. The CLI continues.
 
 ## Glob cheat sheet
 
@@ -180,35 +250,33 @@ Each block is all-or-nothing: declaring workspace-level `content.read` replaces 
 | `/journal/*` | `/journal/x.sy` (one level only) |
 | `query.*` | `query.sql` (not `queryx.sql`) |
 | `block.get*` | `block.getBlockKramdown`, `block.getBlockInfo` |
-| `!query.*` | **not** supported by this engine — use the `deny` list |
+| `!query.*` | **not** supported — use `effect: deny` |
+
+## Debugging a permission denial
+
+1. `siyuan workspace which` — shows the active rule list for the current directory
+2. `siyuan api <id> --debug` — shows endpoint id and payload before execution
+3. Read the error: `ENDPOINT_DENIED` gives the rule index or "default deny"; `CONTENT_DENIED` gives the resource kind/value and rule index
+4. Check glob patterns with `micromatch`: `**` crosses `/`, `*` does not
 
 ## Project config file (`.siyuan-cli.yaml`)
 
-A project-level file can override workspace selection and permission per directory tree. This is the recommended mechanism for:
-
-- isolating concurrent agent sessions to different workspaces (the root motivation; see `31-workspace-resolution.md`)
-- pinning "prod read-only" in one project directory and "prod read-write" in another without duplicating workspace entries
-- making "which workspace does this project talk to" a property of the project, committable or not per team preference
-
-See `31-workspace-resolution.md` for the full resolution chain, file format, validation rules, and permission-override semantics.
+A project-level file can anchor workspace selection and prepend permission rules per directory tree. See `31-workspace-resolution.md` for the full resolution chain, file format, and validation rules.
 
 Short form:
 
 ```yaml
 # .siyuan-cli.yaml (project root)
 schemaVersion: 1
-workspace: prod                      # must exist in global config
-permission:                          # completely replaces global cascade
-  endpoints:
-    deny: ["block.delete*"]
-  content:
-    write:
-      paths:
-        deny: ["/20260107143325-zbrtqup/**"]
+workspace: prod
+permission:
+  default: deny
+  rules:
+    - endpoint: "block.delete*"
+      effect: deny
+    - notebook: "20260101-aaa"
+      path: "/20260107143325-zbrtqup/**"
+      effect: deny
 ```
 
 Fields `token`, `baseUrl`, `tokenSource`, `defaults` are hard-rejected at load time. The file is safe to commit.
-
-## One-line summary
-
-**Config is layered: workspace overrides defaults. Permission is layered: risk-auto confirmation unions user `confirm` policy. A project `.siyuan-cli.yaml` sits between `$SIYUAN_CLI_WORKSPACE` and `config.current` and can fully replace the permission cascade. Guards consult the engine, the engine consults the resolved config.**

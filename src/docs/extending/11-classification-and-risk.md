@@ -83,23 +83,23 @@ Real examples from `src/apis/`:
 
 ## Confirmation policy (user-controlled extension)
 
-`PermissionEngine.requiresConfirmation(entry)` is:
+Confirmation is triggered when **either** is true:
 
-```text
-risk-auto OR policy-match
-```
+1. **Risk-auto**: `meta.requiresConfirmation = true` (derived from `destructive` or `critical` risk)
+2. **Rule effect**: the permission engine's `evaluate()` returns `'confirm'` for this call
 
-where `policy-match` is true if any of `config.permission.confirm.{modes,surfaces,scopes}` contains the endpoint's classification value. Example config:
+This post-processing happens in `guard.ts::executeEndpoint` — the engine itself just returns the effect. User rules that return `deny` are never overridden. Risk-auto only upgrades `allow` to `confirm`.
+
+To require confirmation on all writes (for example):
 
 ```yaml
 permission:
-  confirm:
-    modes: [write, invoke]
-    surfaces: [workspace, network]
-    scopes: [global, batch]
+  rules:
+    - action: write
+      effect: confirm
 ```
 
-The schema author cannot disable confirmation globally — only the user can extend it.
+The schema author cannot disable risk-auto confirmation — only the user can extend it via rules.
 
 ## Picking the right classification
 

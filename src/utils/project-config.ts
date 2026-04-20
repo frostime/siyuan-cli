@@ -21,7 +21,8 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'pathe';
 import { parse } from 'yaml';
 import { CliError, ExitCode } from './errors.js';
-import type { AppConfig, PermissionConfig } from '../core/config.js';
+import type { AppConfig } from '../core/config.js';
+import type { PermissionConfig } from '../core/schema.js';
 
 export const PROJECT_CONFIG_FILENAME = '.siyuan-cli.yaml';
 export const PROJECT_SCHEMA_VERSION = 1;
@@ -79,36 +80,28 @@ function warnProjectPermissionSmoke(
     location: ProjectConfigLocation,
     permission: PermissionConfig | undefined
 ): void {
-    if (!permission?.content) return;
+    if (!permission?.rules) return;
     const scope = `project(${location.path})`;
-    for (const access of ['read', 'write'] as const) {
-        const rule = permission.content[access];
-        if (!rule) continue;
-        for (const bucket of ['allow', 'deny'] as const) {
-            for (const nb of rule.notebooks?.[bucket] ?? []) {
-                if (!ID_PATTERN.test(nb)) {
-                    process.stderr.write(
-                        JSON.stringify({
-                            warning: 'LIKELY_HPATH_NOT_ID',
-                            scope,
-                            at: `permission.content.${access}.notebooks.${bucket}`,
-                            value: nb
-                        }) + '\n'
-                    );
-                }
-            }
-            for (const p of rule.paths?.[bucket] ?? []) {
-                if (!ID_SEGMENT_RE.test(p)) {
-                    process.stderr.write(
-                        JSON.stringify({
-                            warning: 'LIKELY_HPATH_NOT_ID_IN_PATH',
-                            scope,
-                            at: `permission.content.${access}.paths.${bucket}`,
-                            value: p
-                        }) + '\n'
-                    );
-                }
-            }
+    for (const [i, rule] of permission.rules.entries()) {
+        if (rule.notebook && !ID_PATTERN.test(rule.notebook)) {
+            process.stderr.write(
+                JSON.stringify({
+                    warning: 'LIKELY_HPATH_NOT_ID',
+                    scope,
+                    at: `rules[${i}].notebook`,
+                    value: rule.notebook
+                }) + '\n'
+            );
+        }
+        if (rule.path && !ID_SEGMENT_RE.test(rule.path)) {
+            process.stderr.write(
+                JSON.stringify({
+                    warning: 'LIKELY_HPATH_NOT_ID_IN_PATH',
+                    scope,
+                    at: `rules[${i}].path`,
+                    value: rule.path
+                }) + '\n'
+            );
         }
     }
 }
