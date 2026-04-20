@@ -1,4 +1,5 @@
 import { defineCommand, runMain, showUsage } from 'citty';
+import { fileURLToPath } from 'node:url';
 import { workspaceCommand } from './commands/workspace.js';
 import { apiCommand } from './commands/api.js';
 import { toolCommand } from './commands/tool.js';
@@ -53,6 +54,15 @@ async function customShowUsage<T extends Record<string, unknown>>(
     }
 
     await showUsage(cmd, parent);
+
+    // Print docs path hint for top-level help only
+    if (!parent) {
+        const docsDir = new URL('./docs', import.meta.url);
+        const docsPath = fileURLToPath(docsDir);
+        process.stdout.write(
+            `\nDocs: ${docsPath}\n  Read these to understand SiYuan block model, SQL queries, and CLI usage.\n`
+        );
+    }
 }
 
 runMain(main, { showUsage: customShowUsage });
