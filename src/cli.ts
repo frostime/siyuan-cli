@@ -62,7 +62,7 @@ async function customShowUsage<T extends Record<string, unknown>>(
         process.stdout.write(
             `\nCLI BuiltinDocs: ${docsPath}\n` +
             `  <doc>/siyuan-guide -> Read to understand SiYuan data model, SQL queries, etc.\n` +
-            `  <doc>/cli-usage -> Read to understand CLI usage, written of config file.\n`
+            `  <doc>/cli-usage -> Read to understand CLI commands, config file format, permission rules.\n`
         );
     }
 }
