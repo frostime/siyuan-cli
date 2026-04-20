@@ -29,7 +29,8 @@ function buildTree(rows: Row[], rootKey: string, depth: number): Node[] {
         const children = childMap.get(parentPath) ?? [];
         return children.map((r) => ({
             id: r.id,
-            title: r.hpath.split('/').filter(Boolean).at(-1) ?? r.id,
+            // title: r.hpath.split('/').filter(Boolean).at(-1) ?? r.id,
+            title: `${r.hpath.split('/').filter(Boolean).at(-1)} (${r.id})`,
             hpath: r.hpath,
             children: walk(r.path.replace(/\.sy$/, ''), level + 1)
         }));

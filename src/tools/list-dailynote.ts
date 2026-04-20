@@ -112,7 +112,7 @@ export const tool: ToolSchema = {
         const content = filtered.length
             ? `# Daily Notes (${filtered.length})\n` +
               filtered
-                  .map((r) => `- ${r.created.slice(0, 8)} [${r.id}] ${r.hpath}`)
+                  .map((r) => `- [Notebook: ${r.box}] Date: ${r.created.slice(0, 8)}; BlockID: ${r.id}; Hpath: ${r.hpath}`)
                   .join('\n')
             : 'No daily notes found.';
 
