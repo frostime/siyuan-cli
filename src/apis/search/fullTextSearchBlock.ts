@@ -6,6 +6,7 @@
  * @FilePath     : /src/apis/search/fullTextSearchBlock.ts
  * @LastEditTime : 2026-04-19 01:39:52
  */
+import { formatRecordArray, isRecord } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
 export const schema: EndpointSchema = {
@@ -47,5 +48,24 @@ export const schema: EndpointSchema = {
             itemsAt: 'blocks[*]',
             fieldMap: { id: 'id', path: 'path', notebook: 'box' }
         }
+    },
+    format: ({ result }) => {
+        if (!isRecord(result)) return JSON.stringify(result, null, 2);
+        const blocks = Array.isArray(result.blocks) ? result.blocks : [];
+        const header = [
+            `blocks=${blocks.length}`,
+            result.matchedBlockCount !== undefined
+                ? `matched=${String(result.matchedBlockCount)}`
+                : undefined,
+            result.pageCount !== undefined ? `pages=${String(result.pageCount)}` : undefined
+        ]
+            .filter(Boolean)
+            .join(' | ');
+        const body = formatRecordArray(blocks, {
+            label: 'hits',
+            maxItems: 10,
+            keys: ['id', 'box', 'path', 'hPath', 'content', 'rootTitle']
+        });
+        return header ? `${header}\n${body}` : body;
     }
 };

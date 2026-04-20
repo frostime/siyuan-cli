@@ -1,3 +1,4 @@
+import { isRecord } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 export const schema: EndpointSchema = {
     endpoint: '/api/system/version',
@@ -8,5 +9,12 @@ export const schema: EndpointSchema = {
         surface: 'meta',
         scope: 'single',
         operation: 'inspect'
+    },
+    format: ({ result }) => {
+        if (typeof result === 'string') return result;
+        if (isRecord(result) && typeof result.ver === 'string') {
+            return result.ver;
+        }
+        return JSON.stringify(result, null, 2);
     }
 };

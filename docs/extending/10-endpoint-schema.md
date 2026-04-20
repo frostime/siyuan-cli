@@ -113,6 +113,25 @@ multipart: { fileFields: ["file[]"] }
 
 Fields listed are sent as file uploads; other string fields are sent as form fields.
 
+### `format` (optional)
+
+Compact renderer for `siyuan api <id> --print compact`, which is the default API output mode.
+
+```ts
+format: ({ result, payload, endpoint, args }) => {
+  return typeof result === "string" ? result : JSON.stringify(result, null, 2);
+}
+```
+
+Rules:
+
+- `result` is the same guarded value that `--print json` would print.
+- Return a single string. Keep it short, stable, and agent-readable.
+- If the formatter throws or returns a non-string, the CLI emits a warning to stderr and falls back to raw JSON stdout.
+- Security filtering stays in `guard.response` / `guard.filterResponse`.
+
+Recommended for read-heavy endpoints that otherwise produce large JSON: SQL rows, search hits, document lists, file listings, and content bodies.
+
 ### `minKernelVersion` / `deprecated` (optional metadata)
 
 Informational. No runtime effect yet.
@@ -144,6 +163,7 @@ A bad schema throws at `import "./apis/index.js"`, so bugs surface before any co
 - missing `required` when the kernel actually requires the field → downstream error is cryptic, ajv catch is better
 - payload target `path` that expands `[*]` on a non-array property → runtime throws `PointerPathShapeError`
 - guarded field uses `"id"` kind but the value is actually an hpath → guard tries to resolve it as a block id and fails with `BLOCK_NOT_FOUND`; pick the correct `ResourceKind`
+- `format` omits important structure without documenting `--print json` as the raw-data escape hatch
 
 ## `ResourceKind` selection
 

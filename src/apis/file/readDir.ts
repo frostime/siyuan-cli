@@ -1,3 +1,4 @@
+import { formatRecordArray, isRecord } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
 export const schema: EndpointSchema = {
@@ -24,5 +25,22 @@ export const schema: EndpointSchema = {
         payloadTargets: [
             { path: 'path', kind: 'workspace-path', access: 'read' }
         ]
+    },
+    format: ({ result }) => {
+        if (Array.isArray(result)) {
+            return formatRecordArray(result, {
+                label: 'entries',
+                maxItems: 30,
+                keys: ['name', 'isDir', 'size', 'path']
+            });
+        }
+        if (isRecord(result) && Array.isArray(result.files)) {
+            return formatRecordArray(result.files, {
+                label: 'entries',
+                maxItems: 30,
+                keys: ['name', 'isDir', 'size', 'path']
+            });
+        }
+        return JSON.stringify(result, null, 2);
     }
 };

@@ -1,3 +1,4 @@
+import { formatRecordArray, isRecord } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
 export const schema: EndpointSchema = {
@@ -55,5 +56,31 @@ export const schema: EndpointSchema = {
             else if (r.files) r.files = kept;
             return response;
         }
+    },
+    format: ({ result }) => {
+        if (!isRecord(result)) return JSON.stringify(result, null, 2);
+        const files = Array.isArray(result.files)
+            ? result.files
+            : isRecord(result.data) && Array.isArray(result.data.files)
+              ? result.data.files
+              : [];
+        const box =
+            typeof result.box === 'string'
+                ? result.box
+                : isRecord(result.data) && typeof result.data.box === 'string'
+                  ? result.data.box
+                  : undefined;
+        const header = [
+            box ? `box=${box}` : undefined,
+            `files=${files.length}`
+        ]
+            .filter(Boolean)
+            .join(' | ');
+        const body = formatRecordArray(files, {
+            label: 'docs',
+            maxItems: 20,
+            keys: ['id', 'box', 'path', 'hPath', 'name', 'title', 'subFileCount']
+        });
+        return header ? `${header}\n${body}` : body;
     }
 };

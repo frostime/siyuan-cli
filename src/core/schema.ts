@@ -202,6 +202,8 @@ export interface EndpointSchema {
     multipart?: { fileFields: string[] };
     cli?: CliBehavior;
     guard?: GuardSpec;
+    /** Optional compact renderer for `siyuan api <id> --print compact`. */
+    format?: (ctx: EndpointFormatContext) => string;
 }
 
 /** Derived, normalized view of EndpointSchema (produced by the registry). */
@@ -211,6 +213,13 @@ export interface RegisteredEndpoint {
     group: string;
     name: string;
     meta: DerivedMeta;
+}
+
+export interface EndpointFormatContext {
+    endpoint: RegisteredEndpoint;
+    payload: unknown;
+    result: unknown;
+    args: GlobalArgs;
 }
 
 // ————— ToolSchema —————

@@ -291,6 +291,11 @@ export function buildEndpointHelp(endpoint: {
     lines.push('  -f, --file <path>   Load JSON payload from file (- = stdin)');
     lines.push('');
 
+    lines.push('OUTPUT');
+    lines.push('  default: --print compact → stdout prints endpoint compact text or JSON fallback');
+    lines.push('  --print json: stdout prints raw result JSON');
+    lines.push('');
+
     if (schema.cli?.examples?.length) {
         lines.push('EXAMPLES');
         for (const ex of schema.cli.examples) {

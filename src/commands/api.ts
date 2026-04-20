@@ -8,8 +8,9 @@ import { SiyuanClient } from '../core/client.js';
 import { createPermissionEngine } from '../core/permission.js';
 import { executeEndpoint } from '../core/guard.js';
 import { parsePayload } from '../core/argv.js';
+import { preparePrintedOutput } from '../core/output.js';
 import { fatalError, toCliError } from '../utils/errors.js';
-import type { RegisteredEndpoint } from '../core/schema.js';
+import type { GlobalArgs, RegisteredEndpoint } from '../core/schema.js';
 
 import '../apis/index.js';
 
@@ -56,7 +57,8 @@ export function describeEndpoint(id: string): void {
                       ? { filterResponse: '[Function]' }
                       : {})
               }
-            : undefined
+            : undefined,
+        ...(schema.format ? { format: '[Function]' } : {})
     };
     out({ ...entry, schema: serializable });
 }
@@ -81,17 +83,39 @@ async function callEndpoint(
     const client = new SiyuanClient(workspace);
     const engine = createPermissionEngine(config, workspace, client);
 
+    const args = {
+        workspace: rawArgs['workspace'] as string | undefined,
+        baseUrl: rawArgs['baseUrl'] as string | undefined,
+        token: rawArgs['token'] as string | undefined,
+        config: rawArgs['config'] as string | undefined,
+        dryRun: rawArgs['dry-run'] as boolean | undefined,
+        yes: rawArgs['yes'] as boolean | undefined,
+        debug: rawArgs['debug'] as boolean | undefined,
+        print: (rawArgs['print'] as GlobalArgs['print'] | undefined) ?? 'compact'
+    } satisfies GlobalArgs;
+
     const result = await executeEndpoint({
         entry,
         payload,
         client,
         engine,
         workspace,
-        dryRun: rawArgs['dry-run'] as boolean | undefined,
-        yes: rawArgs['yes'] as boolean | undefined,
-        debug: rawArgs['debug'] as boolean | undefined
+        dryRun: args.dryRun,
+        yes: args.yes,
+        debug: args.debug
     });
-    out(result);
+    const rendered = preparePrintedOutput({
+        print: args.print,
+        details: result,
+        compact: entry.schema.format
+            ? () => entry.schema.format!({ endpoint: entry, payload, result, args })
+            : undefined,
+        warning: { endpoint: entry.id }
+    });
+    if (rendered.warning) {
+        process.stderr.write(JSON.stringify(rendered.warning) + '\n');
+    }
+    process.stdout.write(rendered.stdout + '\n');
 }
 
 const RESERVED_CLI_ARGS = new Set([
@@ -99,6 +123,7 @@ const RESERVED_CLI_ARGS = new Set([
     'dry-run',
     'yes',
     'debug',
+    'print',
     'json',
     'file',
     'primary',
@@ -145,6 +170,11 @@ function buildEndpointSubCommand(entry: RegisteredEndpoint) {
                 type: 'boolean',
                 description: 'Show debug info (curl equivalent)',
                 default: false
+            },
+            print: {
+                type: 'string',
+                description: 'Print mode: compact | json',
+                default: 'compact'
             },
             json: {
                 type: 'string',

@@ -134,11 +134,11 @@ All `siyuan api <id>` and `siyuan tool <id>` commands accept these:
 | `--json`, `-j` | JSON-encoded payload |
 | `--file`, `-f` | JSON payload from file; `-f -` = stdin |
 
-Tools additionally accept:
+APIs and tools additionally accept:
 
 | Flag | Meaning |
 |---|---|
-| `--print compact\|json` | choose tool output: compact content or details JSON |
+| `--print compact\|json` | choose output mode; APIs default to compact formatter text or JSON fallback, tools default to content |
 
 ## Help surface
 
@@ -150,6 +150,7 @@ Tools additionally accept:
 - PARAMETERS (required / optional / primary / default / enum)
 - INPUT SOURCES (if any field has non-default `allowSource`)
 - PAYLOAD MODES (`-j` / `-f`)
+- OUTPUT (`--print compact|json`)
 - EXAMPLES (if declared)
 - DESCRIPTION (if declared)
 
@@ -157,4 +158,4 @@ Write `description` fields assuming they'll be shown in this help — be terse.
 
 ## One-line summary
 
-**`cli.primary` for DX, `cli.allowSource` for large-text fields, `cli.examples` for clarity. Everything else defaults sensibly.**
+**`cli.primary` for DX, `cli.allowSource` for large-text fields, `cli.examples` for clarity, `format` for compact API stdout. Everything else defaults sensibly.**

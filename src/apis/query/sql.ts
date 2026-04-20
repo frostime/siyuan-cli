@@ -1,3 +1,4 @@
+import { formatRecordArray, isRecord } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
 export const schema: EndpointSchema = {
@@ -36,5 +37,17 @@ export const schema: EndpointSchema = {
             itemsAt: '[*]',
             fieldMap: { id: 'id', path: 'path', notebook: 'box' }
         }
+    },
+    format: ({ result }) => {
+        if (!Array.isArray(result)) {
+            return JSON.stringify(result, null, 2);
+        }
+        const first = result.find(isRecord);
+        const keys = first
+            ? ['id', 'box', 'path', 'hpath', 'content', ...Object.keys(first)].filter(
+                  (key, index, arr) => arr.indexOf(key) === index
+              )
+            : undefined;
+        return formatRecordArray(result, { label: 'rows', maxItems: 12, keys });
     }
 };

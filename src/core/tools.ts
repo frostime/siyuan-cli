@@ -3,6 +3,7 @@ import { loadConfig, resolveEffectiveWorkspace } from './config.js';
 import { SiyuanClient } from './client.js';
 import { createPermissionEngine } from './permission.js';
 import { executeEndpoint } from './guard.js';
+import { preparePrintedOutput } from './output.js';
 import type {
     GlobalArgs,
     ToolContext,
@@ -95,13 +96,15 @@ export function renderToolResult(result: ToolResult, args: GlobalArgs): void {
     if (args.debug && result.meta) {
         process.stderr.write(JSON.stringify({ meta: result.meta }) + '\n');
     }
-    if (args.print === 'json') {
-        process.stdout.write(
-            JSON.stringify(result.details ?? null, null, 2) + '\n'
-        );
-        return;
+    const rendered = preparePrintedOutput({
+        print: args.print,
+        details: result.details ?? null,
+        compact: result.content
+    });
+    if (rendered.warning) {
+        process.stderr.write(JSON.stringify(rendered.warning) + '\n');
     }
-    process.stdout.write(result.content + '\n');
+    process.stdout.write(rendered.stdout + '\n');
 }
 
 export function buildToolHelp(tool: ToolSchema): string {

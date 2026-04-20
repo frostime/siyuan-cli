@@ -1,3 +1,4 @@
+import { isRecord } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
 export const schema: EndpointSchema = {
@@ -23,5 +24,13 @@ export const schema: EndpointSchema = {
     },
     guard: {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }]
+    },
+    format: ({ result }) => {
+        if (typeof result === 'string') return result;
+        if (isRecord(result)) {
+            const value = result.kramdown ?? result.markdown ?? result.content;
+            if (typeof value === 'string') return value;
+        }
+        return JSON.stringify(result, null, 2);
     }
 };
