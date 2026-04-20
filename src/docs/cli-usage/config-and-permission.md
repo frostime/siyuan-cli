@@ -30,7 +30,7 @@ workspaces:
     #   type: env
     #   value: SIYUAN_TOKEN
     permission:                        # optional: workspace-level overrides
-      default: deny
+      default: allow
       rules: [...]
 
   work:
@@ -41,7 +41,7 @@ workspaces:
 
 defaults:
   permission:                          # applied to workspaces without their own block
-    default: deny
+    default: allow
     rules: [...]
 ```
 
@@ -67,7 +67,7 @@ Pick **one** per workspace. Runtime overrides (highest priority first):
 
 ```yaml
 permission:
-  default: deny          # fallback when no rule matches; defaults to "deny"
+  default: allow         # fallback when no rule matches; defaults to "allow"
 
   rules:
     - endpoint: "query.sql"
@@ -149,7 +149,7 @@ When multiple config layers exist, their rules are concatenated:
 
 ```text
 final rules   = project.rules ++ workspace.rules ++ defaults.rules
-final default = project.default ?? workspace.default ?? defaults.default ?? "deny"
+final default = project.default ?? workspace.default ?? defaults.default ?? "allow"
 ```
 
 Project rules come first and have the highest priority.
@@ -168,7 +168,7 @@ This means a rule with both `tool: "X"` and `notebook: "Y"` only fires in Phase 
 ```yaml
 defaults:
   permission:
-    default: deny
+    default: allow
     rules:
       # Essential read access for all workspaces
       - endpoint: "query.sql"
@@ -215,7 +215,7 @@ Drop at project root to pin workspace and add permission rules per directory tre
 schemaVersion: 1
 workspace: prod              # optional; must exist in global config
 permission:                  # optional; prepended to the cascade
-  default: deny
+  default: allow
   rules:
     - endpoint: "block.delete*"
       effect: deny
@@ -248,7 +248,7 @@ Output includes `source`, active workspace, project config path (if found), and 
 
 1. `siyuan workspace which` — see the complete rule list and resolution source
 2. `siyuan api <id> --debug` — see endpoint id and assembled payload
-3. Read the error message: `ENDPOINT_DENIED` includes the rule index or "default deny"; `CONTENT_DENIED` includes the resource kind/value and matching rule index
+3. Read the error message: `ENDPOINT_DENIED` includes the rule index or "default deny" when an explicit deny-default policy is active; `CONTENT_DENIED` includes the resource kind/value and matching rule index
 4. Common fixes:
    - `ENDPOINT_DENIED` → add an `allow` rule for this endpoint, or check that an existing rule's glob pattern matches
    - `CONTENT_DENIED` → add an `allow` rule scoped to the target notebook/path

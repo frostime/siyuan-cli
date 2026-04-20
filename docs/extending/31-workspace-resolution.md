@@ -71,7 +71,7 @@ Resolution does **not** merge files found on the way up — first hit wins.
 schemaVersion: 1            # required; must equal 1
 workspace: prod             # optional; must exist in global config.workspaces
 permission:                 # optional; same shape as global permission block
-  default: deny
+  default: allow
   rules:
     - endpoint: "system.exit"
       effect: deny
@@ -100,7 +100,7 @@ When a project file declares `permission`, its rules are **prepended** to the ca
 
 ```
 final rules   = project.rules ++ workspace.rules ++ defaults.rules
-final default = project.default ?? workspace.default ?? defaults.default ?? "deny"
+final default = project.default ?? workspace.default ?? defaults.default ?? "allow"
 ```
 
 Project rules come first → highest priority. Global workspace and defaults rules still apply after them. This means a project file can add targeted exceptions (deny a specific subtree, require confirm for a tool) without having to re-declare everything.

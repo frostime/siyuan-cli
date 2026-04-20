@@ -83,8 +83,57 @@ function defaultConfig(): AppConfig {
     return {
         schemaVersion: SCHEMA_VERSION,
         current: '',
-        workspaces: {}
+        workspaces: {},
+        defaults: {
+            permission: {
+                default: 'allow',
+                rules: []
+            }
+        }
     };
+}
+
+function normalizePermission(permission?: PermissionConfig): PermissionConfig {
+    return {
+        default: permission?.default ?? 'allow',
+        rules: permission?.rules ?? []
+    };
+}
+
+function normalizeConfig(config: AppConfig): AppConfig {
+    const workspaces = Object.fromEntries(
+        Object.entries(config.workspaces ?? {}).map(([name, ws]) => [
+            name,
+            {
+                baseUrl: ws.baseUrl,
+                ...(ws.token ? { token: ws.token } : {}),
+                ...(ws.tokenSource ? { tokenSource: ws.tokenSource } : {}),
+                permission: normalizePermission(ws.permission)
+            }
+        ])
+    );
+
+    return {
+        schemaVersion: SCHEMA_VERSION,
+        current: config.current ?? '',
+        workspaces,
+        defaults: {
+            permission: normalizePermission(config.defaults?.permission)
+        }
+    };
+}
+
+function renderConfigYaml(config: AppConfig): string {
+    const header = [
+        '# siyuan-cli config',
+        '#',
+        '# Global defaults:',
+        '# - permission.default: allow',
+        '# - add deny/confirm rules to restrict access',
+        '# - token and tokenSource are global-only and should stay out of project files',
+        ''
+    ].join('\n');
+    return header + stringify(normalizeConfig(config));
 }
 
 function migrateLegacyWindowsConfig(targetPath: string): void {
@@ -170,12 +219,12 @@ export function loadConfig(configPath?: string): AppConfig {
                 'Delete the old config file and recreate workspaces in alpha stage.'
             );
         }
-        const result: AppConfig = {
+        const result: AppConfig = normalizeConfig({
             schemaVersion: SCHEMA_VERSION,
             current: parsed.current ?? '',
             workspaces: parsed.workspaces ?? {},
-            ...(parsed.defaults ? { defaults: parsed.defaults } : {})
-        };
+            defaults: parsed.defaults
+        });
         runConfigSmokeTest(result);
         return result;
     } catch (e) {
@@ -194,11 +243,7 @@ export function saveConfig(config: AppConfig, configPath?: string): void {
     migrateLegacyWindowsConfig(path);
     const dir = dirname(path);
     mkdirSync(dir, { recursive: true });
-    writeFileSync(
-        path,
-        stringify({ ...config, schemaVersion: SCHEMA_VERSION }),
-        'utf-8'
-    );
+    writeFileSync(path, renderConfigYaml(config), 'utf-8');
     try {
         chmodSync(path, 0o600);
     } catch {

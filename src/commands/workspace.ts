@@ -14,6 +14,7 @@ import { resolveEffectivePermission } from '../core/permission.js';
 import { SiyuanClient } from '../core/client.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../utils/errors.js';
 import { diagnoseConnection } from '../utils/diagnostics.js';
+import { getConfigPath } from '../utils/paths.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -176,7 +177,12 @@ const addCommand = defineCommand({
                 baseUrl: args.url,
                 hasToken: !!args.token || !!entry.tokenSource,
                 tokenSource: entry.tokenSource ?? null,
-                isCurrent: config.current === args.name
+                isCurrent: config.current === args.name,
+                permission: {
+                    default: 'allow',
+                    hint: 'Configure permission policy in config.yaml if you want to restrict access.',
+                    configPath: getConfigPath()
+                }
             });
         })
 });

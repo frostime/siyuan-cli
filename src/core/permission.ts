@@ -38,6 +38,7 @@ import type { SiyuanClient } from './client.js';
 /**
  * Assemble the final rule list and default effect by concatenating layers.
  * Order: project (highest priority) > workspace > defaults (lowest).
+ * Fallback default is `allow` when no layer specifies `permission.default`.
  */
 export function cascadePermission(
     config: AppConfig,
@@ -54,7 +55,7 @@ export function cascadePermission(
         projectPermission?.default ??
         ws?.permission?.default ??
         config.defaults?.permission?.default ??
-        'deny';
+        'allow';
     return { defaultEffect, rules };
 }
 

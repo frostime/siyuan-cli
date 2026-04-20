@@ -68,7 +68,7 @@ Workspace override: `--workspace <name>` or `SIYUAN_CLI_WORKSPACE` env var.
 
 ```yaml
 permission:
-  default: deny          # fallback when no rule matches; default is 'deny'
+  default: allow         # fallback when no rule matches; default is 'allow'
 
   rules:
     - endpoint: "query.sql"      # glob on endpoint id (micromatch)
@@ -145,7 +145,7 @@ Permission checks happen in two phases because the available context differs:
 
 - Pure caller rules (no `notebook` / `path` conditions) produce immediate verdicts.
 - If resource-qualified rules exist whose caller conditions match → defer; Phase 2 decides once the resource is known.
-- If no rules match and `default: deny` → deny immediately.
+- If no rules match and `default: deny` → deny immediately; with the default fallback `allow`, unmatched calls pass through.
 
 **Phase 2** (`checkContentRef` / `filterItems`): full context `{endpoint, tool, action, notebook, path}`.
 
@@ -164,7 +164,7 @@ Final rules and default are assembled by concatenating layers:
 
 ```
 final rules   = project.rules ++ workspace.rules ++ defaults.rules
-final default = project.default ?? workspace.default ?? defaults.default ?? "deny"
+final default = project.default ?? workspace.default ?? defaults.default ?? "allow"
 ```
 
 Project rules come first → highest priority. No replace-vs-merge ambiguity: list order is priority.
@@ -188,7 +188,7 @@ Exit code `5` (`ExitCode.PERMISSION`) applies to hard policy denials: `ENDPOINT_
 ```yaml
 defaults:
   permission:
-    default: deny
+    default: allow
     rules:
       # Allow essential read endpoints for all workspaces
       - endpoint: "query.sql"
@@ -256,7 +256,7 @@ Both are stderr warnings, not errors. The CLI continues.
 
 1. `siyuan workspace which` — shows the active rule list for the current directory
 2. `siyuan api <id> --debug` — shows endpoint id and payload before execution
-3. Read the error: `ENDPOINT_DENIED` gives the rule index or "default deny"; `CONTENT_DENIED` gives the resource kind/value and rule index
+3. Read the error: `ENDPOINT_DENIED` gives the rule index or "default deny" when an explicit deny-default policy is active; `CONTENT_DENIED` gives the resource kind/value and rule index
 4. Check glob patterns with `micromatch`: `**` crosses `/`, `*` does not
 
 ## Project config file (`.siyuan-cli.yaml`)
@@ -270,7 +270,7 @@ Short form:
 schemaVersion: 1
 workspace: prod
 permission:
-  default: deny
+  default: allow
   rules:
     - endpoint: "block.delete*"
       effect: deny

@@ -23,7 +23,7 @@ export interface PermissionRule {
 }
 
 export interface PermissionConfig {
-    default?: PermissionEffect;    // fallback when no rule matches; defaults to 'deny'
+    default?: PermissionEffect;    // fallback when no rule matches; defaults to 'allow'
     rules?: PermissionRule[];
 }
 
