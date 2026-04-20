@@ -32,7 +32,7 @@ Before the kernel is called, `applyPayloadGuard()` evaluates each `path` against
 | `path` | An id-based document path (e.g. `/abc-xxx/def-yyy.sy`) | Used directly | `path` |
 | `workspace-path` | A filesystem path under the workspace root | Caller + action check only; `path`-condition rules are not yet applied | (reserved) |
 
-**`kind: "id"` resolution detail**: the SQL query returns `box` (notebook id) and `path` (the `.sy` file path of the document that owns the block). For non-document blocks (paragraphs, headings, list items), `path` is the path of their *containing document*, not a path unique to that block — consistent with SiYuan's block tree semantics. See `guides/document-tree-and-paths.md`.
+**`kind: "id"` resolution detail**: the SQL query returns `box` (notebook id) and `path` (the `.sy` file path of the document that owns the block). For non-document blocks (paragraphs, headings, list items), `path` is the path of their *containing document*, not a path unique to that block — consistent with SiYuan's block tree semantics. See `src/docs/siyuan-guide/document-tree-and-paths.md`.
 
 Once the context is populated, the full rule list is evaluated with `{endpoint, tool, action, notebook, path}`. Rules with `notebook` / `path` conditions are matched against these resolved values.
 

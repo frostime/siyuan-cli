@@ -92,7 +92,7 @@ function templateVars() {
         baseUrl = ws.baseUrl;
     } catch {}
     return {
-        '{{cli_version}}': '0.2.0',
+        '{{cli_version}}': '0.3.1',
         '{{workspace}}': workspace,
         '{{base_url}}': baseUrl,
         '{{cli_path}}': join(process.cwd(), 'bin', 'siyuan.mjs'),

@@ -37,7 +37,8 @@ src/
 │   ├── errors.ts        CliError, ExitCode, fatalError
 │   └── paths.ts         config dir resolution (XDG + legacy APPDATA migration)
 ├── skills/              builtin SKILL.md bundles (copied out by `siyuan skill install`)
-└── docs/                this folder
+├── docs/                agent-facing reference (published with CLI; see src/docs/README.md)
+└── (dev)                this file lives in docs/dev/extending/ (not published)
 ```
 
 ## Request lifecycle: `siyuan api <id> ...`

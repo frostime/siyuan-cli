@@ -12,7 +12,7 @@ import './tools/index.js';
 const main = defineCommand({
     meta: {
         name: 'siyuan',
-        version: '0.2.0',
+        version: '0.3.1',
         description: 'Agent-first CLI for SiYuan Note'
     },
     subCommands: {
@@ -60,7 +60,9 @@ async function customShowUsage<T extends Record<string, unknown>>(
         const docsDir = new URL('./docs', import.meta.url);
         const docsPath = fileURLToPath(docsDir);
         process.stdout.write(
-            `\nDocs: ${docsPath}\n  Read these to understand SiYuan block model, SQL queries, and CLI usage.\n`
+            `\nCLI BuiltinDocs: ${docsPath}\n` +
+            `  <doc>/siyuan-guide -> Read to understand SiYuan data model, SQL queries, etc.\n` +
+            `  <doc>/cli-usage -> Read to understand CLI usage, written of config file.\n`
         );
     }
 }

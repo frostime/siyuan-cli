@@ -35,7 +35,7 @@ None of the obvious quick fixes actually isolate:
 
 ### P3 — `notebooks` / `paths` fill-in guidance (partially solved)
 
-Solved in docs: `src/docs/extending/30-config.md` and `src/docs/guides/document-tree-and-paths.md` now state that `notebooks.*` takes notebook IDs and `paths.*` takes ID-based SiYuan paths. Still missing:
+Solved in docs: `src/docs/extending/30-config.md` and `src/docs/siyuan-guide/document-tree-and-paths.md` now state that `notebooks.*` takes notebook IDs and `paths.*` takes ID-based SiYuan paths. Still missing:
 
 - **load-time smoke-test warning**: if a rule entry looks like an hpath (contains `/`, non-ASCII, no `\d{14}-[0-9a-z]{7}` pattern), emit a non-fatal warning on config load
 - **write-time implicit-workspace warning**: when a write-like call resolves workspace via the lowest-priority source (`config.current`), emit a `IMPLICIT_WORKSPACE` warning to stderr; does not block

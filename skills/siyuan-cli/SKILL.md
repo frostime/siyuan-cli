@@ -7,37 +7,34 @@ description: "Manage SiYuan Note with the `siyuan` CLI. Use this whenever the us
 
 Use the `siyuan` command to interact with the user's SiYuan kernel.
 
-## Prerequisites
+## Quick start
 
-1. Check CLI exists: `siyuan --version`
+1. Check CLI: `siyuan --version`
 2. Check workspace: `siyuan workspace list`
-3. If needed, add one:
+3. If needed: `siyuan workspace add main --url http://127.0.0.1:6806 [--token <token>]`
 
-```bash
-siyuan workspace add main --url http://127.0.0.1:6806 [--token <token>]
-```
+## Bundled docs
 
-## Anchoring workspace to a project
+Run `siyuan --help` to see the path to bundled reference docs:
 
-If multiple agents or sessions share this CLI, each relying on `siyuan workspace use` can race — one agent's `use dev` silently changes which workspace the other sees on its next call.
+- `siyuan-guide/` — SiYuan block model, document paths, SQL queries, daily notes
+- `cli-usage/` — CLI commands, config file structure, permission rules
 
-To pin a project to a specific workspace independent of global state, drop a `.siyuan-cli.yaml` at the project root:
+Read these before performing complex operations. In particular, `cli-usage/config-and-permission.md` covers how to write permission rules, and `siyuan-guide/sql-query-guide.md` covers how to query the five core tables (`blocks`, `refs`, `attributes`, `assets`, `spans`).
+
+## Anchoring workspace
+
+Multiple agents sharing `siyuan workspace use` can race — one agent's `use dev` silently changes the active workspace for all others.
+
+Pin a project to a specific workspace with `.siyuan-cli.yaml` at the project root:
 
 ```yaml
-# .siyuan-cli.yaml
+# .siyuan-cli.yaml (safe to commit — cannot hold tokens or URLs)
 schemaVersion: 1
 workspace: <name from `siyuan workspace list`>
 ```
 
-When invoked from that directory (or any subdirectory), the CLI uses that workspace regardless of what `siyuan workspace use` was last called with. The file is safe to commit — by construction it cannot contain tokens or URLs; attempting to put `token`, `baseUrl`, `tokenSource`, or `defaults` in it is a hard error at load time.
-
-Inspect what will be used from the current directory:
-
-```bash
-siyuan workspace which
-```
-
-Output includes `source` (one of `flag` / `env` / `project-file` / `global-current` / `ad-hoc`) and, when a project file was found, its absolute path. Use this before write operations to confirm the target is what you expect.
+Inspect current resolution: `siyuan workspace which`
 
 ## Runtime values
 
@@ -47,40 +44,47 @@ Output includes `source` (one of `flag` / `env` / `project-file` / `global-curre
 - CLI path: `{{cli_path}}`
 - Today: `{{today}}`
 
-## Common commands
+## Common patterns
+
+### Query
+
+```bash
+siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
+```
+
+### Resolve path
+
+```bash
+siyuan tool resolve-path --hpath "/私人/日记"
+```
+
+### Append content
+
+```bash
+siyuan tool append-content --targetId <id> --targetType document --markdown @file:./note.md
+```
 
 ### Verify kernel
+
 ```bash
 siyuan workspace verify main
 siyuan api system.version
 ```
 
-### Run SQL
-```bash
-siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
-```
-
-### Resolve stable path
-```bash
-siyuan tool resolve-path --hpath "/私人/日记"
-```
-
-### Append markdown
-```bash
-siyuan tool append-content --targetId <doc-or-block-id> --targetType document --markdown @file:./note.md
-```
-
 ## Help discovery
 
 ```bash
-siyuan api list
-siyuan api query.sql --help
-siyuan tool list
-siyuan tool list-doc-tree --help
+siyuan --help                        # overview + docs path
+siyuan api list                      # all endpoints
+siyuan api <id> --help               # endpoint usage + examples
+siyuan tool list                     # all tools
+siyuan tool <id> --help              # tool usage
 ```
 
-## Notes
+## Key rules
 
-- Prefer stable `path` / `id` over hpath for automation.
-- Prefer `@file:` or `@stdin` for large text inputs.
-- Write actions support `--dry-run` where available.
+- Prefer `id` / `path` over `hpath` for stable addressing.
+- Use `@file:` or `@stdin` for large text inputs.
+- Write operations support `--dry-run`; destructive actions require `--yes`.
+- Always `siyuan workspace which` before writes to confirm the target.
+- Errors go to stderr as JSON; stdout stays clean. See `cli-usage/cli-overview.md` for exit code reference.

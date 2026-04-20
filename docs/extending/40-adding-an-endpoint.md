@@ -186,7 +186,7 @@ response is a scalar or a fixed-shape object with no lists?
 If the endpoint enables a new workflow (e.g. backlink analysis), consider also:
 
 - writing a tool that composes it with others (`42-adding-a-tool.md`)
-- adding an entry to the relevant `guides/` if the endpoint surfaces a new domain concept
+- adding an entry to the relevant `src/docs/siyuan-guide/` if the endpoint surfaces a new domain concept
 
 ## One-line summary
 
