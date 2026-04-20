@@ -138,8 +138,7 @@ Tools additionally accept:
 
 | Flag | Meaning |
 |---|---|
-| `--details` | stdout becomes `{content, details}` |
-| `--only content\|details` | stdout contains only that part |
+| `--print compact\|json` | choose tool output: compact content or details JSON |
 
 ## Help surface
 

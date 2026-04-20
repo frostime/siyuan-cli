@@ -72,9 +72,8 @@ docs/ (dev)                this file lives in docs/extending/ (not published)
        ├── permission.checkTool(id)
        └── wires callEndpoint / callEndpointRaw
  3. tool.run(ctx, input) → ToolResult
- 4. renderToolResult() writes to stdout/stderr   default: content only
-                                                  --details: { content, details }
-                                                  --only details: details only
+ 4. renderToolResult() writes to stdout/stderr   default / --print compact: content
+                                                  --print json: details JSON
 ```
 
 ## Three extension points

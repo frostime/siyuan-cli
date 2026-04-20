@@ -165,8 +165,8 @@ pnpm build
 node dist/cli.mjs tool list
 node dist/cli.mjs tool list-backlinks --help
 node dist/cli.mjs tool list-backlinks <some-block-id>
-node dist/cli.mjs tool list-backlinks <some-block-id> --details
-node dist/cli.mjs tool list-backlinks <some-block-id> --only details | jq .
+node dist/cli.mjs tool list-backlinks <some-block-id> --print compact
+node dist/cli.mjs tool list-backlinks <some-block-id> --print json | jq .
 ```
 
 ## Design heuristics

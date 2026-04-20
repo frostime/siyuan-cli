@@ -11,6 +11,17 @@ import type { ToolSchema } from '../core/schema.js';
 
 import '../tools/index.js';
 
+const RESERVED_CLI_ARGS = new Set([
+    'workspace',
+    'debug',
+    'dry-run',
+    'yes',
+    'print',
+    'json',
+    'file',
+    'primary'
+]);
+
 function describeTool(id: string): void {
     const tool = toolRegistry.get(id);
     if (!tool) {
@@ -43,6 +54,14 @@ async function runTool(
 }
 
 function buildToolSubCommand(tool: ToolSchema) {
+    const payloadFields = Object.keys(tool.input.properties);
+    const collision = payloadFields.filter((f) => RESERVED_CLI_ARGS.has(f));
+    if (collision.length > 0) {
+        throw new Error(
+            `Tool "${tool.id}" payload fields conflict with reserved CLI args: ${collision.join(', ')}`
+        );
+    }
+
     return defineCommand({
         meta: { name: tool.id, description: tool.summary },
         args: {
@@ -67,14 +86,10 @@ function buildToolSubCommand(tool: ToolSchema) {
                 default: false,
                 alias: 'y'
             },
-            details: {
-                type: 'boolean',
-                description: 'Print { content, details }',
-                default: false
-            },
-            only: {
+            print: {
                 type: 'string',
-                description: 'Output only content or details'
+                description: 'Print mode: compact | json',
+                default: 'compact'
             },
             json: {
                 type: 'string',

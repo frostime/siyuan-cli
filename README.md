@@ -123,8 +123,7 @@ Common flags (same as `api`, plus):
 
 | Flag | Description |
 |---|---|
-| `--details` | Output `{ content, details }` |
-| `--only details` | Output details only |
+| `--print compact\|json` | Choose tool output: compact text or details JSON |
 
 ### `siyuan skill`
 

@@ -70,12 +70,12 @@ siyuan tool append-content --targetId <id> --targetType document --markdown @fil
 
 ### Output modes
 
-By default, stdout is a human-readable `content` string. Structured data is available via flags:
+By default, stdout is a human-readable `content` string. Structured data is available with `--print json`:
 
 ```bash
-siyuan tool <id> ...                  # content only (human-readable)
-siyuan tool <id> ... --details        # { content, details }
-siyuan tool <id> ... --only details   # structured JSON only (machine-readable)
+siyuan tool <id> ...                  # compact content (human-readable)
+siyuan tool <id> ... --print compact  # compact content (explicit)
+siyuan tool <id> ... --print json     # details JSON (machine-readable)
 ```
 
 ## Global flags
@@ -98,8 +98,7 @@ Tools additionally accept:
 
 | Flag | Meaning |
 |------|---------|
-| `--details` | stdout becomes `{ content, details }` |
-| `--only content\|details` | stdout contains only that part |
+| `--print compact\|json` | Choose tool output: compact content or details JSON |
 
 ## Input sources
 

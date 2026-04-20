@@ -236,12 +236,11 @@ export interface GlobalArgs {
     baseUrl?: string;
     token?: string;
     format?: 'json' | 'pretty' | 'yaml';
+    print?: 'compact' | 'json';
     debug?: boolean;
     dryRun?: boolean;
     config?: string;
     yes?: boolean;
-    details?: boolean;
-    only?: 'content' | 'details';
 }
 
 export interface ToolSchema {

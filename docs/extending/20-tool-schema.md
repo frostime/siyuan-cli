@@ -119,8 +119,8 @@ Rule of thumb: if the user's `--dry-run` should also dry-run this internal call,
 
 ```ts
 interface ToolResult {
-  content: string;                                  // stdout by default
-  details?: unknown;                                // structured, shown with --details
+  content: string;                                  // stdout with --print compact (default)
+  details?: unknown;                                // structured, shown with --print json
   warnings?: string[];                              // stderr, prefixed with [warn]
   meta?: { elapsedMs?; filteredCount?; truncated? }; // stderr only in --debug
 }
@@ -129,7 +129,7 @@ interface ToolResult {
 **Design the content field for humans, the details field for programs.**
 
 - `content`: a single string, usually markdown. Keep short — truncate with "... (N more omitted)" if needed.
-- `details`: full structured data. This is what an agent programmatically consumes via `--only details` or `--details`.
+- `details`: full structured data. This is what an agent programmatically consumes via `--print json`.
 - `warnings`: anomalies that didn't cause failure (skipped rows, unparseable fields, partial results).
 - `meta`: timing, counts, flags.
 
@@ -149,7 +149,7 @@ Tools should honor:
   ```
 
 - `args.debug`: can print extra diagnostics via `ctx.logger`.
-- `args.details` / `args.only`: handled by the renderer, not the tool.
+- `args.print`: handled by the renderer, not the tool.
 
 ## Permission enforcement for tools
 
@@ -179,7 +179,7 @@ The array registration happens at import time; order doesn't matter for lookup.
 - summary
 - USAGE
 - PARAMETERS (same format as endpoint help)
-- OUTPUT (explains `--details` / `--only`)
+- OUTPUT (explains `--print compact|json`)
 - EXAMPLES (if declared)
 - DESCRIPTION (if declared)
 
