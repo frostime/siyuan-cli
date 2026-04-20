@@ -1,0 +1,6 @@
+commands:
+  pack-zip:
+    description: 把核心代码打包方便发给Agent审查
+    type: cmd-line
+    invoke: sspec tool pack-zip --exclude .agents --exclude .sspec --exclude .pi --exclude
+      bin
