@@ -108,7 +108,7 @@ async function callEndpoint(
         print: args.print,
         details: result,
         compact: entry.schema.format
-            ? () => entry.schema.format!({ endpoint: entry, payload, result, args })
+            ? () => entry.schema.format!({ endpoint: entry, payload, responseData: result, args })
             : undefined,
         warning: { endpoint: entry.id }
     });

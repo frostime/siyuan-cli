@@ -1,14 +1,5 @@
 import type { EndpointSchema } from '../../core/schema.js';
 
-/**
- * Response data type for getIDsByHPath
- */
-export interface GetIDsByHPathResponse {
-    code: number;
-    msg: string;
-    data: string[];
-}
-
 // Phase 6 correction: local draft schema used `paths: string[]`, but upstream SDK accepts a single `path: string` hpath input.
 export const schema: EndpointSchema = {
     endpoint: '/api/filetree/getIDsByHPath',
@@ -26,19 +17,6 @@ export const schema: EndpointSchema = {
             path: { type: 'string', description: 'Human-readable path (hpath)' }
         }
     },
-    response: {
-        type: 'object',
-        required: ['code', 'msg', 'data'],
-        properties: {
-            code: { type: 'integer', description: 'status code' },
-            msg: { type: 'string', description: 'status message' },
-            data: {
-                type: 'array',
-                description: 'document block ID list',
-                items: { type: 'string', description: 'document ID' }
-            }
-        }
-    },
     classification: {
         mode: 'read',
         surface: 'content',
@@ -50,3 +28,12 @@ export const schema: EndpointSchema = {
         // `path` here is hpath, not SiYuan id-based path. Current ResourceKind cannot express hpath precisely.
     }
 };
+
+/**
+ * Response data type for getIDsByHPath
+ */
+export interface GetIDsByHPathResponse {
+    code: number;
+    msg: string;
+    data: string[];
+}

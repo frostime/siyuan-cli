@@ -1,16 +1,5 @@
 import type { EndpointSchema } from '../../core/schema.js';
 
-/**
- * Response data type for pushErrMsg
- */
-export interface PushErrMsgResponse {
-    code: number;
-    msg: string;
-    data: {
-        id: string;
-    };
-}
-
 export const schema: EndpointSchema = {
     endpoint: '/api/notification/pushErrMsg',
     summary: 'Push error message to SiYuan interface',
@@ -23,21 +12,6 @@ export const schema: EndpointSchema = {
             timeout: {
                 type: 'integer',
                 description: 'Display duration (milliseconds)'
-            }
-        }
-    },
-    response: {
-        type: 'object',
-        required: ['code', 'msg', 'data'],
-        properties: {
-            code: { type: 'integer', description: 'status code' },
-            msg: { type: 'string', description: 'status message' },
-            data: {
-                type: 'object',
-                required: ['id'],
-                properties: {
-                    id: { type: 'string', description: 'message ID' }
-                }
             }
         }
     },
@@ -54,3 +28,14 @@ export const schema: EndpointSchema = {
         allowSource: { msg: ['literal', 'file', 'stdin'] }
     }
 };
+
+/**
+ * Response data type for pushErrMsg
+ */
+export interface PushErrMsgResponse {
+    code: number;
+    msg: string;
+    data: {
+        id: string;
+    };
+}

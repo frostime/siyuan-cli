@@ -1,14 +1,5 @@
 import type { EndpointSchema } from '../../core/schema.js';
 
-/**
- * Response data type for renameFile
- */
-export interface RenameFileResponse {
-    code: number;
-    msg: string;
-    data: null;
-}
-
 export const schema: EndpointSchema = {
     endpoint: '/api/file/renameFile',
     summary: 'Rename file under workspace directory',
@@ -19,15 +10,6 @@ export const schema: EndpointSchema = {
         properties: {
             path: { type: 'string', description: 'Current file path' },
             newPath: { type: 'string', description: 'New file path' }
-        }
-    },
-    response: {
-        type: 'object',
-        required: ['code', 'msg', 'data'],
-        properties: {
-            code: { type: 'integer', description: 'status code' },
-            msg: { type: 'string', description: 'status message' },
-            data: { type: 'null', description: 'null' }
         }
     },
     classification: {
@@ -43,3 +25,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for renameFile
+ */
+export interface RenameFileResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

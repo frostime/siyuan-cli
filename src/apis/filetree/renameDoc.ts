@@ -1,14 +1,5 @@
 import type { EndpointSchema } from '../../core/schema.js';
 
-/**
- * Response data type for renameDoc
- */
-export interface RenameDocResponse {
-    code: number;
-    msg: string;
-    data: null;
-}
-
 export const schema: EndpointSchema = {
     endpoint: '/api/filetree/renameDoc',
     summary: 'Rename document',
@@ -26,15 +17,6 @@ export const schema: EndpointSchema = {
             title: { type: 'string', description: '新标题' }
         }
     },
-    response: {
-        type: 'object',
-        required: ['code', 'msg', 'data'],
-        properties: {
-            code: { type: 'integer', description: 'status code' },
-            msg: { type: 'string', description: 'status message' },
-            data: { type: 'null', description: 'null' }
-        }
-    },
     classification: {
         mode: 'write',
         surface: 'content',
@@ -48,3 +30,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for renameDoc
+ */
+export interface RenameDocResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

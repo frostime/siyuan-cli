@@ -1,14 +1,5 @@
 import type { EndpointSchema } from '../../core/schema.js';
 
-/**
- * Response data type for transferBlockRef
- */
-export interface TransferBlockRefResponse {
-    code: number;
-    msg: string;
-    data: null;
-}
-
 export const schema: EndpointSchema = {
     endpoint: '/api/block/transferBlockRef',
     summary: 'Transfer block reference',
@@ -34,15 +25,6 @@ export const schema: EndpointSchema = {
             }
         }
     },
-    response: {
-        type: 'object',
-        required: ['code', 'msg', 'data'],
-        properties: {
-            code: { type: 'integer', description: 'status code' },
-            msg: { type: 'string', description: 'status message' },
-            data: { type: 'null', description: 'null' }
-        }
-    },
     classification: {
         mode: 'write',
         surface: 'content',
@@ -57,3 +39,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for transferBlockRef
+ */
+export interface TransferBlockRefResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

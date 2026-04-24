@@ -1,14 +1,5 @@
 import type { EndpointSchema } from '../../core/schema.js';
 
-/**
- * Response data type for createDocWithMd
- */
-export interface CreateDocWithMdResponse {
-    code: number;
-    msg: string;
-    data: string;
-}
-
 export const schema: EndpointSchema = {
     endpoint: '/api/filetree/createDocWithMd',
     summary: 'Create Markdown document',
@@ -24,15 +15,6 @@ export const schema: EndpointSchema = {
             },
             path: { type: 'string', description: 'Target SiYuan path' },
             markdown: { type: 'string', description: 'Markdown content' }
-        }
-    },
-    response: {
-        type: 'object',
-        required: ['code', 'msg', 'data'],
-        properties: {
-            code: { type: 'integer', description: 'status code' },
-            msg: { type: 'string', description: 'status message' },
-            data: { type: 'string', description: 'document ID' }
         }
     },
     classification: {
@@ -51,3 +33,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for createDocWithMd
+ */
+export interface CreateDocWithMdResponse {
+    code: number;
+    msg: string;
+    data: string;
+}

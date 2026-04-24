@@ -191,7 +191,6 @@ export interface EndpointSchema {
     summary: string;
     description?: string;
     payload: JSONSchema;
-    response?: JSONSchemaProperty;
 
     /** Authored endpoint classification. */
     classification: EndpointClassification;
@@ -218,7 +217,7 @@ export interface RegisteredEndpoint {
 export interface EndpointFormatContext {
     endpoint: RegisteredEndpoint;
     payload: unknown;
-    result: unknown;
+    responseData: unknown;
     args: GlobalArgs;
 }
 

@@ -1,21 +1,5 @@
 import type { EndpointSchema } from '../../core/schema.js';
 
-/**
- * Response data type for getBlockInfo
- */
-export interface GetBlockInfoResponse {
-    code: number;
-    msg: string;
-    data: {
-        box: string;
-        path: string;
-        rootChildID: string;
-        rootID: string;
-        rootIcon: string;
-        rootTitle: string;
-    };
-}
-
 export const schema: EndpointSchema = {
     endpoint: '/api/block/getBlockInfo',
     summary: 'Get block information',
@@ -31,26 +15,6 @@ export const schema: EndpointSchema = {
             }
         }
     },
-    response: {
-        type: 'object',
-        required: ['code', 'msg', 'data'],
-        properties: {
-            code: { type: 'integer', description: 'status code' },
-            msg: { type: 'string', description: 'status message' },
-            data: {
-                type: 'object',
-                required: ['box', 'path', 'rootChildID', 'rootID', 'rootIcon', 'rootTitle'],
-                properties: {
-                    box: { type: 'string', description: 'Notebook ID' },
-                    path: { type: 'string', description: 'Document path' },
-                    rootChildID: { type: 'string', description: 'Block ID without parent block' },
-                    rootID: { type: 'string', description: 'Document block ID' },
-                    rootIcon: { type: 'string', description: 'Document icon' },
-                    rootTitle: { type: 'string', description: 'Document title' }
-                }
-            }
-        }
-    },
     classification: {
         mode: 'read',
         surface: 'content',
@@ -61,3 +25,19 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }]
     }
 };
+
+/**
+ * Response data type for getBlockInfo
+ */
+export interface GetBlockInfoResponse {
+    code: number;
+    msg: string;
+    data: {
+        box: string;
+        path: string;
+        rootChildID: string;
+        rootID: string;
+        rootIcon: string;
+        rootTitle: string;
+    };
+}
