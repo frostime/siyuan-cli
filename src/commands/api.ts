@@ -8,6 +8,7 @@ import { SiyuanClient } from '../core/client.js';
 import { createPermissionEngine } from '../core/permission.js';
 import { executeEndpoint } from '../core/guard.js';
 import { parsePayload } from '../core/argv.js';
+import { normalizePayloadPaths } from '../core/msys-path.js';
 import { preparePrintedOutput } from '../core/output.js';
 import { fatalError, toCliError } from '../utils/errors.js';
 import type { GlobalArgs, RegisteredEndpoint } from '../core/schema.js';
@@ -93,6 +94,8 @@ async function callEndpoint(
         debug: rawArgs['debug'] as boolean | undefined,
         print: (rawArgs['print'] as GlobalArgs['print'] | undefined) ?? 'compact'
     } satisfies GlobalArgs;
+
+    normalizePayloadPaths(payload as Record<string, unknown>, entry.schema.guard?.payloadTargets);
 
     const result = await executeEndpoint({
         entry,
