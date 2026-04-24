@@ -1,7 +1,11 @@
-import { formatRecordArray, isRecord } from '../../core/output.js';
+import { formatRecordArray } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<{
+    box?: string;
+    path?: string;
+    files: DocFileInfo[];
+}> = {
     endpoint: '/api/filetree/listDocsByPath',
     summary: 'List documents by path',
     payload: {
@@ -57,26 +61,14 @@ export const schema: EndpointSchema = {
             return response;
         }
     },
-    format: ({ responseData: result }) => {
-        if (!isRecord(result)) return JSON.stringify(result, null, 2);
-        const files = Array.isArray(result.files)
-            ? result.files
-            : isRecord(result.data) && Array.isArray(result.data.files)
-              ? result.data.files
-              : [];
-        const box =
-            typeof result.box === 'string'
-                ? result.box
-                : isRecord(result.data) && typeof result.data.box === 'string'
-                  ? result.data.box
-                  : undefined;
+    format: ({ responseData }) => {
         const header = [
-            box ? `box=${box}` : undefined,
-            `files=${files.length}`
+            responseData.box ? `box=${responseData.box}` : undefined,
+            `files=${responseData.files.length}`
         ]
             .filter(Boolean)
             .join(' | ');
-        const body = formatRecordArray(files, {
+        const body = formatRecordArray(responseData.files, {
             label: 'docs',
             maxItems: 20,
             keys: ['id', 'box', 'path', 'hPath', 'name', 'title', 'subFileCount']

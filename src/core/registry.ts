@@ -93,7 +93,7 @@ function validateSchema(
 export class EndpointRegistry {
     private readonly map = new Map<string, RegisteredEndpoint>();
 
-    register(schema: EndpointSchema): void {
+    register(schema: EndpointSchema<any>): void {
         const { id, group, name } = deriveEndpointId(schema.endpoint);
         if (this.map.has(id)) {
             throw new Error(`Endpoint "${id}" is already registered.`);

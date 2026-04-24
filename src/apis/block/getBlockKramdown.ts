@@ -1,7 +1,6 @@
-import { isRecord } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<{ id: string; kramdown: string }> = {
     endpoint: '/api/block/getBlockKramdown',
     summary: 'Get block Kramdown content',
     payload: {
@@ -25,14 +24,7 @@ export const schema: EndpointSchema = {
     guard: {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }]
     },
-    format: ({ responseData: result }) => {
-        if (typeof result === 'string') return result;
-        if (isRecord(result)) {
-            const value = result.kramdown ?? result.markdown ?? result.content;
-            if (typeof value === 'string') return value;
-        }
-        return JSON.stringify(result, null, 2);
-    }
+    format: ({ responseData }) => responseData.kramdown
 };
 
 /**

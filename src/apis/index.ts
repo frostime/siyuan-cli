@@ -1,4 +1,5 @@
 import { registry } from '../core/registry.js';
+import type { EndpointSchema } from '../core/schema.js';
 
 // System APIs
 import { schema as systemVersion } from './system/version.js';
@@ -91,7 +92,7 @@ import { schema as sqliteFlushTransaction } from './sqlite/flushTransaction.js';
 // Network APIs
 import { schema as networkForwardProxy } from './network/forwardProxy.js';
 
-const schemas = [
+const schemas: EndpointSchema<any>[] = [
     // System
     systemVersion,
     systemBootProgress,

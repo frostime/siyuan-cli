@@ -1,7 +1,7 @@
-import { formatRecordArray, isRecord } from '../../core/output.js';
+import { formatRecordArray } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<FileEntry[]> = {
     endpoint: '/api/file/readDir',
     summary: 'List files in directory',
     payload: {
@@ -26,23 +26,12 @@ export const schema: EndpointSchema = {
             { path: 'path', kind: 'workspace-path', access: 'read' }
         ]
     },
-    format: ({ responseData: result }) => {
-        if (Array.isArray(result)) {
-            return formatRecordArray(result, {
-                label: 'entries',
-                maxItems: 30,
-                keys: ['name', 'isDir', 'size', 'path']
-            });
-        }
-        if (isRecord(result) && Array.isArray(result.files)) {
-            return formatRecordArray(result.files, {
-                label: 'entries',
-                maxItems: 30,
-                keys: ['name', 'isDir', 'size', 'path']
-            });
-        }
-        return JSON.stringify(result, null, 2);
-    }
+    format: ({ responseData }) =>
+        formatRecordArray(responseData, {
+            label: 'entries',
+            maxItems: 30,
+            keys: ['name', 'isDir', 'size', 'path']
+        })
 };
 
 /**

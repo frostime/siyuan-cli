@@ -185,7 +185,7 @@ export interface PermissionEngineLike {
 }
 
 // ————— EndpointSchema —————
-export interface EndpointSchema {
+export interface EndpointSchema<TResponseData = unknown> {
     /** The only authoritative identity — e.g. "/api/query/sql". */
     endpoint: string;
     summary: string;
@@ -202,7 +202,7 @@ export interface EndpointSchema {
     cli?: CliBehavior;
     guard?: GuardSpec;
     /** Optional compact renderer for `siyuan api <id> --print compact`. */
-    format?: (ctx: EndpointFormatContext) => string;
+    format?: (ctx: EndpointFormatContext<TResponseData>) => string;
 }
 
 /** Derived, normalized view of EndpointSchema (produced by the registry). */
@@ -214,10 +214,10 @@ export interface RegisteredEndpoint {
     meta: DerivedMeta;
 }
 
-export interface EndpointFormatContext {
+export interface EndpointFormatContext<T = unknown> {
     endpoint: RegisteredEndpoint;
     payload: unknown;
-    responseData: unknown;
+    responseData: T;
     args: GlobalArgs;
 }
 

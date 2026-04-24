@@ -6,10 +6,16 @@
  * @FilePath     : /src/apis/search/fullTextSearchBlock.ts
  * @LastEditTime : 2026-04-19 01:39:52
  */
-import { formatRecordArray, isRecord } from '../../core/output.js';
+import { formatRecordArray } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<{
+    blocks: SearchBlock[];
+    docMode?: boolean;
+    matchedBlockCount?: number;
+    matchedRootCount?: number;
+    pageCount?: number;
+}> = {
     endpoint: '/api/search/fullTextSearchBlock',
     summary: 'Full-text search blocks',
     payload: {
@@ -49,19 +55,17 @@ export const schema: EndpointSchema = {
             fieldMap: { id: 'id', path: 'path', notebook: 'box' }
         }
     },
-    format: ({ responseData: result }) => {
-        if (!isRecord(result)) return JSON.stringify(result, null, 2);
-        const blocks = Array.isArray(result.blocks) ? result.blocks : [];
+    format: ({ responseData }) => {
         const header = [
-            `blocks=${blocks.length}`,
-            result.matchedBlockCount !== undefined
-                ? `matched=${String(result.matchedBlockCount)}`
+            `blocks=${responseData.blocks.length}`,
+            responseData.matchedBlockCount !== undefined
+                ? `matched=${String(responseData.matchedBlockCount)}`
                 : undefined,
-            result.pageCount !== undefined ? `pages=${String(result.pageCount)}` : undefined
+            responseData.pageCount !== undefined ? `pages=${String(responseData.pageCount)}` : undefined
         ]
             .filter(Boolean)
             .join(' | ');
-        const body = formatRecordArray(blocks, {
+        const body = formatRecordArray(responseData.blocks, {
             label: 'hits',
             maxItems: 10,
             keys: ['id', 'box', 'path', 'hPath', 'content', 'rootTitle']

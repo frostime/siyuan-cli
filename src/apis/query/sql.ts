@@ -1,7 +1,7 @@
 import { formatRecordArray, isRecord } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<Array<Record<string, unknown>>> = {
     endpoint: '/api/query/sql',
     summary: 'Query SiYuan database via SQL',
     description:
@@ -38,17 +38,14 @@ export const schema: EndpointSchema = {
             fieldMap: { id: 'id', path: 'path', notebook: 'box' }
         }
     },
-    format: ({ responseData: result }) => {
-        if (!Array.isArray(result)) {
-            return JSON.stringify(result, null, 2);
-        }
-        const first = result.find(isRecord);
+    format: ({ responseData }) => {
+        const first = responseData.find(isRecord);
         const keys = first
             ? ['id', 'box', 'path', 'hpath', 'content', ...Object.keys(first)].filter(
                   (key, index, arr) => arr.indexOf(key) === index
               )
             : undefined;
-        return formatRecordArray(result, { label: 'rows', maxItems: 12, keys });
+        return formatRecordArray(responseData, { label: 'rows', maxItems: 12, keys });
     }
 };
 
