@@ -1,6 +1,6 @@
 ---
 name: workspace-session-isolation
-from-request: .sspec/requests/26-04-17T20-24_workspace-session-isolation.md
+from-request: .sspec/requests/archive/26-04-17T20-24_workspace-session-isolation.md
 created: 2026-04-19
 status: READY_TO_APPLY
 format: sspec-patch-multi-block
@@ -300,7 +300,7 @@ DoD：
 
 ## 概览
 
-本 patch 把 `.sspec/requests/26-04-17T20-24_workspace-session-isolation.md` 里声明的 Phase 1 + Phase 2 一次性落地，以及对应的文档更新。**Phase 3（usage 观察后决定是否引入 `extends:` / 别名机制）不在本 patch 内**，那是数周后才能决定的事。
+本 patch 把 `.sspec/requests/archive/26-04-17T20-24_workspace-session-isolation.md` 里声明的 Phase 1 + Phase 2 一次性落地，以及对应的文档更新。**Phase 3（usage 观察后决定是否引入 `extends:` / 别名机制）不在本 patch 内**，那是数周后才能决定的事。
 
 **一共 16 个 patch block**，按应用顺序组织：
 

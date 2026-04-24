@@ -4,7 +4,7 @@ status: DONE
 change-type: root
 created: 2026-04-17 01:34:45
 reference:
-- source: .sspec/requests/26-04-16T19-04_do-this-project.md
+- source: .sspec/requests/archive/26-04-16T19-04_do-this-project.md
   type: request
   note: Original request
 - source: .sspec/changes/archive/26-04-17T01-34_siyuan-cli/reference/siyuan-cli-design
