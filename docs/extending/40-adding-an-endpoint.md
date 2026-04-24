@@ -16,8 +16,9 @@ GATE: you have a documented kernel API (`/api/<group>/<n>`) with known payload a
 [ ] 3. Pick classification (mode/surface/scope/operation)
 [ ] 4. Decide guard (payloadTargets / response / filterResponse / none)
 [ ] 5. Consider cli (primary / allowSource / examples)
-[ ] 6. Register in src/apis/index.ts
-[ ] 7. Verify: pnpm typecheck && pnpm build && siyuan api <id> --help
+[ ] 6. Consider compact `format` for read-heavy output
+[ ] 7. Register in src/apis/index.ts
+[ ] 8. Verify: pnpm typecheck && pnpm build && siyuan api <id> --help
 ```
 
 ## Step-by-step example
@@ -109,7 +110,20 @@ cli: {
 
 No `allowSource` — `id` is a short literal. No `examples` needed; the primary usage is obvious.
 
-### 5. Register
+### 5. Compact output
+
+If the endpoint returns bulky read data, add `format` so the default `--print compact` output stays short:
+
+```ts
+format: ({ result }) => {
+  if (!Array.isArray(result)) return JSON.stringify(result, null, 2);
+  return `${result.length} rows\n` + result.slice(0, 10).map((row, i) => `${i + 1}. ${JSON.stringify(row)}`).join("\n");
+},
+```
+
+Keep the formatter lossy only in presentation terms. `--print json` remains the full-fidelity path.
+
+### 6. Register
 
 ```ts
 // src/apis/index.ts
@@ -124,7 +138,7 @@ const schemas = [
 ];
 ```
 
-### 6. Verify
+### 7. Verify
 
 ```sh
 pnpm typecheck          # catches schema shape errors
@@ -133,6 +147,7 @@ node dist/cli.mjs api list --group block | grep getRefIDs
 node dist/cli.mjs api describe block.getRefIDs
 node dist/cli.mjs api block.getRefIDs --help
 node dist/cli.mjs api block.getRefIDs 20260417120000-xxxxxxx
+node dist/cli.mjs api block.getRefIDs 20260417120000-xxxxxxx --print json
 ```
 
 ## Decision trees

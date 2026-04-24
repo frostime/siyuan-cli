@@ -1,6 +1,7 @@
+import { formatRecords, isRecord } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<Array<Record<string, unknown>>> = {
     endpoint: '/api/query/sql',
     summary: 'Query SiYuan database via SQL',
     description:
@@ -36,5 +37,21 @@ export const schema: EndpointSchema = {
             itemsAt: '[*]',
             fieldMap: { id: 'id', path: 'path', notebook: 'box' }
         }
+    },
+    format: ({ responseData }) => {
+        const first = responseData.find(isRecord);
+        if (!first) return formatRecords(responseData, { label: 'rows' });
+        // Use actual columns from the result, preserving order
+        const keys = Object.keys(first);
+        return formatRecords(responseData, { label: 'rows', keys });
     }
 };
+
+/**
+ * Response data type for SQL query
+ */
+export interface SqlQueryResponse {
+    code: number;
+    msg: string;
+    data: Array<Record<string, unknown>>;
+}

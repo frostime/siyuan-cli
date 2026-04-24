@@ -23,3 +23,15 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for render
+ */
+export interface RenderTemplateResponse {
+    code: number;
+    msg: string;
+    data: {
+        path: string;
+        content: string;
+    };
+}

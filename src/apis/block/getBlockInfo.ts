@@ -25,3 +25,19 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }]
     }
 };
+
+/**
+ * Response data type for getBlockInfo
+ */
+export interface GetBlockInfoResponse {
+    code: number;
+    msg: string;
+    data: {
+        box: string;
+        path: string;
+        rootChildID: string;
+        rootID: string;
+        rootIcon: string;
+        rootTitle: string;
+    };
+}

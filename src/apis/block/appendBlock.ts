@@ -33,3 +33,31 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'parentID', kind: 'id', access: 'write' }]
     }
 };
+
+/**
+ * Operation in transaction
+ */
+export interface BlockOperation {
+    action: string;
+    data: string;
+    id: string;
+    parentID: string;
+}
+
+/**
+ * Transaction in response
+ */
+export interface BlockTransaction {
+    timestamp: number;
+    doOperations: BlockOperation[];
+    undoOperations: null;
+}
+
+/**
+ * Response data type for appendBlock
+ */
+export interface AppendBlockResponse {
+    code: number;
+    msg: string;
+    data: BlockTransaction[];
+}

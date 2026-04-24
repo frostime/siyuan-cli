@@ -33,3 +33,31 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'parentID', kind: 'id', access: 'write' }]
     }
 };
+
+/**
+ * Prepend operation
+ */
+export interface PrependOperation {
+    action: string;
+    data: string;
+    id: string;
+    parentID: string;
+}
+
+/**
+ * Prepend transaction
+ */
+export interface PrependTransaction {
+    timestamp: number;
+    doOperations: PrependOperation[];
+    undoOperations: null;
+}
+
+/**
+ * Response data type for prependBlock
+ */
+export interface PrependBlockResponse {
+    code: number;
+    msg: string;
+    data: PrependTransaction[];
+}

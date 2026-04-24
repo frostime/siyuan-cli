@@ -25,3 +25,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for renameFile
+ */
+export interface RenameFileResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

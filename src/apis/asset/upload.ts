@@ -28,3 +28,20 @@ export const schema: EndpointSchema = {
         operation: 'upload'
     }
 };
+
+/**
+ * Upload result data
+ */
+export interface UploadResult {
+    errFiles: string[] | null;
+    succMap: Record<string, string>;
+}
+
+/**
+ * Response data type for upload
+ */
+export interface UploadResponse {
+    code: number;
+    msg: string;
+    data: UploadResult;
+}

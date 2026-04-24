@@ -33,3 +33,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for createDocWithMd
+ */
+export interface CreateDocWithMdResponse {
+    code: number;
+    msg: string;
+    data: string;
+}

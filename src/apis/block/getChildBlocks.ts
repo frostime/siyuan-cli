@@ -29,3 +29,21 @@ export const schema: EndpointSchema = {
         }
     }
 };
+
+/**
+ * Child block info
+ */
+export interface ChildBlockInfo {
+    id: string;
+    type: string;
+    subType?: string;
+}
+
+/**
+ * Response data type for getChildBlocks
+ */
+export interface GetChildBlocksResponse {
+    code: number;
+    msg: string;
+    data: ChildBlockInfo[];
+}

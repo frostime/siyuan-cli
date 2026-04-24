@@ -28,3 +28,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for renameNotebook
+ */
+export interface RenameNotebookResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

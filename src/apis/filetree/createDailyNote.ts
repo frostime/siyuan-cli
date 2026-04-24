@@ -28,3 +28,14 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for createDailyNote
+ */
+export interface CreateDailyNoteResponse {
+    code: number;
+    msg: string;
+    data: {
+        id: string;
+    };
+}

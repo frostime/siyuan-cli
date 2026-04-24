@@ -28,3 +28,14 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for exportResources
+ */
+export interface ExportResourcesResponse {
+    code: number;
+    msg: string;
+    data: {
+        path: string;
+    };
+}

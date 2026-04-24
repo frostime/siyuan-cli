@@ -48,3 +48,32 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Move operation
+ */
+export interface MoveOperation {
+    action: string;
+    data: null;
+    id: string;
+    previousID: string;
+    parentID: string;
+}
+
+/**
+ * Move transaction
+ */
+export interface MoveTransaction {
+    timestamp: number;
+    doOperations: MoveOperation[];
+    undoOperations: null;
+}
+
+/**
+ * Response data type for moveBlock
+ */
+export interface MoveBlockResponse {
+    code: number;
+    msg: string;
+    data: MoveTransaction[];
+}

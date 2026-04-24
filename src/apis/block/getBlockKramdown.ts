@@ -1,6 +1,6 @@
 import type { EndpointSchema } from '../../core/schema.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<{ id: string; kramdown: string }> = {
     endpoint: '/api/block/getBlockKramdown',
     summary: 'Get block Kramdown content',
     payload: {
@@ -23,5 +23,18 @@ export const schema: EndpointSchema = {
     },
     guard: {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }]
-    }
+    },
+    format: ({ responseData }) => responseData.kramdown
 };
+
+/**
+ * Response data type for getBlockKramdown
+ */
+export interface GetBlockKramdownResponse {
+    code: number;
+    msg: string;
+    data: {
+        id: string;
+        kramdown: string;
+    };
+}

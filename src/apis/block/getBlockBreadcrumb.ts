@@ -25,3 +25,23 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }]
     }
 };
+
+/**
+ * Breadcrumb item
+ */
+export interface BreadcrumbItem {
+    id: string;
+    name: string;
+    type: string;
+    subType: string;
+    children: null;
+}
+
+/**
+ * Response data type for getBlockBreadcrumb
+ */
+export interface GetBlockBreadcrumbResponse {
+    code: number;
+    msg: string;
+    data: BreadcrumbItem[];
+}

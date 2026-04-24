@@ -25,3 +25,30 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'write' }]
     }
 };
+
+/**
+ * Operation in delete transaction
+ */
+export interface DeleteOperation {
+    action: string;
+    data: null;
+    id: string;
+}
+
+/**
+ * Delete transaction
+ */
+export interface DeleteTransaction {
+    timestamp: number;
+    doOperations: DeleteOperation[];
+    undoOperations: null;
+}
+
+/**
+ * Response data type for deleteBlock
+ */
+export interface DeleteBlockResponse {
+    code: number;
+    msg: string;
+    data: DeleteTransaction[];
+}

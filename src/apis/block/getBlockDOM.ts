@@ -25,3 +25,15 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }]
     }
 };
+
+/**
+ * Response data type for getBlockDOM
+ */
+export interface GetBlockDOMResponse {
+    code: number;
+    msg: string;
+    data: {
+        id: string;
+        dom: string;
+    };
+}

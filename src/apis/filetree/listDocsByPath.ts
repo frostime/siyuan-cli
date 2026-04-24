@@ -1,6 +1,11 @@
+import { formatRecords } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<{
+    box?: string;
+    path?: string;
+    files: DocFileInfo[];
+}> = {
     endpoint: '/api/filetree/listDocsByPath',
     summary: 'List documents by path',
     payload: {
@@ -55,5 +60,58 @@ export const schema: EndpointSchema = {
             else if (r.files) r.files = kept;
             return response;
         }
+    },
+    format: ({ responseData }) => {
+        const header = [
+            responseData.box ? `box=${responseData.box}` : undefined,
+            `files=${responseData.files.length}`
+        ]
+            .filter(Boolean)
+            .join(' | ');
+        const body = formatRecords(responseData.files, {
+            label: 'docs',
+            keys: ['id', 'box', 'path', 'hPath', 'name', 'title', 'subFileCount']
+        });
+        return header ? `${header}\n${body}` : body;
     }
 };
+
+/**
+ * Document file info
+ */
+export interface DocFileInfo {
+    path: string;
+    name: string;
+    icon: string;
+    name1: string;
+    alias: string;
+    memo: string;
+    bookmark: string;
+    id: string;
+    count: number;
+    size: number;
+    hSize: string;
+    mtime: number;
+    ctime: number;
+    hMtime: string;
+    hCtime: string;
+    sort: number;
+    subFileCount: number;
+    hidden: boolean;
+    newFlashcardCount: number;
+    dueFlashcardCount: number;
+    flashcardCount: number;
+}
+
+/**
+ * Response data type for listDocsByPath
+ */
+export interface ListDocsByPathResponse {
+    code: number;
+    msg: string;
+    data: {
+        box: string;
+        path: string;
+        files: DocFileInfo[];
+    };
+}

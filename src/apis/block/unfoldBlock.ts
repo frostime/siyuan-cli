@@ -25,3 +25,12 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'write' }]
     }
 };
+
+/**
+ * Response data type for unfoldBlock
+ */
+export interface UnfoldBlockResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

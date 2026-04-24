@@ -25,3 +25,12 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'write' }]
     }
 };
+
+/**
+ * Response data type for foldBlock
+ */
+export interface FoldBlockResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

@@ -27,3 +27,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for closeNotebook
+ */
+export interface CloseNotebookResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

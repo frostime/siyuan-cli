@@ -33,3 +33,30 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'write' }]
     }
 };
+
+/**
+ * Update operation
+ */
+export interface UpdateOperation {
+    action: string;
+    data: string;
+    id: string;
+}
+
+/**
+ * Update transaction
+ */
+export interface UpdateTransaction {
+    timestamp: number;
+    doOperations: UpdateOperation[];
+    undoOperations: null;
+}
+
+/**
+ * Response data type for updateBlock
+ */
+export interface UpdateBlockResponse {
+    code: number;
+    msg: string;
+    data: UpdateTransaction[];
+}

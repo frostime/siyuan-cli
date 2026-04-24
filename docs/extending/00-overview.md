@@ -61,7 +61,10 @@ docs/ (dev)                this file lives in docs/extending/ (not published)
        ├── wouldConfirm + --yes                  confirm gate
        ├── client.call(endpoint, payload)        or client.upload() for multipart
        └── applyResponseGuard(...)               declarative response filter + write-back
- 7. write JSON to stdout
+ 7. render result to stdout                      src/core/output.ts + src/commands/api.ts
+       ├── --print json                          raw JSON
+       ├── --print compact + schema.format       compact text
+       └── formatter failure                     warning + JSON fallback
 ```
 
 ## Request lifecycle: `siyuan tool <id> ...`
@@ -72,9 +75,8 @@ docs/ (dev)                this file lives in docs/extending/ (not published)
        ├── permission.checkTool(id)
        └── wires callEndpoint / callEndpointRaw
  3. tool.run(ctx, input) → ToolResult
- 4. renderToolResult() writes to stdout/stderr   default: content only
-                                                  --details: { content, details }
-                                                  --only details: details only
+ 4. renderToolResult() writes to stdout/stderr   default / --print compact: content
+                                                  --print json: details JSON
 ```
 
 ## Three extension points
@@ -101,4 +103,5 @@ Both are pulled in by `src/cli.ts` and by any command that needs the registries.
 - every `EndpointSchema` must have `classification`; `risk` and `requiresConfirmation` are derived, not authored
 - every `payloadTargets[*].path` must start with a property declared in `schema.payload.properties`
 - every `mode:"read" + scope:"global"` endpoint must have `guard.response` or `guard.filterResponse`
+- `format(ctx)` is optional and affects only `siyuan api ... --print compact` output
 - tool ids are kebab-case; endpoint ids are `group.name`

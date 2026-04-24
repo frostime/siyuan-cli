@@ -13,3 +13,17 @@ export const schema: EndpointSchema = {
         riskOverride: 'sensitive'
     }
 };
+
+/**
+ * Response data type for getConf
+ * Note: conf object is complex and abbreviated here
+ */
+export interface GetConfResponse {
+    code: number;
+    msg: string;
+    data: {
+        start: boolean;
+        isPublish: boolean;
+        conf: Record<string, unknown>;
+    };
+}

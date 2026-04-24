@@ -58,6 +58,16 @@ siyuan api describe query.sql      # schema details
 siyuan api query.sql --help        # usage + examples
 ```
 
+### Output modes
+
+By default, stdout uses compact endpoint rendering when available, with raw JSON fallback:
+
+```bash
+siyuan api query.sql "SELECT id, hpath FROM blocks LIMIT 5"   # compact text by default
+siyuan api query.sql "SELECT id, hpath FROM blocks LIMIT 5" --print compact
+siyuan api query.sql "SELECT id, hpath FROM blocks LIMIT 5" --print json
+```
+
 ## Using tools
 
 Tools compose multiple endpoint calls into a single workflow.
@@ -70,12 +80,12 @@ siyuan tool append-content --targetId <id> --targetType document --markdown @fil
 
 ### Output modes
 
-By default, stdout is a human-readable `content` string. Structured data is available via flags:
+By default, stdout is a human-readable `content` string. Structured data is available with `--print json`:
 
 ```bash
-siyuan tool <id> ...                  # content only (human-readable)
-siyuan tool <id> ... --details        # { content, details }
-siyuan tool <id> ... --only details   # structured JSON only (machine-readable)
+siyuan tool <id> ...                  # compact content (human-readable)
+siyuan tool <id> ... --print compact  # compact content (explicit)
+siyuan tool <id> ... --print json     # details JSON (machine-readable)
 ```
 
 ## Global flags
@@ -94,12 +104,11 @@ All `siyuan api <id>` and `siyuan tool <id>` commands accept:
 | `--json` | `-j` | Entire payload as inline JSON |
 | `--file` | `-f` | Entire payload from JSON file; `-f -` reads stdin |
 
-Tools additionally accept:
+APIs and tools additionally accept:
 
 | Flag | Meaning |
 |------|---------|
-| `--details` | stdout becomes `{ content, details }` |
-| `--only content\|details` | stdout contains only that part |
+| `--print compact\|json` | Choose output mode; APIs use compact formatter text or JSON fallback, tools use compact content or details JSON |
 
 ## Input sources
 

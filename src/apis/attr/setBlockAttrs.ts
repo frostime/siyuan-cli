@@ -31,3 +31,12 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'write' }]
     }
 };
+
+/**
+ * Response data type for setBlockAttrs
+ */
+export interface SetBlockAttrsResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

@@ -28,3 +28,14 @@ export const schema: EndpointSchema = {
         allowSource: { msg: ['literal', 'file', 'stdin'] }
     }
 };
+
+/**
+ * Response data type for pushMsg
+ */
+export interface PushMsgResponse {
+    code: number;
+    msg: string;
+    data: {
+        id: string;
+    };
+}

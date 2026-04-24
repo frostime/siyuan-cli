@@ -1,4 +1,5 @@
 import type { EndpointSchema } from '../../core/schema.js';
+
 export const schema: EndpointSchema = {
     endpoint: '/api/system/bootProgress',
     summary: 'Get SiYuan boot progress (commonly used in Docker scenarios)',
@@ -10,3 +11,15 @@ export const schema: EndpointSchema = {
         operation: 'inspect'
     }
 };
+
+/**
+ * Response data type for boot progress
+ */
+export interface BootProgressResponse {
+    code: number;
+    msg: string;
+    data: {
+        details: string;
+        progress: number;
+    };
+}

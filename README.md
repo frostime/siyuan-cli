@@ -85,6 +85,8 @@ siyuan api query.sql --help
 siyuan api block.appendBlock --help
 ```
 
+API output defaults to `--print compact`, which uses endpoint-specific compact rendering when available and raw JSON fallback otherwise. Use `--print json` for full structured output.
+
 `--tag` filters derived endpoint tags such as `mode:read`, `surface:content`, `scope:batch`, `operation:move`, and `risk:sensitive`.
 
 Common flags for all endpoints:
@@ -97,6 +99,7 @@ Common flags for all endpoints:
 | `--dry-run` | Preview write request without sending |
 | `-y, --yes` | Auto-confirm write operations |
 | `--debug` | Show curl-equivalent debug info |
+| `--print compact\|json` | Choose compact endpoint text or raw JSON |
 | `-j, --json` | Pass JSON payload inline |
 | `-f, --file` | Load JSON payload from file (`-` for stdin) |
 
@@ -119,12 +122,11 @@ Run built-in workflow tools.
 | `append-content` | Append markdown content to daily note, document, or block |
 | `resolve-path` | Resolve hpath or id to stable SiYuan path |
 
-Common flags (same as `api`, plus):
+Common flags (same as `api`, plus the same `--print` semantics for tool output):
 
 | Flag | Description |
 |---|---|
-| `--details` | Output `{ content, details }` |
-| `--only details` | Output details only |
+| `--print compact\|json` | Choose tool output: compact text or details JSON |
 
 ### `siyuan skill`
 

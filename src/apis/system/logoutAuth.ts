@@ -13,3 +13,12 @@ export const schema: EndpointSchema = {
         riskOverride: 'sensitive'
     }
 };
+
+/**
+ * Response data type for logoutAuth
+ */
+export interface LogoutAuthResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

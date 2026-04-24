@@ -25,3 +25,12 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }]
     }
 };
+
+/**
+ * Response data type for getHPathByID
+ */
+export interface GetHPathByIDResponse {
+    code: number;
+    msg: string;
+    data: string;
+}

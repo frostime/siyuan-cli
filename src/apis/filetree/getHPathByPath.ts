@@ -29,3 +29,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for getHPathByPath
+ */
+export interface GetHPathByPathResponse {
+    code: number;
+    msg: string;
+    data: string;
+}

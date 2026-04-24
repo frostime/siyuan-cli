@@ -25,3 +25,15 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }]
     }
 };
+
+/**
+ * Response data type for exportMdContent
+ */
+export interface ExportMdContentResponse {
+    code: number;
+    msg: string;
+    data: {
+        content: string;
+        hPath: string;
+    };
+}

@@ -27,3 +27,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for openNotebook
+ */
+export interface OpenNotebookResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

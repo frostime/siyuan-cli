@@ -35,3 +35,25 @@ export const schema: EndpointSchema = {
         }
     }
 };
+
+/**
+ * Document search result item
+ */
+export interface DocSearchResult {
+    box: string;
+    boxIcon: string;
+    hPath: string;
+    path: string;
+    flashcardCount?: number;
+    newFlashcardCount?: number;
+    dueFlashcardCount?: number;
+}
+
+/**
+ * Response data type for searchDocs
+ */
+export interface SearchDocsResponse {
+    code: number;
+    msg: string;
+    data: DocSearchResult[];
+}

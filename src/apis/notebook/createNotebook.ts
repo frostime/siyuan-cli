@@ -22,3 +22,24 @@ export const schema: EndpointSchema = {
         allowSource: { name: ['literal'] }
     }
 };
+
+/**
+ * Response data type for createNotebook
+ */
+export interface CreateNotebookResponse {
+    code: number;
+    msg: string;
+    data: {
+        notebook: {
+            id: string;
+            name: string;
+            icon: string;
+            sort: number;
+            sortMode: number;
+            closed: boolean;
+            newFlashcardCount: number;
+            dueFlashcardCount: number;
+            flashcardCount: number;
+        };
+    };
+}

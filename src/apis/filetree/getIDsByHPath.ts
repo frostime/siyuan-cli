@@ -28,3 +28,12 @@ export const schema: EndpointSchema = {
         // `path` here is hpath, not SiYuan id-based path. Current ResourceKind cannot express hpath precisely.
     }
 };
+
+/**
+ * Response data type for getIDsByHPath
+ */
+export interface GetIDsByHPathResponse {
+    code: number;
+    msg: string;
+    data: string[];
+}

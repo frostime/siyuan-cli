@@ -25,3 +25,33 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'notebook', kind: 'notebook', access: 'read' }]
     }
 };
+
+/**
+ * Notebook configuration
+ */
+export interface NotebookConf {
+    closed: boolean;
+    dailyNoteSavePath: string;
+    dailyNoteTemplatePath: string;
+    docCreateSaveBox: string;
+    docCreateSavePath: string;
+    icon: string;
+    name: string;
+    refCreateSaveBox: string;
+    refCreateSavePath: string;
+    sort: number;
+    sortMode: number;
+}
+
+/**
+ * Response data type for getNotebookConf
+ */
+export interface GetNotebookConfResponse {
+    code: number;
+    msg: string;
+    data: {
+        box: string;
+        conf: NotebookConf;
+        name: string;
+    };
+}

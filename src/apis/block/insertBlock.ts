@@ -46,3 +46,33 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Insert operation
+ */
+export interface InsertOperation {
+    action: string;
+    data: string;
+    id: string;
+    nextID: string;
+    previousID: string;
+    parentID: string;
+}
+
+/**
+ * Insert transaction
+ */
+export interface InsertTransaction {
+    timestamp: number;
+    doOperations: InsertOperation[];
+    undoOperations: null;
+}
+
+/**
+ * Response data type for insertBlock
+ */
+export interface InsertBlockResponse {
+    code: number;
+    msg: string;
+    data: InsertTransaction[];
+}

@@ -29,3 +29,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for removeDoc
+ */
+export interface RemoveDocResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

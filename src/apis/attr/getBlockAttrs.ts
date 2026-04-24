@@ -25,3 +25,21 @@ export const schema: EndpointSchema = {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }]
     }
 };
+
+/**
+ * Block attributes (IAL - Inline Attribute List)
+ */
+export interface BlockAttrs {
+    id: string;
+    updated?: string;
+    [key: string]: string | undefined;
+}
+
+/**
+ * Response data type for getBlockAttrs
+ */
+export interface GetBlockAttrsResponse {
+    code: number;
+    msg: string;
+    data: BlockAttrs;
+}

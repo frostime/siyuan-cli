@@ -30,3 +30,14 @@ export const schema: EndpointSchema = {
         operation: 'inspect'
     }
 };
+
+/**
+ * Response data type for pandoc
+ */
+export interface PandocResponse {
+    code: number;
+    msg: string;
+    data: {
+        path: string;
+    };
+}

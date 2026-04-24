@@ -185,13 +185,12 @@ export interface PermissionEngineLike {
 }
 
 // ————— EndpointSchema —————
-export interface EndpointSchema {
+export interface EndpointSchema<TResponseData = unknown> {
     /** The only authoritative identity — e.g. "/api/query/sql". */
     endpoint: string;
     summary: string;
     description?: string;
     payload: JSONSchema;
-    response?: JSONSchemaProperty;
 
     /** Authored endpoint classification. */
     classification: EndpointClassification;
@@ -202,6 +201,8 @@ export interface EndpointSchema {
     multipart?: { fileFields: string[] };
     cli?: CliBehavior;
     guard?: GuardSpec;
+    /** Optional compact renderer for `siyuan api <id> --print compact`. */
+    format?: (ctx: EndpointFormatContext<TResponseData>) => string;
 }
 
 /** Derived, normalized view of EndpointSchema (produced by the registry). */
@@ -211,6 +212,13 @@ export interface RegisteredEndpoint {
     group: string;
     name: string;
     meta: DerivedMeta;
+}
+
+export interface EndpointFormatContext<T = unknown> {
+    endpoint: RegisteredEndpoint;
+    payload: unknown;
+    responseData: T;
+    args: GlobalArgs;
 }
 
 // ————— ToolSchema —————
@@ -236,12 +244,11 @@ export interface GlobalArgs {
     baseUrl?: string;
     token?: string;
     format?: 'json' | 'pretty' | 'yaml';
+    print?: 'compact' | 'json';
     debug?: boolean;
     dryRun?: boolean;
     config?: string;
     yes?: boolean;
-    details?: boolean;
-    only?: 'content' | 'details';
 }
 
 export interface ToolSchema {

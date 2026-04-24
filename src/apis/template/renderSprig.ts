@@ -22,3 +22,12 @@ export const schema: EndpointSchema = {
         allowSource: { template: ['literal', 'file', 'stdin'] }
     }
 };
+
+/**
+ * Response data type for renderSprig
+ */
+export interface RenderSprigResponse {
+    code: number;
+    msg: string;
+    data: string;
+}

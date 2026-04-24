@@ -27,3 +27,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for removeNotebook
+ */
+export interface RemoveNotebookResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

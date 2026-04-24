@@ -35,3 +35,27 @@ export const schema: EndpointSchema = {
         // Critical by fallback: this can drive arbitrary outbound requests through the kernel.
     }
 };
+
+/**
+ * Response headers
+ */
+export interface ResponseHeaders {
+    [key: string]: string[];
+}
+
+/**
+ * Response data type for forwardProxy
+ */
+export interface ForwardProxyResponse {
+    code: number;
+    msg: string;
+    data: {
+        url: string;
+        status: number;
+        elapsed: number;
+        contentType: string;
+        headers: ResponseHeaders;
+        body: string;
+        bodyEncoding: string;
+    };
+}

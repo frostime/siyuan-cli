@@ -13,3 +13,12 @@ export const schema: EndpointSchema = {
         riskOverride: 'critical'
     }
 };
+
+/**
+ * Response data type for exit
+ */
+export interface ExitResponse {
+    code: number;
+    msg: string;
+    data: unknown;
+}

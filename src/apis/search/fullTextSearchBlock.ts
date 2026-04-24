@@ -6,9 +6,16 @@
  * @FilePath     : /src/apis/search/fullTextSearchBlock.ts
  * @LastEditTime : 2026-04-19 01:39:52
  */
+import { formatRecords } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<{
+    blocks: SearchBlock[];
+    docMode?: boolean;
+    matchedBlockCount?: number;
+    matchedRootCount?: number;
+    pageCount?: number;
+}> = {
     endpoint: '/api/search/fullTextSearchBlock',
     summary: 'Full-text search blocks',
     payload: {
@@ -47,5 +54,71 @@ export const schema: EndpointSchema = {
             itemsAt: 'blocks[*]',
             fieldMap: { id: 'id', path: 'path', notebook: 'box' }
         }
+    },
+    format: ({ responseData }) => {
+        const header = [
+            `blocks=${responseData.blocks.length}`,
+            responseData.matchedBlockCount !== undefined
+                ? `matched=${String(responseData.matchedBlockCount)}`
+                : undefined,
+            responseData.pageCount !== undefined ? `pages=${String(responseData.pageCount)}` : undefined
+        ]
+            .filter(Boolean)
+            .join(' | ');
+        const body = formatRecords(responseData.blocks, {
+            label: 'hits',
+            keys: ['id', 'box', 'path', 'hPath', 'content', 'rootTitle']
+        });
+        return header ? `${header}\n${body}` : body;
     }
 };
+
+/**
+ * Search result block
+ */
+export interface SearchBlock {
+    box: string;
+    path: string;
+    hPath: string;
+    id: string;
+    rootID: string;
+    parentID: string;
+    name: string;
+    alias: string;
+    memo: string;
+    tag: string;
+    content: string;
+    fcontent: string;
+    markdown: string;
+    folded: boolean;
+    type: string;
+    subType: string;
+    refText: string;
+    refs: string[] | null;
+    defID: string;
+    defPath: string;
+    ial: Record<string, string>;
+    children: SearchBlock[] | null;
+    depth: number;
+    count: number;
+    sort: number;
+    created: string;
+    updated: string;
+    riffCardID: string;
+    riffCardReps: number;
+}
+
+/**
+ * Response data type for fullTextSearchBlock
+ */
+export interface FullTextSearchBlockResponse {
+    code: number;
+    msg: string;
+    data: {
+        blocks: SearchBlock[];
+        docMode: boolean;
+        matchedBlockCount: number;
+        matchedRootCount: number;
+        pageCount: number;
+    };
+}

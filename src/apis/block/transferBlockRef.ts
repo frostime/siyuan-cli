@@ -39,3 +39,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for transferBlockRef
+ */
+export interface TransferBlockRefResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

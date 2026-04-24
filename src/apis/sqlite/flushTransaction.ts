@@ -11,3 +11,12 @@ export const schema: EndpointSchema = {
         operation: 'control'
     }
 };
+
+/**
+ * Response data type for flushTransaction
+ */
+export interface FlushTransactionResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

@@ -23,3 +23,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for removeFile
+ */
+export interface RemoveFileResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

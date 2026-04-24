@@ -41,3 +41,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for putFile
+ */
+export interface PutFileResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

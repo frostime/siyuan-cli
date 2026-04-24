@@ -35,3 +35,12 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Response data type for moveDocs
+ */
+export interface MoveDocsResponse {
+    code: number;
+    msg: string;
+    data: null;
+}

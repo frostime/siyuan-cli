@@ -33,3 +33,29 @@ export const schema: EndpointSchema = {
         ]
     }
 };
+
+/**
+ * Notebook configuration
+ */
+export interface NotebookConf {
+    closed: boolean;
+    dailyNoteSavePath: string;
+    dailyNoteTemplatePath: string;
+    docCreateSaveBox: string;
+    docCreateSavePath: string;
+    icon: string;
+    name: string;
+    refCreateSaveBox: string;
+    refCreateSavePath: string;
+    sort: number;
+    sortMode: number;
+}
+
+/**
+ * Response data type for setNotebookConf
+ */
+export interface SetNotebookConfResponse {
+    code: number;
+    msg: string;
+    data: NotebookConf;
+}
