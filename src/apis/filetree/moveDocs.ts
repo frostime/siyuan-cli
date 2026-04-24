@@ -1,5 +1,14 @@
 import type { EndpointSchema } from '../../core/schema.js';
 
+/**
+ * Response data type for moveDocs
+ */
+export interface MoveDocsResponse {
+    code: number;
+    msg: string;
+    data: null;
+}
+
 export const schema: EndpointSchema = {
     endpoint: '/api/filetree/moveDocs',
     summary: 'Move documents by path',
@@ -19,6 +28,15 @@ export const schema: EndpointSchema = {
                 pattern: '^\\d{14}-[0-9a-z]{7}$'
             },
             toPath: { type: 'string', description: 'Target path' }
+        }
+    },
+    response: {
+        type: 'object',
+        required: ['code', 'msg', 'data'],
+        properties: {
+            code: { type: 'integer', description: 'status code' },
+            msg: { type: 'string', description: 'status message' },
+            data: { type: 'null', description: 'null' }
         }
     },
     classification: {

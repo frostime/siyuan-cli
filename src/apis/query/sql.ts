@@ -1,6 +1,15 @@
 import { formatRecordArray, isRecord } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
+/**
+ * Response data type for SQL query
+ */
+export interface SqlQueryResponse {
+    code: number;
+    msg: string;
+    data: Array<Record<string, unknown>>;
+}
+
 export const schema: EndpointSchema = {
     endpoint: '/api/query/sql',
     summary: 'Query SiYuan database via SQL',
@@ -12,6 +21,19 @@ export const schema: EndpointSchema = {
         additionalProperties: false,
         properties: {
             stmt: { type: 'string', description: 'SQL query statement' }
+        }
+    },
+    response: {
+        type: 'object',
+        required: ['code', 'msg', 'data'],
+        properties: {
+            code: { type: 'integer', description: 'status code' },
+            msg: { type: 'string', description: 'status message' },
+            data: {
+                type: 'array',
+                description: 'query results',
+                items: { type: 'object', additionalProperties: true }
+            }
         }
     },
     classification: {

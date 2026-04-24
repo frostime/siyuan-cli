@@ -9,6 +9,56 @@
 import { formatRecordArray, isRecord } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
+/**
+ * Search result block
+ */
+export interface SearchBlock {
+    box: string;
+    path: string;
+    hPath: string;
+    id: string;
+    rootID: string;
+    parentID: string;
+    name: string;
+    alias: string;
+    memo: string;
+    tag: string;
+    content: string;
+    fcontent: string;
+    markdown: string;
+    folded: boolean;
+    type: string;
+    subType: string;
+    refText: string;
+    refs: string[] | null;
+    defID: string;
+    defPath: string;
+    ial: Record<string, string>;
+    children: SearchBlock[] | null;
+    depth: number;
+    count: number;
+    sort: number;
+    created: string;
+    updated: string;
+    riffCardID: string;
+    riffCardReps: number;
+}
+
+/**
+ * Response data type for fullTextSearchBlock
+ */
+export interface FullTextSearchBlockResponse {
+    code: number;
+    msg: string;
+    data: {
+        blocks: SearchBlock[];
+        docMode: boolean;
+        matchedBlockCount: number;
+        matchedRootCount: number;
+        pageCount: number;
+    };
+}
+
 export const schema: EndpointSchema = {
     endpoint: '/api/search/fullTextSearchBlock',
     summary: 'Full-text search blocks',
@@ -42,6 +92,29 @@ export const schema: EndpointSchema = {
         operation: 'search'
     },
     cli: { primary: 'query' },
+    response: {
+        type: 'object',
+        required: ['code', 'msg', 'data'],
+        properties: {
+            code: { type: 'integer', description: 'status code' },
+            msg: { type: 'string', description: 'status message' },
+            data: {
+                type: 'object',
+                required: ['blocks', 'docMode', 'matchedBlockCount', 'matchedRootCount', 'pageCount'],
+                properties: {
+                    blocks: {
+                        type: 'array',
+                        description: 'search results',
+                        items: { type: 'object', additionalProperties: true }
+                    },
+                    docMode: { type: 'boolean', description: 'document search mode' },
+                    matchedBlockCount: { type: 'integer', description: 'matched block count' },
+                    matchedRootCount: { type: 'integer', description: 'matched document count' },
+                    pageCount: { type: 'integer', description: 'page count' }
+                }
+            }
+        }
+    },
     guard: {
         payloadTargets: [{ path: 'paths[*]', kind: 'path', access: 'read' }],
         response: {

@@ -1,5 +1,14 @@
 import type { EndpointSchema } from '../../core/schema.js';
 
+/**
+ * Response data type for renameNotebook
+ */
+export interface RenameNotebookResponse {
+    code: number;
+    msg: string;
+    data: null;
+}
+
 export const schema: EndpointSchema = {
     endpoint: '/api/notebook/renameNotebook',
     summary: 'Rename a notebook',
@@ -14,6 +23,15 @@ export const schema: EndpointSchema = {
                 pattern: '^\\d{14}-[0-9a-z]{7}$'
             },
             name: { type: 'string', description: 'New notebook name' }
+        }
+    },
+    response: {
+        type: 'object',
+        required: ['code', 'msg', 'data'],
+        properties: {
+            code: { type: 'integer', description: 'status code' },
+            msg: { type: 'string', description: 'status message' },
+            data: { type: 'null', description: 'null' }
         }
     },
     classification: {

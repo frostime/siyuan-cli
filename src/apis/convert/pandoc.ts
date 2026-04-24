@@ -1,5 +1,16 @@
 import type { EndpointSchema } from '../../core/schema.js';
 
+/**
+ * Response data type for pandoc
+ */
+export interface PandocResponse {
+    code: number;
+    msg: string;
+    data: {
+        path: string;
+    };
+}
+
 export const schema: EndpointSchema = {
     endpoint: '/api/convert/pandoc',
     summary: 'Execute pandoc to convert content',
@@ -20,6 +31,21 @@ export const schema: EndpointSchema = {
                 type: 'string',
                 description:
                     'Working dir name under workspace/temp/convert/pandoc/; random if unset'
+            }
+        }
+    },
+    response: {
+        type: 'object',
+        required: ['code', 'msg', 'data'],
+        properties: {
+            code: { type: 'integer', description: 'status code' },
+            msg: { type: 'string', description: 'status message' },
+            data: {
+                type: 'object',
+                required: ['path'],
+                properties: {
+                    path: { type: 'string', description: 'path of output file' }
+                }
             }
         }
     },

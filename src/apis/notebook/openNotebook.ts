@@ -1,5 +1,14 @@
 import type { EndpointSchema } from '../../core/schema.js';
 
+/**
+ * Response data type for openNotebook
+ */
+export interface OpenNotebookResponse {
+    code: number;
+    msg: string;
+    data: null;
+}
+
 export const schema: EndpointSchema = {
     endpoint: '/api/notebook/openNotebook',
     summary: 'Open a notebook',
@@ -13,6 +22,15 @@ export const schema: EndpointSchema = {
                 description: 'Notebook ID',
                 pattern: '^\\d{14}-[0-9a-z]{7}$'
             }
+        }
+    },
+    response: {
+        type: 'object',
+        required: ['code', 'msg', 'data'],
+        properties: {
+            code: { type: 'integer', description: 'status code' },
+            msg: { type: 'string', description: 'status message' },
+            data: { type: 'null', description: 'null' }
         }
     },
     classification: {

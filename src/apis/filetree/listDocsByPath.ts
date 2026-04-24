@@ -1,6 +1,46 @@
 import { formatRecordArray, isRecord } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
+/**
+ * Document file info
+ */
+export interface DocFileInfo {
+    path: string;
+    name: string;
+    icon: string;
+    name1: string;
+    alias: string;
+    memo: string;
+    bookmark: string;
+    id: string;
+    count: number;
+    size: number;
+    hSize: string;
+    mtime: number;
+    ctime: number;
+    hMtime: string;
+    hCtime: string;
+    sort: number;
+    subFileCount: number;
+    hidden: boolean;
+    newFlashcardCount: number;
+    dueFlashcardCount: number;
+    flashcardCount: number;
+}
+
+/**
+ * Response data type for listDocsByPath
+ */
+export interface ListDocsByPathResponse {
+    code: number;
+    msg: string;
+    data: {
+        box: string;
+        path: string;
+        files: DocFileInfo[];
+    };
+}
+
 export const schema: EndpointSchema = {
     endpoint: '/api/filetree/listDocsByPath',
     summary: 'List documents by path',
@@ -26,6 +66,26 @@ export const schema: EndpointSchema = {
             flashcard: {
                 type: 'boolean',
                 description: 'Include flashcard-related information'
+            }
+        }
+    },
+    response: {
+        type: 'object',
+        required: ['code', 'msg', 'data'],
+        properties: {
+            code: { type: 'integer', description: 'status code' },
+            msg: { type: 'string', description: 'status message' },
+            data: {
+                type: 'object',
+                required: ['box', 'path', 'files'],
+                properties: {
+                    box: { type: 'string', description: 'notebook ID' },
+                    path: { type: 'string', description: 'document path' },
+                    files: {
+                        type: 'array',
+                        items: { type: 'object', additionalProperties: true }
+                    }
+                }
             }
         }
     },

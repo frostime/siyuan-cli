@@ -1,6 +1,18 @@
 import { isRecord } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
+/**
+ * Response data type for getBlockKramdown
+ */
+export interface GetBlockKramdownResponse {
+    code: number;
+    msg: string;
+    data: {
+        id: string;
+        kramdown: string;
+    };
+}
+
 export const schema: EndpointSchema = {
     endpoint: '/api/block/getBlockKramdown',
     summary: 'Get block Kramdown content',
@@ -13,6 +25,22 @@ export const schema: EndpointSchema = {
                 type: 'string',
                 description: '块 ID',
                 pattern: '^\\d{14}-[0-9a-z]{7}$'
+            }
+        }
+    },
+    response: {
+        type: 'object',
+        required: ['code', 'msg', 'data'],
+        properties: {
+            code: { type: 'integer', description: 'status code' },
+            msg: { type: 'string', description: 'status message' },
+            data: {
+                type: 'object',
+                required: ['id', 'kramdown'],
+                properties: {
+                    id: { type: 'string', description: 'block ID' },
+                    kramdown: { type: 'string', description: 'block kramdown text' }
+                }
             }
         }
     },
