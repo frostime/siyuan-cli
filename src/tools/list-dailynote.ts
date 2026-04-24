@@ -84,55 +84,46 @@ export const tool: ToolSchema = {
             }
         }
 
-        let stmt =
-            "SELECT id, box, hpath, path, created FROM blocks WHERE type='d' AND hpath LIKE '%/daily note/%'";
+        // Convert Date to SiYuan yyyyMMdd format (used in attribute values)
+        const toAttrDate = (d: Date): string =>
+            `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+
+        let stmt = `SELECT DISTINCT B.id, B.box, B.hpath, B.path, B.created
+  FROM blocks AS B
+  JOIN attributes AS A ON B.id = A.block_id
+  WHERE A.name LIKE 'custom-dailynote-%'
+    AND B.type = 'd'`;
+
+        // Date filtering uses the attribute value (yyyyMMdd), which is more
+        // reliable than hpath matching and works regardless of path templates.
+        if (after) stmt += `\n    AND A.value >= '${toAttrDate(after)}'`;
+        if (before) stmt += `\n    AND A.value <= '${toAttrDate(before)}'`;
+
         if (notebookId)
-            stmt += ` AND box = '${escapeSqliteLiteral(notebookId)}'`;
-        stmt += ' ORDER BY created DESC LIMIT 200';
+            stmt += `\n    AND B.box = '${escapeSqliteLiteral(notebookId)}'`;
+
+        stmt += '\n  ORDER BY A.value DESC\n  LIMIT 200';
 
         const rows = await ctx.callEndpoint<DailyRow[]>('query.sql', { stmt });
-        let skippedUnparseable = 0;
-        const filtered = rows.filter((r) => {
-            const s = typeof r.created === 'string' ? r.created : '';
-            if (s.length < 14) {
-                skippedUnparseable++;
-                return false;
-            }
-            const iso = `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T${s.slice(8, 10)}:${s.slice(10, 12)}:${s.slice(12, 14)}`;
-            const created = new Date(iso);
-            if (Number.isNaN(created.getTime())) {
-                skippedUnparseable++;
-                return false;
-            }
-            if (before && created > before) return false;
-            if (after && created < after) return false;
-            return true;
-        });
 
-        const content = filtered.length
-            ? `# Daily Notes (${filtered.length})\n` +
-              filtered
-                  .map((r) => `- [Notebook: ${r.box}] Date: ${r.created.slice(0, 8)}; BlockID: ${r.id}; Hpath: ${r.hpath}`)
+        const content = rows.length
+            ? `# Daily Notes (${rows.length})\n` +
+              rows
+                  .map((r) => `- [${r.id}] ${r.hpath} (notebook: ${r.box})`)
                   .join('\n')
             : 'No daily notes found.';
 
         return {
             content,
             details: {
-                entries: filtered.map((r) => ({
+                entries: rows.map((r) => ({
                     id: r.id,
                     notebook: r.box,
                     hpath: r.hpath,
                     path: r.path,
                     created: r.created
                 }))
-            },
-            warnings:
-                skippedUnparseable > 0
-                    ? [
-                          `skipped ${skippedUnparseable} row(s) with unparseable 'created' field`
-                      ]
-                    : undefined
+            }
         };
     }
 };

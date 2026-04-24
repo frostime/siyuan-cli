@@ -9,13 +9,12 @@ type Row = {
     content?: string;
 };
 
-type Node = { id: string; title: string; hpath: string; children: Node[] };
+type Node = { id: string; title: string; hpath: string; children: Node[]; unexpandedCount: number };
 
 function buildTree(rows: Row[], rootKey: string, depth: number): Node[] {
     // `rootKey` is the childMap key to start walking from:
     //   - notebook mode: ""            (SiYuan's blocks.path is notebook-relative)
     //   - doc mode     : "/<doc-id>"   (root doc's path minus ".sy")
-    const byPath = new Map(rows.map((r) => [r.path, r]));
     const childMap = new Map<string, Row[]>();
     for (const row of rows) {
         const parentPath = row.path.includes('/')
@@ -25,24 +24,41 @@ function buildTree(rows: Row[], rootKey: string, depth: number): Node[] {
         childMap.get(parentPath)!.push(row);
     }
     function walk(parentPath: string, level: number): Node[] {
-        if (depth >= 0 && level > depth) return [];
         const children = childMap.get(parentPath) ?? [];
-        return children.map((r) => ({
-            id: r.id,
-            // title: r.hpath.split('/').filter(Boolean).at(-1) ?? r.id,
-            title: `${r.hpath.split('/').filter(Boolean).at(-1)} (${r.id})`,
-            hpath: r.hpath,
-            children: walk(r.path.replace(/\.sy$/, ''), level + 1)
-        }));
+        return children.map((r) => {
+            const childKey = r.path.replace(/\.sy$/, '');
+            const atLimit = depth >= 0 && level >= depth;
+            const subCount = (childMap.get(childKey) ?? []).length;
+            return {
+                id: r.id,
+                title: `${r.hpath.split('/').filter(Boolean).at(-1) ?? r.id} (${r.id})`,
+                hpath: r.hpath,
+                // unexpandedCount: children that exist in DB but won't be walked
+                unexpandedCount: atLimit ? subCount : 0,
+                children: atLimit ? [] : walk(childKey, level + 1)
+            };
+        });
     }
     return walk(rootKey, 1);
 }
 
-function render(nodes: Node[], indent = 0): string[] {
+function render(nodes: Node[], prefix = '', isRoot = true): string[] {
     const lines: string[] = [];
-    for (const n of nodes) {
-        lines.push(`${'  '.repeat(indent)}- ${n.title}`);
-        lines.push(...render(n.children, indent + 1));
+    for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i]!;
+        const isLast = i === nodes.length - 1;
+        if (isRoot) {
+            // Top-level: no branch chars, just list items
+            const suffix = n.unexpandedCount > 0 ? ` (+${n.unexpandedCount})` : '';
+            lines.push(`- ${n.title}${suffix}`);
+            lines.push(...render(n.children, '  ', false));
+        } else {
+            const branch = isLast ? '└─ ' : '├─ ';
+            const suffix = n.unexpandedCount > 0 ? ` (+${n.unexpandedCount})` : '';
+            lines.push(`${prefix}${branch}${n.title}${suffix}`);
+            const childPrefix = prefix + (isLast ? '   ' : '│  ');
+            lines.push(...render(n.children, childPrefix, false));
+        }
     }
     return lines;
 }
