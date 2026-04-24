@@ -1,4 +1,4 @@
-import { formatRecordArray, isRecord } from '../../core/output.js';
+import { formatRecords, isRecord } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
 export const schema: EndpointSchema<Array<Record<string, unknown>>> = {
@@ -40,12 +40,10 @@ export const schema: EndpointSchema<Array<Record<string, unknown>>> = {
     },
     format: ({ responseData }) => {
         const first = responseData.find(isRecord);
-        const keys = first
-            ? ['id', 'box', 'path', 'hpath', 'content', ...Object.keys(first)].filter(
-                  (key, index, arr) => arr.indexOf(key) === index
-              )
-            : undefined;
-        return formatRecordArray(responseData, { label: 'rows', maxItems: 12, keys });
+        if (!first) return formatRecords(responseData, { label: 'rows' });
+        // Use actual columns from the result, preserving order
+        const keys = Object.keys(first);
+        return formatRecords(responseData, { label: 'rows', keys });
     }
 };
 

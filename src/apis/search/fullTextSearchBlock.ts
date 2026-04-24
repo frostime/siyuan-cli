@@ -6,7 +6,7 @@
  * @FilePath     : /src/apis/search/fullTextSearchBlock.ts
  * @LastEditTime : 2026-04-19 01:39:52
  */
-import { formatRecordArray } from '../../core/output.js';
+import { formatRecords } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
 export const schema: EndpointSchema<{
@@ -65,9 +65,8 @@ export const schema: EndpointSchema<{
         ]
             .filter(Boolean)
             .join(' | ');
-        const body = formatRecordArray(responseData.blocks, {
+        const body = formatRecords(responseData.blocks, {
             label: 'hits',
-            maxItems: 10,
             keys: ['id', 'box', 'path', 'hPath', 'content', 'rootTitle']
         });
         return header ? `${header}\n${body}` : body;

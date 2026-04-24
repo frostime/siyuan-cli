@@ -1,4 +1,4 @@
-import { formatRecordArray } from '../../core/output.js';
+import { formatRecords } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
 export const schema: EndpointSchema<{
@@ -68,9 +68,8 @@ export const schema: EndpointSchema<{
         ]
             .filter(Boolean)
             .join(' | ');
-        const body = formatRecordArray(responseData.files, {
+        const body = formatRecords(responseData.files, {
             label: 'docs',
-            maxItems: 20,
             keys: ['id', 'box', 'path', 'hPath', 'name', 'title', 'subFileCount']
         });
         return header ? `${header}\n${body}` : body;

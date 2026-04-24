@@ -1,4 +1,4 @@
-import { formatRecordArray } from '../../core/output.js';
+import { formatRecords } from '../../core/output.js';
 import type { EndpointSchema } from '../../core/schema.js';
 
 export const schema: EndpointSchema<FileEntry[]> = {
@@ -27,9 +27,8 @@ export const schema: EndpointSchema<FileEntry[]> = {
         ]
     },
     format: ({ responseData }) =>
-        formatRecordArray(responseData, {
+        formatRecords(responseData, {
             label: 'entries',
-            maxItems: 30,
             keys: ['name', 'isDir', 'size', 'path']
         })
 };
