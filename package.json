@@ -1,6 +1,6 @@
 {
     "name": "@frostime/siyuan-cli",
-    "version": "0.6.1",
+    "version": "0.6.2",
     "description": "Agent-first CLI for SiYuan Note — workspace management, kernel API proxy, workflow tools, and agent skill install",
     "type": "module",
     "bin": {
@@ -10,14 +10,15 @@
         "bin/**",
         "dist/**",
         "skills/**",
-        "src/docs/**"
+        "src/"
     ],
+    "source": "src/cli.ts",
     "engines": {
         "node": ">=20"
     },
     "scripts": {
-        "build": "tsdown src/cli.ts --format esm --out-dir dist --no-dts",
-        "dev": "tsdown src/cli.ts --format esm --out-dir dist --no-dts --watch",
+        "build": "tsdown src/cli.ts --format esm --out-dir dist --dts --unbundle",
+        "dev": "tsdown src/cli.ts --format esm --out-dir dist --no-dts --sourcemap --watch",
         "siyuan": "node bin/siyuan.mjs",
         "typecheck": "tsc --noEmit",
         "test": "tsx --test tests/*.test.ts",
