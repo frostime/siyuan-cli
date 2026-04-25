@@ -28,6 +28,14 @@ siyuan
 ├── doc          Discover shipped docs
 │   ├── list     List built-in docs with real file paths
 │   └── read     Read a built-in doc by path or unique basename
+├── approval     Manage the local human-approval broker and queue
+│   ├── status   Show broker status
+│   ├── list     List pending and recent approvals
+│   ├── show     Show one approval request
+│   ├── approve  Approve one request from the terminal
+│   ├── reject   Reject one request from the terminal
+│   ├── open     Open the Approval Center in the browser
+│   └── stop     Stop the broker
 └── skill        Manage the bundled agent skill
     ├── install  Install or update to a target
     ├── read     Read the bundled SKILL.md
@@ -102,7 +110,7 @@ All `siyuan api <id>` and `siyuan tool <id>` commands accept:
 | `--token` | | Override authentication token |
 | `--config` | | Override config file path |
 | `--dry-run` | | Preview write operations without calling kernel |
-| `--yes` | `-y` | Auto-confirm destructive operations |
+| `--yes` | `-y` | Execute confirm-gated writes immediately without opening the Approval Center |
 | `--debug` | | Print intended request (curl-equivalent) to stderr |
 | `--json` | `-j` | Entire payload as inline JSON |
 | `--file` | `-f` | Entire payload from JSON file; `-f -` reads stdin |
@@ -144,7 +152,7 @@ Errors are written to stderr as single-line JSON, stdout remains clean:
 | Code | Category | Typical cause |
 |------|----------|---------------|
 | 0 | Success | — |
-| 1 | General | kernel error, invalid payload, confirmation required, block not found |
+| 1 | General | kernel error, invalid payload, approval rejected/timed out/cancelled, block not found |
 | 2 | Config | missing workspace, invalid config, bad schema version, project config error |
 | 3 | Network | connection refused, timeout |
 | 4 | Auth | 401 from kernel |
@@ -155,7 +163,10 @@ Errors are written to stderr as single-line JSON, stdout remains clean:
 | `error` field | Exit | Action |
 |---------------|------|--------|
 | `PAYLOAD_INVALID` | 1 | Fix input, retry |
-| `CONFIRMATION_REQUIRED` | 1 | Retry with `--yes` if appropriate |
+| `APPROVAL_REJECTED` | 1 | Review the pending action and retry only if intended |
+| `APPROVAL_TIMEOUT` | 1 | Re-run the command or approve it faster next time |
+| `APPROVAL_CANCELLED` | 1 | Re-run if the write is still intended |
+| `CONFIRMATION_REQUIRED` | 1 | Approval flow was unavailable; retry with `--yes` or inspect broker state |
 | `KERNEL_ERROR` | 1 | Show message as-is; likely a data-level problem |
 | `BLOCK_NOT_FOUND` | 1 | Verify the block id exists |
 | `NO_WORKSPACE` | 2 | Run `siyuan workspace add` |
@@ -169,7 +180,8 @@ Errors are written to stderr as single-line JSON, stdout remains clean:
 
 ```text
 exit 0          → parse stdout as result
-exit 1 + CONFIRMATION_REQUIRED → re-invoke with --yes (if policy permits)
+exit 1 + APPROVAL_*           → surface the decision outcome to the user
+exit 1 + CONFIRMATION_REQUIRED → approval flow unavailable; re-invoke with --yes only if policy permits
 exit 1 + PAYLOAD_INVALID       → fix input and retry
 exit 2/3/4      → environment issue; surface to user
 exit 5          → permission policy blocks this; check config rules
@@ -200,6 +212,25 @@ Normalization rules:
 - generic target names normalize to leading-dot form
 - `pi` and `.pi` resolve to the same target family
 - `--local` switches the base directory from the home directory to the current project directory
+
+## Approval Center
+
+When a write resolves to `confirm` and `--yes` is absent, the CLI submits a request to the local Approval Broker, opens `http://127.0.0.1:<port>/approval`, and waits inline for up to 60 seconds.
+
+```bash
+siyuan approval status
+siyuan approval list
+siyuan approval open
+siyuan approval approve <request-id>
+siyuan approval reject <request-id>
+```
+
+Broker lifecycle:
+- lazy start on the first confirm-gated write
+- stays alive while pending requests exist
+- queue-empty grace period: 30s
+- hard idle timeout: 5min
+- browser polling does not keep the broker alive
 
 ## Debugging
 

@@ -10,26 +10,26 @@ updated: ""
 
 ## Tasks
 
-### Phase 1: Approval module skeleton ⏳
-- [ ] Create `src/approval/types.ts` and `src/approval/errors.ts` per `design.md` interface and error contracts
-- [ ] Create `src/approval/runtime.ts` for state dir paths, pid/port discovery, stale cleanup, lazy broker start, and auto-shutdown policy constants
-- [ ] Create `src/approval/store.ts` for request persistence, audit append, queue listing, and timeout state transitions
+### Phase 1: Approval module skeleton ✅
+- [x] Create `src/approval/types.ts` and `src/approval/errors.ts` per `design.md` interface and error contracts
+- [x] Create `src/approval/runtime.ts` for state dir paths, pid/port discovery, stale cleanup, lazy broker start, and auto-shutdown policy constants
+- [x] Create `src/approval/store.ts` for request persistence, audit append, queue listing, and timeout state transitions
 **Verification**: `src/approval/` compiles with the designed types and lifecycle primitives.
 
-### Phase 2: Broker and client transport ⏳
-- [ ] Create `src/approval/broker.ts` to expose localhost HTTP routes, maintain waiters, auto-open the Approval Center, and enforce queue-empty grace plus hard idle shutdown
-- [ ] Create `src/approval/ui.ts` to serve the built-in Approval Center HTML and browser polling script
-- [ ] Create `src/approval/client.ts` and `src/approval/index.ts` for `ensureBroker()` and `requestAndWait()` over HTTP + long-poll
+### Phase 2: Broker and client transport ✅
+- [x] Create `src/approval/broker.ts` to expose localhost HTTP routes, maintain waiters, auto-open the Approval Center, and enforce queue-empty grace plus hard idle shutdown
+- [x] Create `src/approval/ui.ts` to serve the built-in Approval Center HTML and browser polling script
+- [x] Create `src/approval/client.ts` and `src/approval/index.ts` for `ensureBroker()` and `requestAndWait()` over HTTP + long-poll
 **Verification**: A local approval request can be created, listed, waited on, approved/rejected, and cleaned up through the broker API.
 
-### Phase 3: CLI integration ⏳
-- [ ] Create `src/approval/command.ts` for `siyuan approval status|list|show|approve|reject|open|stop`
-- [ ] Register the approval command in `src/cli.ts`
-- [ ] Integrate `src/core/guard.ts` with `approval.requestAndWait()` while preserving `--yes` and `--dry-run` behavior
+### Phase 3: CLI integration ✅
+- [x] Create `src/approval/command.ts` for `siyuan approval status|list|show|approve|reject|open|stop`
+- [x] Register the approval command in `src/cli.ts`
+- [x] Integrate `src/core/guard.ts` with `approval.requestAndWait()` while preserving `--yes` and `--dry-run` behavior
 **Verification**: A confirm-gated CLI call opens the Approval Center, emits `APPROVAL_PENDING`, waits inline, and resumes only after approval.
 
-### Phase 4: Docs and validation ⏳
-- [ ] Update `src/docs/cli-usage/cli-overview.md`, `src/docs/cli-usage/config-and-permission.md`, and related recipe docs for Approval Center, timeout, queue, and broker lifecycle behavior
+### Phase 4: Docs and validation 🚧
+- [x] Update `src/docs/cli-usage/cli-overview.md`, `src/docs/cli-usage/config-and-permission.md`, and related recipe docs for Approval Center, timeout, queue, and broker lifecycle behavior
 - [ ] Add or update tests for single approval, multiple pending approvals, timeout, and broker auto-shutdown behavior
 **Verification**: Docs describe the new flow accurately and tests cover the designed approval lifecycle.
 
@@ -56,16 +56,16 @@ If the work belongs in a new follow-up or replacement change, the agent MUST NOT
 
 ## Progress
 
-**Overall**: 25%
+**Overall**: 80%
 
 | Phase | Progress | Status |
 |-------|----------|--------|
 | Phase 1 | 100% | ✅ |
-| Phase 2 | 0% | ⏳ |
-| Phase 3 | 0% | ⏳ |
-| Phase 4 | 0% | ⏳ |
+| Phase 2 | 100% | ✅ |
+| Phase 3 | 100% | ✅ |
+| Phase 4 | 50% | 🚧 |
 
 **Recent**:
-- Rewrote `design.md` to center the feature around one cohesive `src/approval/` module.
-- Made the transport contract explicit: CLI -> broker via localhost HTTP, CLI waits via long-poll, browser refreshes queue via polling in MVP.
-- Added broker lifecycle rules to the design: queue-empty grace period, hard idle timeout, stale-state cleanup, and browser polling not extending broker lifetime.
+- Implemented the cohesive `src/approval/` module with broker, store, client, UI, runtime, errors, and command surface.
+- Integrated `src/core/guard.ts` with `approval.requestAndWait()` and verified the broker can start/list/stop from the CLI.
+- Updated overview and recipe docs for Approval Center behavior and broker lifecycle.

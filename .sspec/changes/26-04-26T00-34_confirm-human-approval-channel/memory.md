@@ -19,14 +19,14 @@ This section records the change starting point in git and MUST NOT be edited or 
 ```
 
 ## State
-Design was rewritten to improve predictability and to keep approval as one cohesive module under `src/approval/`. Next step: align with the user on the new module boundary and the explicit data-flow/transport contract before planning/implementation.
+Implementation is mostly in place under `src/approval/`: broker, runtime, store, UI, client, command surface, and guard integration are working. Next step: finish validation coverage for multi-request/timeout/auto-shutdown and then present the implementation for review.
 
 ## Key Files
 - `.sspec/requests/26-04-26T00-03_confirm-human-approval-channel.md` — original request and success criteria
 - `.sspec/changes/26-04-26T00-34_confirm-human-approval-channel/spec.md` — proposed broker-based approval solution and scope
 - `.sspec/changes/26-04-26T00-34_confirm-human-approval-channel/design.md` — cohesive `src/approval/` module design with explicit module boundary, call flow, transport, and UI contract
-- `src/core/guard.ts` — current confirm gate location that will hand off to approval flow
-- `src/core/permission.ts` — current `ConfirmationRequiredError` definition and permission outcomes
+- `src/approval/` — implemented approval module: broker, runtime, store, UI, client, command surface
+- `src/core/guard.ts` — confirm gate now hands off to approval flow
 - `H:/SrcCode/playground/simple-lsp-cli/src/daemon.ts` — reference daemon pattern for lazy startup, Windows port file, and idle shutdown
 
 ## Knowledge
@@ -42,3 +42,4 @@ Design was rewritten to improve predictability and to keep approval as one cohes
 ## Milestones
 - [2026-04-26T00:35:39+08:00] Created change `26-04-26T00-34_confirm-human-approval-channel`, reviewed current confirm path, examined `simple-lsp-cli` daemon design, and drafted spec/design for an on-demand approval broker.
 - [2026-04-26T00:44:00+08:00] Rewrote design to improve predictability, centered all approval logic in `src/approval/`, and made the data-flow/transport contract explicit.
+- [2026-04-26T01:05:00+08:00] Implemented the first end-to-end approval module, integrated guard handoff, verified broker start/list/stop commands, and added initial runtime/store tests.

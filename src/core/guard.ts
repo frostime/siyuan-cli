@@ -10,6 +10,7 @@ import {
     type PermissionEngineLike,
     type RegisteredEndpoint
 } from './schema.js';
+import { buildPreparedApprovalRequest, requestAndWait } from '../approval/index.js';
 import {
     ConfirmationRequiredError,
     ContentDeniedError,
@@ -206,7 +207,17 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
     }
 
     if (wouldConfirm && !yes) {
-        throw new ConfirmationRequiredError(id);
+        if (!workspace) {
+            throw new ConfirmationRequiredError(id);
+        }
+        await requestAndWait(
+            buildPreparedApprovalRequest({
+                workspaceName: workspace.name,
+                entry,
+                payload,
+                ...(callerTool ? { callerTool } : {})
+            })
+        );
     }
 
     let response: unknown;
