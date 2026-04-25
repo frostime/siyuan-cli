@@ -1,7 +1,7 @@
 import { defineCommand, runMain, showUsage } from 'citty';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'pathe';
+import { basename, dirname, join } from 'pathe';
 import { workspaceCommand } from './commands/workspace.js';
 import { apiCommand } from './commands/api.js';
 import { toolCommand } from './commands/tool.js';
@@ -69,12 +69,17 @@ async function customShowUsage<T extends Record<string, unknown>>(
 
     // Print docs path hint for top-level help only
     if (!parent) {
-        const docsDir = new URL('./docs', import.meta.url);
-        const docsPath = fileURLToPath(docsDir);
+        const here = dirname(fileURLToPath(import.meta.url));
+        // Packaged: dist/cli.mjs -> ../src/docs
+        // Dev:      src/cli.ts  -> ./docs
+        const docsPath = basename(here) === 'dist'
+            ? join(here, '..', 'src', 'docs')
+            : join(here, 'docs');
         process.stdout.write(
-            `\nCLI BuiltinDocs: ${docsPath}\n` +
-            `  <doc>/siyuan-guide -> Read to understand SiYuan data model, SQL queries, etc.\n` +
-            `  <doc>/cli-usage -> Read to understand CLI commands, config file format, permission rules.\n`
+            `\nAgent SHOULD read built-in documents for guideline\n` +
+            `  0. ${docsPath}/README.md -> Entry document.\n` +
+            `  1. {docs}/siyuan-guide/*.md -> Read to understand SiYuan data model, SQL queries, etc.\n` +
+            `  2. {docs}/cli-usage/*.md -> Read to understand CLI commands, config file format, permission rules.\n`
         );
     }
 }
