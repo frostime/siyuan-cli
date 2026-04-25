@@ -96,16 +96,16 @@ permission:                 # optional; same shape as global permission block
 
 ## Permission override semantics
 
-When a project file declares `permission`, its rules are **prepended** to the cascade:
+When a project file declares `permission`, that block becomes the effective permission for the invocation:
 
 ```
-final rules   = project.rules ++ workspace.rules ++ defaults.rules
-final default = project.default ?? workspace.default ?? defaults.default ?? "allow"
+final rules   = project.rules
+final default = project.default ?? "allow"
 ```
 
-Project rules come first → highest priority. Global workspace and defaults rules still apply after them. This means a project file can add targeted exceptions (deny a specific subtree, require confirm for a tool) without having to re-declare everything.
+Workspace-level and defaults-level permission rules are skipped for that invocation. This keeps project policy easy to inspect in `siyuan workspace which`: the project file fully defines the active permission set.
 
-If you want the project to completely seal off everything not explicitly allowed, set `default: deny` in the project file and write an explicit allow list in `rules`.
+If you want the project to seal off everything not explicitly allowed, set `default: deny` in the project file and write an explicit allow list in `rules`.
 
 ## Independence of workspace selection and permission
 

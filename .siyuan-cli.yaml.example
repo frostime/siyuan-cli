@@ -30,23 +30,17 @@ workspace: prod
 # cascade workspaces[name].permission ?? defaults.permission for this invocation.
 # Shape is identical to the global permission block (see docs/extending/30-config.md).
 permission:
-  endpoints:
-    deny:
-      - block.delete*
-      - system.exit
+  default: allow
+  rules:
+    - endpoint: "block.delete*"
+      effect: deny
+    - endpoint: "system.exit"
+      effect: deny
 
-  # Notebook ids and id-based paths only — NOT human-readable hpath.
-  content:
-    read:
-      notebooks:
-        allow:
-          - 20260101215354-j0c5gvk
-    write:
-      paths:
-        deny:
-          - /20260107143325-zbrtqup/**
-
-  # Extra confirmation triggers (on top of risk-derived auto-confirm)
-  confirm:
-    modes: [write, invoke]
-    surfaces: [workspace, network]
+    # Notebook ids and id-based paths only — NOT human-readable hpath.
+    - notebook: "20260101215354-j0c5gvk"
+      action: read
+      effect: allow
+    - path: "/20260107143325-zbrtqup/**"
+      action: write
+      effect: deny

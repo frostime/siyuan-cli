@@ -160,16 +160,14 @@ This post-processing lives in `guard.ts::executeEndpoint`, not inside the engine
 
 ## Permission cascade
 
-Final rules and default are assembled by concatenating layers:
+Without a project override, final rules and default are assembled from the global config:
 
 ```
-final rules   = project.rules ++ workspace.rules ++ defaults.rules
-final default = project.default ?? workspace.default ?? defaults.default ?? "allow"
+final rules   = workspace.rules ++ defaults.rules
+final default = workspace.default ?? defaults.default ?? "allow"
 ```
 
-Project rules come first → highest priority. No replace-vs-merge ambiguity: list order is priority.
-
-If a project `.siyuan-cli.yaml` declares `permission`, its rules are prepended. See `31-workspace-resolution.md`.
+If a project `.siyuan-cli.yaml` declares `permission`, that block becomes the effective permission for the invocation and replaces workspace/defaults permission resolution. See `31-workspace-resolution.md`.
 
 ## Permission error taxonomy
 
@@ -261,7 +259,7 @@ Both are stderr warnings, not errors. The CLI continues.
 
 ## Project config file (`.siyuan-cli.yaml`)
 
-A project-level file can anchor workspace selection and prepend permission rules per directory tree. See `31-workspace-resolution.md` for the full resolution chain, file format, and validation rules.
+A project-level file can anchor workspace selection and replace permission rules per directory tree for that invocation. See `31-workspace-resolution.md` for the full resolution chain, file format, and validation rules.
 
 Short form:
 

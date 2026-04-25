@@ -145,14 +145,14 @@ Endpoints classified as `destructive` or `critical` (e.g. batch delete, file wri
 
 ### Permission cascade
 
-When multiple config layers exist, their rules are concatenated:
+Without a project override, global permission resolution is:
 
 ```text
-final rules   = project.rules ++ workspace.rules ++ defaults.rules
-final default = project.default ?? workspace.default ?? defaults.default ?? "allow"
+final rules   = workspace.rules ++ defaults.rules
+final default = workspace.default ?? defaults.default ?? "allow"
 ```
 
-Project rules come first and have the highest priority.
+When a project `.siyuan-cli.yaml` declares `permission`, that block becomes the effective permission for the invocation and replaces workspace/defaults permission resolution.
 
 ### Two-phase evaluation
 
@@ -214,7 +214,7 @@ Drop at project root to pin workspace and add permission rules per directory tre
 ```yaml
 schemaVersion: 1
 workspace: prod              # optional; must exist in global config
-permission:                  # optional; prepended to the cascade
+permission:                  # optional; replaces workspace/defaults permission for this invocation
   default: allow
   rules:
     - endpoint: "block.delete*"
