@@ -15,7 +15,7 @@ export const tool: ToolSchema = {
     },
     cli: {
         examples: [
-            { command: 'siyuan tool resolve-path --hpath "/私人/日记"' },
+            { command: 'siyuan tool resolve-path --hpath "/daily/notes"' },
             { command: 'siyuan tool resolve-path --id 20260417090223-xxxxxxx' }
         ]
     },
@@ -40,11 +40,11 @@ export const tool: ToolSchema = {
             hpath: r.hpath
         }));
         const content = matches.length
-            ? `找到 ${matches.length} 个匹配：\n` +
+            ? `Found ${matches.length} match(es):\n` +
               matches
                   .map((m) => `- ${m.path} (hpath=${m.hpath}, id=${m.id})`)
                   .join('\n')
-            : '未找到匹配。';
+            : 'No matches found.';
         return { content, details: { matches } };
     }
 };

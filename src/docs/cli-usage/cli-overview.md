@@ -74,7 +74,7 @@ Tools compose multiple endpoint calls into a single workflow.
 
 ```bash
 siyuan tool list
-siyuan tool resolve-path --hpath "/日记/2025-01"
+siyuan tool resolve-path --hpath "/diary/2025-01"
 siyuan tool append-content --targetId <id> --targetType document --markdown @file:./note.md
 ```
 

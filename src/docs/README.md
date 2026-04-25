@@ -50,7 +50,7 @@ siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' AND content LI
 siyuan api block.getBlockKramdown --id <block-id>
 
 # Resolve human-readable path
-siyuan tool resolve-path --hpath "/私人/日记"
+siyuan tool resolve-path --hpath "/private/diary"
 
 # Append to document or daily note
 siyuan tool append-content --targetId <id> --targetType document --markdown @file:./note.md

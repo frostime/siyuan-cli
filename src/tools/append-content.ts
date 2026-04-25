@@ -36,7 +36,7 @@ export const tool: ToolSchema = {
         if (ctx.args.dryRun) {
             if (targetType === 'dailynote') {
                 return {
-                    content: `dry-run: 将在笔记本 ${targetId} 创建/获取今日日记并追加内容`,
+                    content: `dry-run: will create/fetch daily note in notebook ${targetId} and append content`,
                     details: {
                         success: true,
                         targetType,
@@ -59,7 +59,7 @@ export const tool: ToolSchema = {
                 };
             }
             return {
-                content: `dry-run: 将追加到 [${targetType}] ${targetId}`,
+                content: `dry-run: will append to [${targetType}] ${targetId}`,
                 details: {
                     success: true,
                     targetType,
@@ -121,7 +121,7 @@ export const tool: ToolSchema = {
         });
 
         return {
-            content: `已成功追加到 [${targetType}] ${actualTargetId}`,
+            content: `Successfully appended to [${targetType}] ${actualTargetId}`,
             details: {
                 success: true,
                 targetId: actualTargetId,

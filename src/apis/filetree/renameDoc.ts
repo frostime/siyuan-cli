@@ -10,11 +10,11 @@ export const schema: EndpointSchema = {
         properties: {
             notebook: {
                 type: 'string',
-                description: '笔记本 ID',
+                description: 'Notebook ID',
                 pattern: '^\\d{14}-[0-9a-z]{7}$'
             },
-            path: { type: 'string', description: '文档 path' },
-            title: { type: 'string', description: '新标题' }
+            path: { type: 'string', description: 'Document path' },
+            title: { type: 'string', description: 'New title' }
         }
     },
     classification: {

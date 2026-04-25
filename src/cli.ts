@@ -1,5 +1,7 @@
 import { defineCommand, runMain, showUsage } from 'citty';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'pathe';
 import { workspaceCommand } from './commands/workspace.js';
 import { apiCommand } from './commands/api.js';
 import { toolCommand } from './commands/tool.js';
@@ -9,10 +11,20 @@ import { registry } from './core/registry.js';
 import { buildToolHelp, toolRegistry } from './core/tools.js';
 import './tools/index.js';
 
+function getVersion(): string {
+    try {
+        const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json');
+        const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+        return pkg.version ?? '0.0.0';
+    } catch {
+        return '0.0.0';
+    }
+}
+
 const main = defineCommand({
     meta: {
         name: 'siyuan',
-        version: '0.3.1',
+        version: getVersion(),
         description: 'Agent-first CLI for SiYuan Note'
     },
     subCommands: {

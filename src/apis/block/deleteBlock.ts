@@ -10,7 +10,7 @@ export const schema: EndpointSchema = {
         properties: {
             id: {
                 type: 'string',
-                description: '块 ID',
+                description: 'Block ID',
                 pattern: '^\\d{14}-[0-9a-z]{7}$'
             }
         }

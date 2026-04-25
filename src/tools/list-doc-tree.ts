@@ -120,7 +120,7 @@ export const tool: ToolSchema = {
             });
         }
         const tree = buildTree(rows, rootKey, depth ?? 2);
-        const content = `# 文档树：${rootTitle}\n\n` + render(tree).join('\n');
+        const content = `# Document tree: ${rootTitle}\n\n` + render(tree).join('\n');
         return {
             content,
             details: {

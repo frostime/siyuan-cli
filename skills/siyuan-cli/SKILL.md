@@ -1,6 +1,6 @@
 ---
 name: siyuan-cli
-description: "Manage SiYuan Note with the `siyuan` CLI. Use this whenever the user mentions SiYuan, 思源笔记, notebooks, documents, blocks, or wants to query/update a SiYuan knowledge base."
+description: "Manage SiYuan Note with the `siyuan` CLI. Use this whenever the user mentions SiYuan, notebooks, documents, blocks, or wants to query/update a SiYuan knowledge base."
 ---
 
 # SiYuan CLI
@@ -38,7 +38,7 @@ siyuan tool list                     # all tools
 siyuan api query.sql "SELECT id, content FROM blocks WHERE type='h' AND root_id='<doc-id>' LIMIT 20"
 
 # Resolve path
-siyuan tool resolve-path --hpath "/私人/日记"
+siyuan tool resolve-path --hpath "/private/diary"
 
 # Append content
 siyuan tool append-content --targetId <id> --targetType document --markdown @file:./note.md
