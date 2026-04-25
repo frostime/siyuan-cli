@@ -65,13 +65,26 @@ siyuan tool list-dailynote --notebook <notebook-id> --from 20250101 --to 2025013
 ## Help discovery
 
 ```bash
-siyuan --help                    # command overview + this docs path
+siyuan --help                    # command overview + real docs root path
+siyuan doc list                  # list built-in docs with real file paths
+siyuan doc read README.md        # read a built-in doc through CLI
 siyuan api list                  # all available endpoints
 siyuan api <id> --help           # endpoint usage, parameters, examples
 siyuan tool list                 # all available tools
 siyuan tool <id> --help          # tool usage
 siyuan workspace which           # current workspace resolution details
 ```
+
+## Task recipes
+
+Read these when you already know the job to do:
+
+| File | Covers |
+|------|--------|
+| `recipes/connect-workspace.md` | Configure, verify, and anchor a workspace |
+| `recipes/find-target.md` | Locate a document or block from id, path, hpath, notebook, or keyword |
+| `recipes/read-content.md` | Read document or block content, including paging and id-aware inspection |
+| `recipes/edit-content.md` | Update existing content with explicit inspection and verification |
 
 ## Detailed reference
 

@@ -5,7 +5,16 @@ description: "Manage SiYuan Note with the `siyuan` CLI. Use this whenever the us
 
 # SiYuan CLI
 
-Agent-first CLI for SiYuan Note. Run `siyuan --help` to see bundled docs path for detailed reference.
+Agent-first CLI for SiYuan Note.
+
+Start with:
+
+```bash
+siyuan --help
+siyuan doc list
+```
+
+Use the real docs paths disclosed by help output when your runtime can read files directly. `siyuan doc` is convenience sugar for discovery and reading.
 
 ## Core concepts
 
@@ -30,6 +39,7 @@ siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
 
 ```bash
 # Discovery
+siyuan doc list                      # built-in docs with real file paths
 siyuan api list                      # all endpoints
 siyuan api <id> --help               # endpoint parameters and examples
 siyuan tool list                     # all tools
@@ -48,7 +58,7 @@ siyuan tool list-doc-tree --notebook <notebook-id>
 
 # Workspace
 siyuan workspace which               # show current resolution
-siyuan workspace list                 # list all configured workspaces
+siyuan workspace list                # list all configured workspaces
 ```
 
 ## Key rules
@@ -62,15 +72,12 @@ siyuan workspace list                 # list all configured workspaces
 
 ## Bundled docs
 
-Run `siyuan --help` to see the path to detailed reference docs covering:
+Use the disclosed docs root to read built-in files directly.
 
-- SiYuan block model, document path semantics, SQL query patterns, daily notes
-- CLI command structure, input sources, config file format, permission rules
+Recommended reading order:
 
-## Runtime values
+1. `README.md`
+2. `recipes/*.md`
+3. `siyuan-guide/*.md`
+4. `cli-usage/*.md`
 
-- CLI version: `{{cli_version}}`
-- Current workspace: `{{workspace}}`
-- Base URL: `{{base_url}}`
-- CLI path: `{{cli_path}}`
-- Today: `{{today}}`

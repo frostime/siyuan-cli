@@ -7,7 +7,8 @@ Agent-first CLI for [SiYuan Note](https://b3log.org/siyuan/) — workspace manag
 - **Workspace management** — add / switch / verify multiple SiYuan kernel connections
 - **Direct kernel API** — call any registered endpoint with argument validation and permission guard
 - **Workflow tools** — higher-level operations (resolve path, append content, list daily notes, list doc tree)
-- **Agent skill install** — install the bundled `siyuan-cli` skill to `.agents/`, `.claude/`, or custom directories
+- **Built-in docs discovery** — list and read shipped docs, with real file paths disclosed for direct agent access
+- **Agent skill install** — install the bundled skill to `.agents/`, `.claude/`, or other dot-prefixed skill directories
 - **Dry-run & permission** — write endpoints support `--dry-run`; configurable deny/allow rules per notebook/path
 
 ## Install
@@ -56,6 +57,7 @@ Manage SiYuan kernel connections.
 | `verify [name]` | Verify connectivity (`--all` for all) |
 | `show [name]` | Show workspace details (`--reveal-token`) |
 | `remove <name>` | Remove a workspace |
+| `which` | Show effective workspace resolution in the current directory |
 
 ```bash
 # Add with token from environment variable
@@ -120,6 +122,8 @@ Run built-in workflow tools.
 | `list-doc-tree` | List document tree under a notebook or document |
 | `list-dailynote` | List daily note documents for a date or range |
 | `append-content` | Append markdown content to daily note, document, or block |
+| `get-block-content` | Read Markdown content of a block or document |
+| `get-block-info` | Inspect metadata for one or more blocks or documents |
 | `resolve-path` | Resolve hpath or id to stable SiYuan path |
 
 Common flags (same as `api`, plus the same `--print` semantics for tool output):
@@ -128,26 +132,40 @@ Common flags (same as `api`, plus the same `--print` semantics for tool output):
 |---|---|
 | `--print compact\|json` | Choose tool output: compact text or details JSON |
 
+### `siyuan doc`
+
+Discover and read built-in docs.
+
+| Subcommand | Description |
+|---|---|
+| `list` | List built-in docs with real file paths |
+| `read <path-or-name>` | Read a built-in doc |
+
+```bash
+siyuan doc list
+siyuan doc read README.md
+siyuan doc read edit-content
+```
+
 ### `siyuan skill`
 
 Manage the bundled agent skill.
 
 | Subcommand | Description |
 |---|---|
-| `list` | List builtin skills |
-| `read <name>` | Read a skill file |
-| `install <name>` | Install skill to target directory |
-| `uninstall <name>` | Uninstall skill from target directory |
+| `install` | Install or update the bundled skill |
+| `read` | Read the bundled skill file |
+| `uninstall` | Uninstall the bundled skill from a target |
 
 ```bash
 # Install to ~/.agents/skills/siyuan-cli/
-siyuan skill install siyuan-cli
+siyuan skill install
 
-# Install for Claude Code project scope
-siyuan skill install siyuan-cli --target claude-project
+# Install to ~/.claude/skills/siyuan-cli/
+siyuan skill install --target claude
 
-# Custom destination
-siyuan skill install siyuan-cli --target custom --dest ./my-skills
+# Install to ./.pi/skills/siyuan-cli/
+siyuan skill install --target .pi --local
 ```
 
 ## Configuration

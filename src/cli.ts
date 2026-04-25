@@ -1,11 +1,12 @@
 import { defineCommand, runMain, showUsage } from 'citty';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { basename, dirname, join } from 'pathe';
+import { dirname, join } from 'pathe';
 import { workspaceCommand } from './commands/workspace.js';
 import { apiCommand } from './commands/api.js';
 import { toolCommand } from './commands/tool.js';
 import { skillCommand } from './commands/skill.js';
+import { docCommand, formatDocsHint } from './commands/doc.js';
 import { buildEndpointHelp } from './core/argv.js';
 import { registry } from './core/registry.js';
 import { buildToolHelp, toolRegistry } from './core/tools.js';
@@ -31,6 +32,7 @@ const main = defineCommand({
         workspace: workspaceCommand,
         api: apiCommand,
         tool: toolCommand,
+        doc: docCommand,
         skill: skillCommand
     }
 });
@@ -67,20 +69,8 @@ async function customShowUsage<T extends Record<string, unknown>>(
 
     await showUsage(cmd, parent);
 
-    // Print docs path hint for top-level help only
-    if (!parent) {
-        const here = dirname(fileURLToPath(import.meta.url));
-        // Packaged: dist/cli.mjs -> ../src/docs
-        // Dev:      src/cli.ts  -> ./docs
-        const docsPath = basename(here) === 'dist'
-            ? join(here, '..', 'src', 'docs')
-            : join(here, 'docs');
-        process.stdout.write(
-            `\nAgent SHOULD read built-in documents for guideline\n` +
-            `  0. ${docsPath}/README.md -> Entry document.\n` +
-            `  1. {docs}/siyuan-guide/*.md -> Read to understand SiYuan data model, SQL queries, etc.\n` +
-            `  2. {docs}/cli-usage/*.md -> Read to understand CLI commands, config file format, permission rules.\n`
-        );
+    if (!parent || meta?.name === 'doc' || parentMeta?.name === 'doc') {
+        process.stdout.write(formatDocsHint());
     }
 }
 

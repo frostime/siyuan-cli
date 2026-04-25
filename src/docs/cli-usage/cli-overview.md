@@ -23,11 +23,14 @@ siyuan
 │   └── <id>     Call an endpoint (e.g. query.sql, block.getBlockKramdown)
 ├── tool         Run high-level composite tools
 │   ├── list     List available tools
+│   ├── describe Show tool schema
 │   └── <id>     Run a tool (e.g. list-doc-tree, append-content)
-└── skill        Manage agent skills
-    ├── list     List builtin skills
-    ├── read     Read a skill file
-    ├── install  Install to agent environment
+├── doc          Discover shipped docs
+│   ├── list     List built-in docs with real file paths
+│   └── read     Read a built-in doc by path or unique basename
+└── skill        Manage the bundled agent skill
+    ├── install  Install or update to a target
+    ├── read     Read the bundled SKILL.md
     └── uninstall
 ```
 
@@ -171,6 +174,32 @@ exit 1 + PAYLOAD_INVALID       → fix input and retry
 exit 2/3/4      → environment issue; surface to user
 exit 5          → permission policy blocks this; check config rules
 ```
+
+## Built-in docs
+
+The CLI ships docs on disk and discloses the real docs root path in `siyuan --help` and `siyuan doc --help`.
+
+```bash
+siyuan doc list
+siyuan doc read README.md
+siyuan doc read edit-content
+```
+
+## Skill install targets
+
+```bash
+siyuan skill install
+siyuan skill install --target agents
+siyuan skill install --target claude
+siyuan skill install --target .pi --local
+```
+
+Normalization rules:
+
+- `agents` and `claude` are explicit home-directory shortcuts
+- generic target names normalize to leading-dot form
+- `pi` and `.pi` resolve to the same target family
+- `--local` switches the base directory from the home directory to the current project directory
 
 ## Debugging
 

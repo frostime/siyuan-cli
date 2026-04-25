@@ -1,54 +1,28 @@
 import { defineCommand } from 'citty';
-import {
-    installSkill,
-    listBuiltinSkills,
-    readSkill,
-    uninstallSkill
-} from '../core/skills.js';
-
-const listCommand = defineCommand({
-    meta: { name: 'list', description: 'List builtin skills.' },
-    run: () => {
-        process.stdout.write(
-            JSON.stringify(listBuiltinSkills(), null, 2) + '\n'
-        );
-    }
-});
+import { installSkill, readSkill, uninstallSkill } from '../core/skills.js';
+import { fatalError, toCliError } from '../utils/errors.js';
 
 const readCommand = defineCommand({
-    meta: { name: 'read', description: 'Read a builtin skill file.' },
-    args: {
-        path: {
-            type: 'positional',
-            description: 'Skill name or relative file path',
-            required: true
-        }
-    },
-    run: ({ args }) => {
-        const rel = args.path.includes('/')
-            ? args.path
-            : `${args.path}/SKILL.md`;
-        process.stdout.write(readSkill(rel));
+    meta: { name: 'read', description: 'Read the bundled skill file.' },
+    run: () => {
+        process.stdout.write(readSkill());
     }
 });
 
 const installCommand = defineCommand({
-    meta: { name: 'install', description: 'Install a builtin skill.' },
+    meta: {
+        name: 'install',
+        description: 'Install or replace the bundled skill at a target.'
+    },
     args: {
-        name: { type: 'positional', description: 'Skill name', required: true },
         target: {
             type: 'string',
-            description:
-                'Install target: agents | claude | claude-project | custom',
+            description: 'Target name such as agents, claude, or .pi',
             default: 'agents'
         },
-        dest: {
-            type: 'string',
-            description: 'Destination directory for custom target'
-        },
-        force: {
+        local: {
             type: 'boolean',
-            description: 'Overwrite existing target',
+            description: 'Install under the current directory instead of the home directory',
             default: false
         },
         'dry-run': {
@@ -58,48 +32,54 @@ const installCommand = defineCommand({
         }
     },
     run: ({ args }) => {
-        const result = installSkill(args.name, {
-            target: args.target,
-            dest: args.dest,
-            force: args.force,
-            dryRun: args['dry-run']
-        });
-        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+        try {
+            const result = installSkill({
+                target: args.target,
+                local: args.local,
+                dryRun: args['dry-run']
+            });
+            process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+        } catch (e) {
+            fatalError(toCliError(e));
+        }
     }
 });
 
 const uninstallCommand = defineCommand({
     meta: {
         name: 'uninstall',
-        description: 'Uninstall a builtin skill from target.'
+        description: 'Uninstall the bundled skill from a target.'
     },
     args: {
-        name: { type: 'positional', description: 'Skill name', required: true },
         target: {
             type: 'string',
-            description: 'Target: agents | claude | claude-project | custom',
+            description: 'Target name such as agents, claude, or .pi',
             default: 'agents'
         },
-        dest: {
-            type: 'string',
-            description: 'Destination directory for custom target'
+        local: {
+            type: 'boolean',
+            description: 'Uninstall from the current directory instead of the home directory',
+            default: false
         }
     },
     run: ({ args }) => {
-        const result = uninstallSkill(args.name, {
-            target: args.target,
-            dest: args.dest
-        });
-        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+        try {
+            const result = uninstallSkill({
+                target: args.target,
+                local: args.local
+            });
+            process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+        } catch (e) {
+            fatalError(toCliError(e));
+        }
     }
 });
 
 export const skillCommand = defineCommand({
-    meta: { name: 'skill', description: 'Manage builtin agent skills.' },
+    meta: { name: 'skill', description: 'Manage the bundled agent skill.' },
     subCommands: {
-        list: listCommand,
-        read: readCommand,
         install: installCommand,
+        read: readCommand,
         uninstall: uninstallCommand
     }
 });
