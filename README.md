@@ -1,299 +1,170 @@
 # siyuan-cli
 
-Agent-first CLI for [SiYuan Note](https://b3log.org/siyuan/) — workspace management, kernel API proxy, workflow tools, and agent skill install.
+An agent-first CLI for [SiYuan Note](https://b3log.org/siyuan/). It sits between your agent and the SiYuan kernel, providing workspace identity, permission guardrails, a structured API surface, and built-in docs for agent self-orientation.
 
-## Features
+## Why This CLI
 
-- **Workspace management** — add / switch / verify multiple SiYuan kernel connections
-- **Direct kernel API** — call any registered endpoint with argument validation and permission guard
-- **Workflow tools** — higher-level operations (resolve path, append content, list daily notes, list doc tree)
-- **Built-in docs discovery** — list and read shipped docs, with real file paths disclosed for direct agent access
-- **Agent skill install** — install the bundled skill to `.agents/`, `.claude/`, or other dot-prefixed skill directories
-- **Dry-run & permission** — write endpoints support `--dry-run`; configurable deny/allow rules per notebook/path
+SiYuan exposes an HTTP API — one could call it directly with curl. This CLI exists because raw HTTP calls don't scale well in agentic workflows.
+
+**Workspace management.** When multiple agents, sessions, or projects connect to different SiYuan instances, keeping credentials and base URLs consistent becomes brittle. `siyuan-cli` stores named workspaces globally and lets each project pin itself to one via a `.siyuan-cli.yaml` file at its root — safe to commit, cannot hold secrets. Resolution priority is explicit: `--workspace` flag → `$SIYUAN_CLI_WORKSPACE` → `.siyuan-cli.yaml` → `config.current`.
+
+**Permission layer.** Agents operating on personal notes need guardrails. The CLI enforces deny and allow rules per workspace — blocking specific endpoints, restricting content access to certain notebooks or ID-based paths. Rules are declarative YAML and evaluated before any kernel request is sent.
+
+**Structured API surface.** Each registered SiYuan endpoint becomes a typed subcommand with named flags, schema introspection, `--help`, `--dry-run` preview, and compact output formatting. The current built-in set covers [SiYuan's public API](https://github.com/siyuan-note/siyuan/blob/master/API.md) plus a small number of necessary non-public endpoints. Support for user-defined custom endpoints is planned.
+
+**High-level tools and built-in docs.** Beyond raw API calls, the CLI ships composite tools (document tree traversal, daily note listing, content append) and a full doc set that agents can discover and read through the CLI itself — so an agent can orient itself without external documentation.
 
 ## Install
 
 ```bash
-# npm
-npm install -g siyuan-cli
-
-# pnpm
-pnpm add -g siyuan-cli
+npm install -g @frostime/siyuan-cli
+# or
+pnpm add -g @frostime/siyuan-cli
 ```
 
 ## Quick Start
 
 ```bash
-# 1. Add a workspace (your local SiYuan kernel)
-siyuan workspace add local --url http://127.0.0.1:6806
+# Add a workspace pointing at your local SiYuan kernel
+siyuan workspace add local --url http://127.0.0.1:6806 --token <token>
 
-# 2. Verify connectivity
+# Verify the connection
 siyuan workspace verify local
 
-# 3. Query with SQL
-siyuan api query.sql "SELECT id, content FROM blocks WHERE type='d' LIMIT 5"
+# Run a SQL query
+siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
 
-# 4. List document tree
-siyuan tool list-doc-tree --notebook "日记"
+# Read block content
+siyuan api block.getBlockKramdown --id <block-id>
 
-# 5. Resolve a human path to stable SiYuan path
-siyuan tool resolve-path --hpath "/私人/日记"
+# Append markdown to a document
+siyuan tool append-content --targetId <doc-id> --targetType document --markdown "## New section"
 
-# 6. Append markdown to a document
-siyuan tool append-content --targetId <doc-id> --targetType document --markdown "Hello world"
+# Install the bundled agent skill
+siyuan skill install
 ```
 
 ## Commands
 
-### `siyuan workspace`
-
-Manage SiYuan kernel connections.
-
-| Subcommand | Description |
-|---|---|
-| `add <name>` | Add a workspace (`--url`, `--token`, `--force`) |
-| `list` | List all configured workspaces |
-| `use <name>` | Set active workspace |
-| `verify [name]` | Verify connectivity (`--all` for all) |
-| `show [name]` | Show workspace details (`--reveal-token`) |
-| `remove <name>` | Remove a workspace |
-| `which` | Show effective workspace resolution in the current directory |
-
-```bash
-# Add with token from environment variable
-siyuan workspace add prod --url http://192.168.1.100:6806 --token-env SIYUAN_TOKEN
-
-# Add with token from file
-siyuan workspace add prod --url http://192.168.1.100:6806 --token-file ~/.siyuan-token
-
-# Ad-hoc call without adding workspace
-siyuan api system.version --baseUrl http://192.168.1.100:6806 --token xxx
+```text
+siyuan
+├── workspace    Manage kernel connections
+│   ├── add      Register a new workspace
+│   ├── list     List all workspaces
+│   ├── use      Set active workspace
+│   ├── verify   Test connection and auth
+│   ├── remove   Remove a workspace
+│   └── which    Show workspace resolution for the current directory
+├── api          Call kernel endpoints
+│   ├── list     List registered endpoints (--group, --tag)
+│   ├── describe Show endpoint schema
+│   └── <id>     Call an endpoint (e.g. query.sql, block.appendBlock)
+├── tool         Run high-level composite tools
+│   ├── list     List available tools
+│   ├── describe Show tool schema
+│   └── <id>     Run a tool (e.g. list-doc-tree, append-content)
+├── doc          Discover and read built-in docs
+│   ├── list     List docs with real file paths
+│   └── read     Read a doc by path or name
+└── skill        Manage the bundled agent skill
+    ├── install  Install or update to a target directory
+    ├── read     Read the bundled SKILL.md
+    └── uninstall
 ```
 
-### `siyuan api`
+Every `api <id>` and `tool <id>` subcommand supports `--help` for full parameter and example details.
 
-Call SiYuan kernel API endpoints directly.
+### Key flags
 
-| Subcommand | Description |
-|---|---|
-| `list` | List all registered endpoints (`--group`, `--tag`) |
-| `describe <id>` | Show endpoint schema |
-| `<endpoint-id>` | Call an endpoint |
-
-Every endpoint is a subcommand, so `--help` works:
-
-```bash
-siyuan api query.sql --help
-siyuan api block.appendBlock --help
-```
-
-API output defaults to `--print compact`, which uses endpoint-specific compact rendering when available and raw JSON fallback otherwise. Use `--print json` for full structured output.
-
-`--tag` filters derived endpoint tags such as `mode:read`, `surface:content`, `scope:batch`, `operation:move`, and `risk:sensitive`.
-
-Common flags for all endpoints:
+All `api` and `tool` invocations share these flags:
 
 | Flag | Description |
-|---|---|
-| `-w, --workspace` | Workspace to use |
-| `--baseUrl` | Ad-hoc base URL |
-| `--token` | Ad-hoc token |
-| `--dry-run` | Preview write request without sending |
-| `-y, --yes` | Auto-confirm write operations |
-| `--debug` | Show curl-equivalent debug info |
-| `--print compact\|json` | Choose compact endpoint text or raw JSON |
-| `-j, --json` | Pass JSON payload inline |
-| `-f, --file` | Load JSON payload from file (`-` for stdin) |
+|------|-------------|
+| `-w, --workspace` | Override active workspace |
+| `--baseUrl / --token` | Ad-hoc connection without a configured workspace |
+| `--dry-run` | Preview write operations without sending to kernel |
+| `-y, --yes` | Auto-confirm prompts from permission confirm rules |
+| `--print compact\|json` | Output mode — compact text (default) or raw JSON |
+| `-j, --json` / `-f, --file` | Pass payload as inline JSON or from a file (`-` for stdin) |
+| `--debug` | Print curl-equivalent request to stderr |
 
-### `siyuan tool`
+Some string fields accept `@file:./path`, `@stdin`, or `@env:VAR` as input sources — check `<endpoint> --help` for which fields support them.
 
-Run built-in workflow tools.
-
-| Subcommand | Description |
-|---|---|
-| `list` | List all tools |
-| `describe <id>` | Show tool schema |
-| `<tool-id>` | Run a tool |
-
-**Available tools:**
+### Available tools
 
 | Tool | Description |
-|---|---|
-| `list-doc-tree` | List document tree under a notebook or document |
-| `list-dailynote` | List daily note documents for a date or range |
-| `append-content` | Append markdown content to daily note, document, or block |
-| `get-block-content` | Read Markdown content of a block or document |
-| `get-block-info` | Inspect metadata for one or more blocks or documents |
+|------|-------------|
+| `list-doc-tree` | Document tree under a notebook or document |
+| `list-dailynote` | Daily note documents for a date or range |
+| `append-content` | Append markdown to a daily note, document, or block |
+| `get-block-content` | Read markdown content of a block or document |
+| `get-block-info` | Inspect metadata for one or more blocks |
 | `resolve-path` | Resolve hpath or id to stable SiYuan path |
-
-Common flags (same as `api`, plus the same `--print` semantics for tool output):
-
-| Flag | Description |
-|---|---|
-| `--print compact\|json` | Choose tool output: compact text or details JSON |
-
-### `siyuan doc`
-
-Discover and read built-in docs.
-
-| Subcommand | Description |
-|---|---|
-| `list` | List built-in docs with real file paths |
-| `read <path-or-name>` | Read a built-in doc |
-
-```bash
-siyuan doc list
-siyuan doc read README.md
-siyuan doc read edit-content
-```
-
-### `siyuan skill`
-
-Manage the bundled agent skill.
-
-| Subcommand | Description |
-|---|---|
-| `install` | Install or update the bundled skill |
-| `read` | Read the bundled skill file |
-| `uninstall` | Uninstall the bundled skill from a target |
-
-```bash
-# Install to ~/.agents/skills/siyuan-cli/
-siyuan skill install
-
-# Install to ~/.claude/skills/siyuan-cli/
-siyuan skill install --target claude
-
-# Install to ./.pi/skills/siyuan-cli/
-siyuan skill install --target .pi --local
-```
 
 ## Configuration
 
-Config file: `~/.config/siyuan-cli/config.yaml`
-
-Override with environment variables:
-
-| Variable | Description |
-|---|---|
-| `SIYUAN_CLI_CONFIG` | Custom config file path |
-| `SIYUAN_CLI_WORKSPACE` | Default workspace name |
-| `SIYUAN_CLI_TOKEN` | Default token |
-
-Example config:
+Config file location: `~/.config/siyuan-cli/config.yaml` (created automatically by `workspace add`; also respects `$XDG_CONFIG_HOME` and `$SIYUAN_CLI_CONFIG`).
 
 ```yaml
-schemaVersion: 2
+schemaVersion: 1
 current: local
-
-defaults:
-  permission:
-    confirm:
-      modes: ["write", "invoke"]
-      surfaces: ["workspace", "runtime", "network"]
-      scopes: ["batch", "global"]
 
 workspaces:
   local:
     baseUrl: http://127.0.0.1:6806
-  remote:
+    token: <literal-token>
+
+  prod:
     baseUrl: http://192.168.1.100:6806
     tokenSource:
       type: env
       value: SIYUAN_TOKEN
+    permission:
+      default: allow
+      rules:
+        - endpoint: "system.exit"
+          effect: deny
+        - path: "/20260107143325-zbrtqup/**"
+          action: write
+          effect: deny
+
+defaults:
+  permission:
+    default: allow
+    rules: []
 ```
 
-### Permission Rules
+### Permission rules
 
-Deny rules are the hard boundary. Confirm rules are an interactive safety rail.
+Permission rules are evaluated before any request reaches the kernel. A `deny` rule is a hard block. A `confirm` rule pauses and requires `--yes` to proceed.
 
-`content.read.paths` and `content.write.paths` match against SiYuan `path` (ID-based document path), not `hpath`.
+Rules can target endpoints by id or glob, content by notebook id or ID-based `path` (not `hpath` — those change on rename), and operations by mode (`read`, `write`, `invoke`) or surface (`content`, `workspace`, `runtime`, `network`).
+
+See `.siyuan-cli.yaml.example` in this repo and `siyuan doc read config-and-permission` for the full rule schema.
+
+### Project-level config
+
+Place a `.siyuan-cli.yaml` at your project root to pin that project to a specific workspace:
 
 ```yaml
-workspaces:
-  prod:
-    baseUrl: http://prod:6806
-    permission:
-      endpoints:
-        deny: ["system.exit", "network.*"]
-      tools:
-        allow: ["append-content", "list-doc-tree"]
-      content:
-        read:
-          paths:
-            deny: ["/20260107143325-zbrtqup/**"]
-        write:
-          paths:
-            deny: ["/20260107143325-zbrtqup/**", "/20260108888888-qwertyu/**"]
-      workspace:
-        write:
-          paths:
-            deny: ["**"]
-      confirm:
-        modes: ["write", "invoke"]
-        surfaces: ["workspace", "runtime", "network"]
-        scopes: ["batch", "global"]
+schemaVersion: 1
+workspace: prod   # must exist in the global config
 ```
 
-## Registered API Endpoints
+This file is safe to commit — the CLI hard-errors if you attempt to put connection details or tokens here. Check `siyuan workspace which` to inspect resolution for the current directory.
 
-| Group | Endpoints |
-|---|---|
-| `asset` | `upload` |
-| `attr` | `getBlockAttrs`, `setBlockAttrs` |
-| `block` | `appendBlock`, `deleteBlock`, `getBlockKramdown`, `getChildBlocks`, `insertBlock`, `updateBlock` |
-| `export` | `exportMdContent` |
-| `filetree` | `createDailyNote`, `createDocWithMd`, `getHPathByID`, `listDocsByPath`, `removeDoc`, `renameDoc` |
-| `notebook` | `createNotebook`, `lsNotebooks` |
-| `notification` | `pushMsg` |
-| `query` | `sql` |
-| `search` | `fullTextSearchBlock` |
-| `system` | `bootProgress`, `version` |
+## Built-in docs
 
-## Development
+The CLI ships a full reference on disk. Agents can discover and read it directly:
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Build
-pnpm build
-
-# Watch mode
-pnpm dev
-
-# Type check
-pnpm typecheck
-
-# Run locally via npm script
-pnpm siyuan -- workspace list
-
-# Or link globally for `siyuan` command
-pnpm link --global
-siyuan --version
-
-# Unlink when done
-pnpm unlink --global
+siyuan doc list          # list all docs with real file paths
+siyuan doc read README.md
+siyuan doc read edit-content
 ```
 
-## Publish
-
-```bash
-# 1. Login to npm (first time)
-npm login
-
-# 2. Bump version (edit package.json or use npm version)
-npm version patch  # 0.2.0 → 0.2.1
-
-# 3. Publish
-npm publish
-
-# Or with pnpm
-pnpm publish
-```
-
-The `prepublishOnly` hook runs `pnpm build` automatically before publish.
+The docs root path is also printed by `siyuan --help` and `siyuan doc --help`, so an agent can read docs files directly without going through the CLI.
 
 ## License
 
-MIT
+GPL-v3

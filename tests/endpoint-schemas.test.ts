@@ -20,7 +20,7 @@ import { schema as notificationPushMsg } from '../src/apis/notification/pushMsg.
 
 function makeConfig(permission?: PermissionConfig): AppConfig {
     return {
-        schemaVersion: 2,
+        schemaVersion: 1,
         current: 'local',
         workspaces: {
             local: {

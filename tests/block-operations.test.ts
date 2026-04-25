@@ -26,7 +26,7 @@ import { schema as blockTransferBlockRef } from '../src/apis/block/transferBlock
 
 function makeConfig(permission?: PermissionConfig): AppConfig {
     return {
-        schemaVersion: 2,
+        schemaVersion: 1,
         current: 'local',
         workspaces: {
             local: {

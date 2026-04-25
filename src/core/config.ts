@@ -77,7 +77,7 @@ export interface ResolvedWorkspace extends WorkspaceEntry {
     effectivePermission?: PermissionConfig;
 }
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 1;
 
 function defaultConfig(): AppConfig {
     return {
@@ -210,7 +210,7 @@ export function loadConfig(configPath?: string): AppConfig {
     try {
         const raw = readFileSync(path, 'utf-8');
         const parsed = parse(raw) as Partial<AppConfig>;
-        const schemaVersion = parsed.schemaVersion ?? 1;
+        const schemaVersion = parsed.schemaVersion;
         if (schemaVersion !== SCHEMA_VERSION) {
             throw new CliError(
                 ExitCode.CONFIG,

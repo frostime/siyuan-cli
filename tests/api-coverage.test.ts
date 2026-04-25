@@ -56,7 +56,7 @@ import { schema as systemVersion } from '../src/apis/system/version.ts';
 
 function makeConfig(permission?: PermissionConfig): AppConfig {
     return {
-        schemaVersion: 2,
+        schemaVersion: 1,
         current: 'local',
         workspaces: {
             local: {

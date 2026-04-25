@@ -19,7 +19,7 @@ Created automatically by `siyuan workspace add`. File mode `0600` on POSIX.
 ## Config structure
 
 ```yaml
-schemaVersion: 2
+schemaVersion: 1
 current: home                          # active workspace name
 
 workspaces:

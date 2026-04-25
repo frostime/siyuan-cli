@@ -21,7 +21,7 @@ Legacy Windows path `%APPDATA%/siyuan-cli/config.yaml` is migrated to `~/.config
 ## Full structure
 
 ```yaml
-schemaVersion: 2
+schemaVersion: 1
 current: home                          # active workspace name
 
 workspaces:
