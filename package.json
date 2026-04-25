@@ -9,8 +9,8 @@
     "files": [
         "bin/**",
         "dist/**",
-        "skills/**",
-        "src/"
+        "src/docs/**",
+        "skills/**"
     ],
     "source": "src/cli.ts",
     "engines": {
