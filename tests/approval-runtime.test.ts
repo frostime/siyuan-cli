@@ -15,17 +15,18 @@ function withTempConfigDir(fn: (dir: string) => void | Promise<void>) {
 
 test('runtime cleans stale broker pid/port state', async () => {
     await withTempConfigDir(async () => {
+        const paths = await import('../src/approval/broker-paths.ts');
         const runtime = await import('../src/approval/runtime.ts');
-        runtime.ensureApprovalStateDirs();
-        writeFileSync(runtime.getApprovalBrokerPidFile(), '999999', 'utf-8');
-        writeFileSync(runtime.getApprovalBrokerPortFile(), '4312', 'utf-8');
-        writeFileSync(runtime.getApprovalBrokerTokenFile(), 'secret', 'utf-8');
+        paths.ensureApprovalStateDirs();
+        writeFileSync(paths.getApprovalBrokerPidFile(), '999999', 'utf-8');
+        writeFileSync(paths.getApprovalBrokerPortFile(), '4312', 'utf-8');
+        writeFileSync(paths.getApprovalBrokerTokenFile(), 'secret', 'utf-8');
 
         runtime.cleanupStaleApprovalBrokerState();
 
-        assert.equal(runtime.readBrokerPid(), null);
-        assert.equal(runtime.readBrokerPort(), null);
-        assert.equal(runtime.readBrokerToken(), null);
+        assert.equal(paths.readBrokerPid(), null);
+        assert.equal(paths.readBrokerPort(), null);
+        assert.equal(paths.readBrokerToken(), null);
     });
 });
 

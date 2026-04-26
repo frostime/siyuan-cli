@@ -12,12 +12,14 @@ import {
 } from './store.js';
 import {
     HARD_IDLE_TIMEOUT_MS,
-    QUEUE_EMPTY_GRACE_MS,
+    QUEUE_EMPTY_GRACE_MS
+} from './runtime.js';
+import {
     cleanupApprovalBrokerState,
-    openApprovalBrowser,
     readBrokerPort,
     writeBrokerState
-} from './runtime.js';
+} from './broker-paths.js';
+import { openApprovalBrowser } from './broker-browser.js';
 import { renderApprovalCenter } from './ui.js';
 import type {
     ApprovalActor,

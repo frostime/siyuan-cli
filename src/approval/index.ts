@@ -1,16 +1,15 @@
+/**
+ * Approval module public API.
+ *
+ * Re-exports the business logic surface used by guard.ts.
+ * CLI command implementations live in command.ts and are not re-exported here.
+ */
 export { startApprovalBroker } from './broker.js';
+export { openApprovalBrowser } from './broker-browser.js';
 export {
-    approveApproval,
     buildPreparedApprovalRequest,
-    createApproval,
     ensureBroker,
-    getApproval,
-    getBrokerStatus,
-    listApprovals,
-    openApprovalCenter,
-    rejectApproval,
-    requestAndWait,
-    stopApprovalBroker
+    requestAndWait
 } from './client.js';
 export {
     ApprovalBrokerUnavailableError,

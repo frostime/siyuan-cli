@@ -10,7 +10,7 @@ import {
     ensureApprovalStateDirs,
     getApprovalAuditDir,
     getApprovalRequestsDir
-} from './runtime.js';
+} from './broker-paths.js';
 import type {
     ApprovalActor,
     ApprovalDecision,

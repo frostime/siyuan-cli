@@ -9,6 +9,6 @@ permission:
     - endpoint: "system.version"
       effect: allow
       note: "Keep a simple read-only health check available"
-    - endpoint: "system.currentTime"
+    - endpoint: "system.*"
       effect: confirm
       note: "Force the approval flow for the current approval UX tests"

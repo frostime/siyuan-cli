@@ -1,12 +1,15 @@
 ---
 name: confirm-human-approval-channel
-status: DOING
+status: DONE
 change-type: single
 created: 2026-04-26 00:34:51
 reference:
 - source: .sspec/requests/26-04-26T00-03_confirm-human-approval-channel.md
   type: request
   note: Linked from request
+- source: .sspec/changes/26-04-26T00-34_confirm-human-approval-channel/revisions/004-readability-split-runtime-and-client.md
+  type: revision
+  note: Readability refactor — split runtime.ts and client.ts
 ---
 <!-- @RULE: Frontmatter
 status: PLANNING | DOING | REVIEW | DONE | BLOCKED

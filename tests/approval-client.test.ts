@@ -16,18 +16,18 @@ function withTempConfigDir(fn: () => void | Promise<void>) {
 
 test('listApprovals does not start broker when none is running', async () => {
     await withTempConfigDir(async () => {
-        const client = await import('../src/approval/client.ts');
-        const approvals = await client.listApprovals();
+        const command = await import('../src/approval/command.ts');
+        const approvals = await command.listApprovals();
         assert.deepEqual(approvals, { pending: [], recent: [] });
     });
 });
 
 test('requestAndWait uses one broker instance for create and wait', async () => {
     await withTempConfigDir(async () => {
-        const runtime = await import('../src/approval/runtime.ts');
+        const paths = await import('../src/approval/broker-paths.ts');
         const client = await import('../src/approval/client.ts');
 
-        runtime.ensureApprovalStateDirs();
+        paths.ensureApprovalStateDirs();
         const server = createServer((req, res) => {
             if (req.url === '/api/approval/status') {
                 res.writeHead(200, { 'content-type': 'application/json' });
@@ -62,7 +62,7 @@ test('requestAndWait uses one broker instance for create and wait', async () => 
         });
         const address = server.address();
         assert.ok(address && typeof address !== 'string');
-        runtime.writeBrokerState(process.pid, address.port, 'secret');
+        paths.writeBrokerState(process.pid, address.port, 'secret');
 
         try {
             const decision = await client.requestAndWait(
@@ -84,17 +84,17 @@ test('requestAndWait uses one broker instance for create and wait', async () => 
             await new Promise<void>((resolve, reject) => {
                 server.close((error) => (error ? reject(error) : resolve()));
             });
-            runtime.cleanupApprovalBrokerState();
+            paths.cleanupApprovalBrokerState();
         }
     });
 });
 
 test('requestAndWait auto-opens the created approval URL', async () => {
     await withTempConfigDir(async () => {
-        const runtime = await import('../src/approval/runtime.ts');
+        const paths = await import('../src/approval/broker-paths.ts');
         const client = await import('../src/approval/client.ts');
 
-        runtime.ensureApprovalStateDirs();
+        paths.ensureApprovalStateDirs();
         const server = createServer((req, res) => {
             if (req.url === '/api/approval/status') {
                 res.writeHead(200, { 'content-type': 'application/json' });
@@ -129,7 +129,7 @@ test('requestAndWait auto-opens the created approval URL', async () => {
         });
         const address = server.address();
         assert.ok(address && typeof address !== 'string');
-        runtime.writeBrokerState(process.pid, address.port, 'secret');
+        paths.writeBrokerState(process.pid, address.port, 'secret');
 
         const opened: string[] = [];
 
@@ -158,17 +158,17 @@ test('requestAndWait auto-opens the created approval URL', async () => {
             await new Promise<void>((resolve, reject) => {
                 server.close((error) => (error ? reject(error) : resolve()));
             });
-            runtime.cleanupApprovalBrokerState();
+            paths.cleanupApprovalBrokerState();
         }
     });
 });
 
 test('rejectApproval passes optional reason through to broker', async () => {
     await withTempConfigDir(async () => {
-        const runtime = await import('../src/approval/runtime.ts');
-        const client = await import('../src/approval/client.ts');
+        const paths = await import('../src/approval/broker-paths.ts');
+        const command = await import('../src/approval/command.ts');
 
-        runtime.ensureApprovalStateDirs();
+        paths.ensureApprovalStateDirs();
         let seenBody = '';
         const server = createServer(async (req, res) => {
             if (req.url === '/api/approval/status') {
@@ -193,16 +193,16 @@ test('rejectApproval passes optional reason through to broker', async () => {
         });
         const address = server.address();
         assert.ok(address && typeof address !== 'string');
-        runtime.writeBrokerState(process.pid, address.port, 'secret');
+        paths.writeBrokerState(process.pid, address.port, 'secret');
 
         try {
-            await client.rejectApproval('apr_reject', 'Need human confirmation on scope');
+            await command.rejectApproval('apr_reject', 'Need human confirmation on scope');
             assert.match(seenBody, /Need human confirmation on scope/);
         } finally {
             await new Promise<void>((resolve, reject) => {
                 server.close((error) => (error ? reject(error) : resolve()));
             });
-            runtime.cleanupApprovalBrokerState();
+            paths.cleanupApprovalBrokerState();
         }
     });
 });

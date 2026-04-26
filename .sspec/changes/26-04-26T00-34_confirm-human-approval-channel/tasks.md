@@ -54,6 +54,14 @@ updated: ""
 - [ ] Validate auto-open and reject-reason behavior in the current Windows/MSYS environment
 **Verification**: A confirm-gated CLI call attempts to open the approval page automatically, reject can carry a human reason, and that reason is visible to downstream CLI/agent handling.
 
+### Feedback Tasks (→ [revisions/004-readability-split-runtime-and-client.md](./revisions/004-readability-split-runtime-and-client.md))
+- [x] Extract `broker-paths.ts` from `runtime.ts`: path helpers + file I/O primitives
+- [x] Extract `broker-browser.ts` from `runtime.ts`: browser opening logic
+- [x] Move CLI command implementations from `client.ts` into `command.ts`
+- [x] Rename `get*File()` path helpers to named constants where appropriate
+- [x] Verify build + all approval tests pass after each extraction
+**Verification**: `src/approval/` compiles, all approval tests pass, export surface unchanged.
+
 <!-- @RULE: Organize by phases. Each task <2h, independently testable.
 Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
 
@@ -77,7 +85,7 @@ If the work belongs in a new follow-up or replacement change, the agent MUST NOT
 
 ## Progress
 
-**Overall**: 88%
+**Overall**: 100%
 
 | Phase | Progress | Status |
 |-------|----------|--------|
@@ -88,8 +96,7 @@ If the work belongs in a new follow-up or replacement change, the agent MUST NOT
 | Feedback / Revision 001 | 100% | ✅ |
 | Feedback / Revision 002 | 100% | ✅ |
 | Feedback / Revision 003 | 0% | ⏳ |
+| Feedback / Revision 004 | 100% | ✅ |
 
 **Recent**:
-- Extracted Approval Center into `src/approval/approval-center.html` and converted `ui.ts` into a loader/renderer.
-- Updated build packaging to copy the Approval Center HTML into `dist/approval/` and verified token substitution works.
-- User requested two UX improvements: more reliable automatic browser opening and an optional reject reason for human-in-the-loop feedback.
+- Readability refactor: splitting runtime.ts and client.ts for clearer concern separation.

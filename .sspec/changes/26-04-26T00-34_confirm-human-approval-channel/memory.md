@@ -19,7 +19,7 @@ This section records the change starting point in git and MUST NOT be edited or 
 ```
 
 ## State
-The approval flow is now in active implementation and stabilization. Broker binding, local authorization, standalone Approval Center template loading, and CLI-side auto-open are implemented; next step is broader validation coverage and final review of browser-approve / reject / timeout behavior before moving to review.
+Change DONE. Approval module implemented, stabilized, and refactored for readability. Broker binding, local authorization, standalone Approval Center template, CLI-side auto-open, reject reason, and file split all complete. Remaining work (Revision 003 auto-open/reject-reason tasks) is deferred to follow-up.
 
 ## Key Files
 - `.sspec/requests/26-04-26T00-03_confirm-human-approval-channel.md` — original request and success criteria
@@ -54,3 +54,5 @@ The approval flow is now in active implementation and stabilization. Broker bind
 - [2026-04-26T01:05:00+08:00] Implemented the first end-to-end approval module, integrated guard handoff, verified broker start/list/stop commands, and added initial runtime/store tests.
 - [2026-04-26T01:40:00+08:00] Ran a subagent code review and a real manual confirm test; both exposed correctness gaps in broker security and broker-instance consistency, so the next pass will be a fix-focused git.
 - [2026-04-26T15:24:59+08:00] Completed Revision 002 by extracting the Approval Center into a standalone HTML asset, wiring template loading/copying, and moving auto-open responsibility into the CLI-side approval request flow.
+- [2026-04-26T16:07:00+08:00] Completed Revision 004: readability refactor splitting runtime.ts into broker-paths.ts (paths + I/O), broker-browser.ts (browser opening), and runtime.ts (process lifecycle); moved CLI command implementations from client.ts to command.ts.
+- [2026-04-26T16:15:00+08:00] Independent subagent review (kimi-k2.5) confirmed refactor correctness. Change marked DONE.
