@@ -38,7 +38,7 @@ Resolution priority: `--workspace` flag > `$SIYUAN_CLI_WORKSPACE` > `.siyuan-cli
 - **Stable addressing**: prefer `id` and `path` over `hpath`. `hpath` changes on rename; `id` never changes.
 - **SQL discipline**: always `LIMIT`; narrow scope with `root_id`, `box`, `type` before fuzzy `LIKE`.
 - **Large text input**: use `@file:./path` or `@stdin` for markdown, SQL, templates.
-- **Write safety**: `--dry-run` to preview, `--yes` to confirm destructive operations.
+- **Write safety**: `--dry-run` to preview, `--yes` to confirm destructive operations. Set `behavior.allowYes: false` in config to enforce the approval flow.
 - **Pre-flight**: `siyuan workspace which` before writes to confirm target.
 - **Error handling**: errors go to stderr as JSON, stdout stays clean. Exit codes: 0=OK, 1=general, 2=config, 3=network, 4=auth, 5=permission.
 

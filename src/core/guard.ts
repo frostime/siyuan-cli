@@ -17,7 +17,7 @@ import {
     type PermissionEngine
 } from './permission.js';
 import type { SiyuanClient } from './client.js';
-import type { ResolvedWorkspace } from './config.js';
+import { resolveEffectiveBehavior, type AppConfig, type ResolvedWorkspace } from './config.js';
 
 const RISK_TRIGGERS_IMPLICIT_WARNING = new Set<string>([
     'elevated',
@@ -133,6 +133,8 @@ export interface ExecuteOptions {
     payload: unknown;
     client: SiyuanClient;
     engine: PermissionEngine;
+    /** Config for behavior resolution. */
+    config: AppConfig;
     /** Optional — when supplied, enables IMPLICIT_WORKSPACE warning on write-like risks. */
     workspace?: ResolvedWorkspace;
     /** When called from inside a tool, carries the tool id for permission context. */
@@ -165,6 +167,7 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
         payload,
         client,
         engine,
+        config,
         workspace,
         callerTool,
         dryRun,
@@ -206,17 +209,48 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
         };
     }
 
-    if (wouldConfirm && !yes) {
+    // Resolve effective behavior: Project > Workspace > Defaults > Built-in
+    const behavior = resolveEffectiveBehavior(
+        config.defaults?.behavior,
+        workspace?.behavior,
+        workspace?.effectiveBehavior
+    );
+    const allowYes = behavior.allowYes;
+    const effectiveYes = yes && allowYes;
+
+    if (wouldConfirm && !effectiveYes) {
+        // Notify when --yes was passed but ignored
+        if (yes && !allowYes) {
+            const source =
+                workspace?.effectiveBehavior?.allowYes !== undefined
+                    ? 'project'
+                    : workspace?.behavior?.allowYes !== undefined
+                      ? 'workspace'
+                      : config?.defaults?.behavior?.allowYes !== undefined
+                        ? 'defaults'
+                        : 'built-in';
+            process.stderr.write(
+                JSON.stringify({
+                    notice: 'YES_BYPASSED',
+                    reason: 'behavior.allowYes is false, --yes ignored',
+                    source
+                }) + '\n'
+            );
+        }
         if (!workspace) {
             throw new ConfirmationRequiredError(id);
         }
+        const timeoutSec = behavior.approval.timeout;
+        const autoOpen = behavior.approval.autoOpen;
         await requestAndWait(
             buildPreparedApprovalRequest({
                 workspaceName: workspace.name,
                 entry,
                 payload,
-                ...(callerTool ? { callerTool } : {})
-            })
+                ...(callerTool ? { callerTool } : {}),
+                timeoutSec
+            }),
+            { autoOpen }
         );
     }
 

@@ -22,7 +22,7 @@ import { dirname, join, resolve } from 'pathe';
 import { parse } from 'yaml';
 import { CliError, ExitCode } from './errors.js';
 import type { AppConfig } from '../core/config.js';
-import type { PermissionConfig } from '../core/schema.js';
+import { validateBehaviorRaw, type BehaviorConfig, type PermissionConfig } from '../core/schema.js';
 
 export const PROJECT_CONFIG_FILENAME = '.siyuan-cli.yaml';
 export const PROJECT_SCHEMA_VERSION = 1;
@@ -32,7 +32,8 @@ const REJECTED_FIELDS = ['token', 'baseUrl', 'tokenSource', 'defaults'] as const
 const ALLOWED_TOP_LEVEL = new Set([
     'schemaVersion',
     'workspace',
-    'permission'
+    'permission',
+    'behavior'
 ]);
 const ID_PATTERN = /^\d{14}-[0-9a-z]{7}$/;
 const ID_SEGMENT_RE = /\d{14}-[0-9a-z]{7}/;
@@ -41,6 +42,7 @@ export interface ProjectConfig {
     schemaVersion: number;
     workspace?: string;
     permission?: PermissionConfig;
+    behavior?: BehaviorConfig;
 }
 
 export interface ProjectConfigLocation {
@@ -205,10 +207,36 @@ export function loadProjectConfig(
 
     const permission = parsed['permission'] as PermissionConfig | undefined;
 
+    // behavior: optional, validate field types when present
+    const rawBehavior = parsed['behavior'] as Record<string, unknown> | undefined;
+    let behavior: BehaviorConfig | undefined;
+    if (rawBehavior !== undefined) {
+        const results = validateBehaviorRaw(rawBehavior, 'project');
+        for (const r of results) {
+            if (r.kind === 'error') {
+                throw new CliError(
+                    ExitCode.CONFIG,
+                    'PROJECT_CONFIG_PARSE_ERROR',
+                    `${r.message} (at ${location.path})`
+                );
+            }
+            process.stderr.write(
+                JSON.stringify({
+                    warning: 'UNKNOWN_PROJECT_BEHAVIOR_KEY',
+                    scope: 'project',
+                    at: location.path,
+                    ...(r.kind === 'warning' ? { key: r.key } : {})
+                }) + '\n'
+            );
+        }
+        behavior = rawBehavior as BehaviorConfig;
+    }
+
     const result: ProjectConfig = {
         schemaVersion: PROJECT_SCHEMA_VERSION,
         ...(workspace ? { workspace } : {}),
-        ...(permission ? { permission } : {})
+        ...(permission ? { permission } : {}),
+        ...(behavior ? { behavior } : {})
     };
 
     warnProjectPermissionSmoke(location, permission);

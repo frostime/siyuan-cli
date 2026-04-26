@@ -110,7 +110,7 @@ All `siyuan api <id>` and `siyuan tool <id>` commands accept:
 | `--token` | | Override authentication token |
 | `--config` | | Override config file path |
 | `--dry-run` | | Preview write operations without calling kernel |
-| `--yes` | `-y` | Execute confirm-gated writes immediately without opening the Approval Center |
+| `--yes` | `-y` | Execute confirm-gated writes immediately without opening the Approval Center. Ignored when `behavior.allowYes` is `false` |
 | `--debug` | | Print intended request (curl-equivalent) to stderr |
 | `--json` | `-j` | Entire payload as inline JSON |
 | `--file` | `-f` | Entire payload from JSON file; `-f -` reads stdin |
@@ -166,7 +166,7 @@ Errors are written to stderr as single-line JSON, stdout remains clean:
 | `APPROVAL_REJECTED` | 1 | Review the pending action and retry only if intended |
 | `APPROVAL_TIMEOUT` | 1 | Re-run the command or approve it faster next time |
 | `APPROVAL_CANCELLED` | 1 | Re-run if the write is still intended |
-| `CONFIRMATION_REQUIRED` | 1 | Approval flow was unavailable; retry with `--yes` or inspect broker state |
+| `CONFIRMATION_REQUIRED` | 1 | Approval flow was unavailable; retry with `--yes` (if `behavior.allowYes` is `true`) or inspect broker state |
 | `KERNEL_ERROR` | 1 | Show message as-is; likely a data-level problem |
 | `BLOCK_NOT_FOUND` | 1 | Verify the block id exists |
 | `NO_WORKSPACE` | 2 | Run `siyuan workspace add` |
@@ -181,7 +181,7 @@ Errors are written to stderr as single-line JSON, stdout remains clean:
 ```text
 exit 0          → parse stdout as result
 exit 1 + APPROVAL_*           → surface the decision outcome to the user
-exit 1 + CONFIRMATION_REQUIRED → approval flow unavailable; re-invoke with --yes only if policy permits
+exit 1 + CONFIRMATION_REQUIRED → approval flow unavailable; re-invoke with --yes only if `behavior.allowYes` is true
 exit 1 + PAYLOAD_INVALID       → fix input and retry
 exit 2/3/4      → environment issue; surface to user
 exit 5          → permission policy blocks this; check config rules
@@ -215,7 +215,7 @@ Normalization rules:
 
 ## Approval Center
 
-When a write resolves to `confirm` and `--yes` is absent, the CLI submits a request to the local Approval Broker, opens `http://127.0.0.1:<port>/approval`, and waits inline for up to 60 seconds.
+When a write resolves to `confirm` and `--yes` is absent (or ignored due to `behavior.allowYes: false`), the CLI submits a request to the local Approval Broker, opens `http://127.0.0.1:<port>/approval`, and waits inline for up to `behavior.approval.timeout` seconds (default 60).
 
 ```bash
 siyuan approval status

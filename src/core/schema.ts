@@ -27,6 +27,87 @@ export interface PermissionConfig {
     rules?: PermissionRule[];
 }
 
+// ————— Behavior config model —————
+
+export interface BehaviorConfig {
+    allowYes?: boolean;              // default: true — when false, --yes is ignored
+    approval?: {
+        timeout?: number;            // seconds, default: 60
+        autoOpen?: boolean;          // default: true — auto-open Approval Center in browser
+    };
+}
+
+/** Fully resolved behavior with all fields populated. Used after merge. */
+export interface ResolvedBehaviorConfig {
+    allowYes: boolean;
+    approval: {
+        timeout: number;
+        autoOpen: boolean;
+    };
+}
+
+// ————— Behavior validation —————
+
+const BEHAVIOR_KEYS = new Set(['allowYes', 'approval']);
+const APPROVAL_KEYS = new Set(['timeout', 'autoOpen']);
+
+export interface BehaviorValidationError {
+    kind: 'error';
+    message: string;
+}
+export interface BehaviorValidationWarning {
+    kind: 'warning';
+    key: string;
+}
+type BehaviorValidationResult = BehaviorValidationError | BehaviorValidationWarning;
+
+/**
+ * Validate a raw behavior value from parsed YAML.
+ * Returns an array of errors and warnings. Errors are fatal; warnings are informational.
+ */
+export function validateBehaviorRaw(
+    behavior: unknown,
+    scope: string
+): BehaviorValidationResult[] {
+    if (behavior === undefined || behavior === null) return [];
+    if (typeof behavior !== 'object' || Array.isArray(behavior)) {
+        return [{ kind: 'error', message: `${scope}.behavior must be an object.` }];
+    }
+    const results: BehaviorValidationResult[] = [];
+    const b = behavior as Record<string, unknown>;
+    for (const key of Object.keys(b)) {
+        if (!BEHAVIOR_KEYS.has(key)) {
+            results.push({ kind: 'warning', key: `behavior.${key}` });
+        }
+    }
+    if (b['allowYes'] !== undefined && typeof b['allowYes'] !== 'boolean') {
+        results.push({ kind: 'error', message: `${scope}.behavior.allowYes must be a boolean.` });
+    }
+    const approval = b['approval'];
+    if (approval !== undefined) {
+        if (typeof approval !== 'object' || approval === null || Array.isArray(approval)) {
+            results.push({ kind: 'error', message: `${scope}.behavior.approval must be an object.` });
+        } else {
+            const a = approval as Record<string, unknown>;
+            for (const key of Object.keys(a)) {
+                if (!APPROVAL_KEYS.has(key)) {
+                    results.push({ kind: 'warning', key: `behavior.approval.${key}` });
+                }
+            }
+            if (
+                a['timeout'] !== undefined &&
+                (typeof a['timeout'] !== 'number' || a['timeout'] < 1 || !Number.isInteger(a['timeout']))
+            ) {
+                results.push({ kind: 'error', message: `${scope}.behavior.approval.timeout must be a positive integer.` });
+            }
+            if (a['autoOpen'] !== undefined && typeof a['autoOpen'] !== 'boolean') {
+                results.push({ kind: 'error', message: `${scope}.behavior.approval.autoOpen must be a boolean.` });
+            }
+        }
+    }
+    return results;
+}
+
 /** Context assembled at evaluation time. All fields optional — unset = wildcard. */
 export interface PermissionContext {
     endpoint?: string;

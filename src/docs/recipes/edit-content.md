@@ -69,6 +69,7 @@ siyuan tool get-block-content <doc-or-block-id>
 - if the Approval Center opens, approve or reject the request there
 - `siyuan approval list` shows pending requests and their ids
 - retry with `--yes` only when the action is intended and safe
+- if `behavior.allowYes` is `false`, `--yes` is disabled; approve via the Approval Center instead
 
 # Related docs
 

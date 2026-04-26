@@ -32,6 +32,10 @@ workspaces:
     permission:                        # optional: workspace-level overrides
       default: allow
       rules: [...]
+    behavior:                          # optional: workspace-level behavior
+      allowYes: false
+      approval:
+        timeout: 30
 
   work:
     baseUrl: http://192.168.1.10:6806
@@ -43,6 +47,11 @@ defaults:
   permission:                          # applied to workspaces without their own block
     default: allow
     rules: [...]
+  behavior:                            # default behavior for all workspaces
+    allowYes: true
+    approval:
+      timeout: 60
+      autoOpen: true
 ```
 
 ## Token sources
@@ -141,7 +150,7 @@ rules:
 
 ### Risk-based auto-confirmation
 
-Endpoints classified as `destructive` or `critical` (e.g. batch delete, file write, system exit) automatically require human approval via the Approval Center, **even if permission rules return `allow`**. Passing `--yes` bypasses this gate, but doing so defeats the safety intent and is not recommended. This is a safety net that cannot be disabled by config.
+Endpoints classified as `destructive` or `critical` (e.g. batch delete, file write, system exit) automatically require human approval via the Approval Center, **even if permission rules return `allow`**. Passing `--yes` bypasses this gate, but doing so defeats the safety intent and is not recommended. Set `behavior.allowYes: false` to enforce the approval flow and disable the `--yes` bypass.
 
 ### Permission cascade
 
@@ -207,9 +216,51 @@ workspaces:
 
 Final rule chain for workspace `main`: workspace rules (5) ++ defaults rules (3) = 8 rules, evaluated top-to-bottom.
 
+## Behavior
+
+Optional `behavior` section controls how the CLI handles confirm-gated writes.
+
+| Field | Type | Default | Effect |
+|-------|------|---------|--------|
+| `allowYes` | boolean | `true` | When `false`, `--yes` flag is ignored; approval flow is mandatory |
+| `approval.timeout` | number (seconds) | `60` | How long the CLI waits for an approval decision |
+| `approval.autoOpen` | boolean | `true` | Whether to auto-open the Approval Center in the browser |
+
+All fields are optional. Omitted fields inherit from the next level in the cascade.
+
+### Merge precedence
+
+Project > Workspace > Defaults > Built-in.
+
+Merge is field-level: a project setting only `allowYes` still inherits `approval.timeout` from workspace or defaults.
+
+### Example
+
+```yaml
+defaults:
+  behavior:
+    allowYes: true
+    approval:
+      timeout: 60
+      autoOpen: true
+```
+
+### CI / agent usage
+
+For CI pipelines or agent sandboxes where no browser is available:
+
+```yaml
+workspaces:
+  ci-agent:
+    behavior:
+      allowYes: true         # CI agent trusts --yes
+      approval:
+        autoOpen: false      # no browser in CI
+```
+
 ## Project config (`.siyuan-cli.yaml`)
 
-Drop at project root to pin workspace and add permission rules per directory tree.
+Drop at project root to pin workspace, add permission rules, and override behavior per directory tree.
 
 ```yaml
 schemaVersion: 1
@@ -222,6 +273,10 @@ permission:                  # optional; replaces workspace/defaults permission 
     - notebook: "20260101215354-aaa"
       path: "/20260107143325-zbrtqup/**"
       effect: deny
+behavior:                    # optional; merged with workspace/defaults behavior
+  allowYes: false            # enforce approval flow for this project
+  approval:
+    timeout: 30
 ```
 
 ### Key properties

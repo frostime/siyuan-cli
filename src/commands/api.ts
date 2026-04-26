@@ -102,6 +102,7 @@ async function callEndpoint(
         payload,
         client,
         engine,
+        config,
         workspace,
         dryRun: args.dryRun,
         yes: args.yes,

@@ -20,8 +20,13 @@ import {
     loadProjectConfig
 } from '../utils/project-config.js';
 import { CliError, ExitCode } from '../utils/errors.js';
-import type { PermissionConfig } from './schema.js';
-export type { PermissionConfig };
+import {
+    validateBehaviorRaw,
+    type BehaviorConfig,
+    type PermissionConfig,
+    type ResolvedBehaviorConfig
+} from './schema.js';
+export type { BehaviorConfig, PermissionConfig, ResolvedBehaviorConfig };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -40,6 +45,7 @@ export interface WorkspaceEntry {
     token?: string;
     tokenSource?: TokenSource;
     permission?: PermissionConfig;
+    behavior?: BehaviorConfig;
 }
 
 export interface AppConfig {
@@ -48,6 +54,7 @@ export interface AppConfig {
     workspaces: Record<string, WorkspaceEntry>;
     defaults?: {
         permission?: PermissionConfig;
+        behavior?: BehaviorConfig;
     };
 }
 
@@ -75,9 +82,49 @@ export interface ResolvedWorkspace extends WorkspaceEntry {
      * Independent of how `name` was resolved.
      */
     effectivePermission?: PermissionConfig;
+    /**
+     * Behavior declared in .siyuan-cli.yaml. When present, fields are merged
+     * with workspace and defaults behavior (field-level, not object-level).
+     */
+    effectiveBehavior?: BehaviorConfig;
 }
 
 const SCHEMA_VERSION = 1;
+
+export const BUILT_IN_BEHAVIOR: ResolvedBehaviorConfig = {
+    allowYes: true,
+    approval: { timeout: 60, autoOpen: true }
+};
+
+/**
+ * Resolve effective behavior by merging Project > Workspace > Defaults > Built-in.
+ * All three inputs are optional; missing fields fall through to the next source.
+ */
+export function resolveEffectiveBehavior(
+    defaults: BehaviorConfig | undefined,
+    workspace: BehaviorConfig | undefined,
+    project: BehaviorConfig | undefined
+): ResolvedBehaviorConfig {
+    return {
+        allowYes:
+            project?.allowYes ??
+            workspace?.allowYes ??
+            defaults?.allowYes ??
+            BUILT_IN_BEHAVIOR.allowYes,
+        approval: {
+            timeout:
+                project?.approval?.timeout ??
+                workspace?.approval?.timeout ??
+                defaults?.approval?.timeout ??
+                BUILT_IN_BEHAVIOR.approval.timeout,
+            autoOpen:
+                project?.approval?.autoOpen ??
+                workspace?.approval?.autoOpen ??
+                defaults?.approval?.autoOpen ??
+                BUILT_IN_BEHAVIOR.approval.autoOpen
+        }
+    };
+}
 
 function defaultConfig(): AppConfig {
     return {
@@ -100,6 +147,25 @@ function normalizePermission(permission?: PermissionConfig): PermissionConfig {
     };
 }
 
+function normalizeBehavior(behavior?: BehaviorConfig): BehaviorConfig | undefined {
+    if (!behavior) return undefined;
+    return {
+        ...(behavior.allowYes !== undefined ? { allowYes: behavior.allowYes } : {}),
+        ...(behavior.approval
+            ? {
+                  approval: {
+                      ...(behavior.approval.timeout !== undefined
+                          ? { timeout: behavior.approval.timeout }
+                          : {}),
+                      ...(behavior.approval.autoOpen !== undefined
+                          ? { autoOpen: behavior.approval.autoOpen }
+                          : {})
+                  }
+              }
+            : {})
+    };
+}
+
 function normalizeConfig(config: AppConfig): AppConfig {
     const workspaces = Object.fromEntries(
         Object.entries(config.workspaces ?? {}).map(([name, ws]) => [
@@ -108,7 +174,8 @@ function normalizeConfig(config: AppConfig): AppConfig {
                 baseUrl: ws.baseUrl,
                 ...(ws.token ? { token: ws.token } : {}),
                 ...(ws.tokenSource ? { tokenSource: ws.tokenSource } : {}),
-                permission: normalizePermission(ws.permission)
+                permission: normalizePermission(ws.permission),
+                ...(ws.behavior ? { behavior: normalizeBehavior(ws.behavior) } : {})
             }
         ])
     );
@@ -118,7 +185,10 @@ function normalizeConfig(config: AppConfig): AppConfig {
         current: config.current ?? '',
         workspaces,
         defaults: {
-            permission: normalizePermission(config.defaults?.permission)
+            permission: normalizePermission(config.defaults?.permission),
+            ...(config.defaults?.behavior
+                ? { behavior: normalizeBehavior(config.defaults.behavior) }
+                : {})
         }
     };
 }
@@ -130,6 +200,9 @@ function renderConfigYaml(config: AppConfig): string {
         '# Global defaults:',
         '# - permission.default: allow',
         '# - add deny/confirm rules to restrict access',
+        '# - behavior.allowYes: true (--yes bypasses confirm)',
+        '# - behavior.approval.timeout: 60 (seconds)',
+        '# - behavior.approval.autoOpen: true (open browser on confirm)',
         '# - token and tokenSource are global-only and should stay out of project files',
         ''
     ].join('\n');
@@ -194,10 +267,26 @@ function warnRulesSmoke(
     }
 }
 
-function runConfigSmokeTest(config: AppConfig): void {
+function validateBehavior(
+    behavior: unknown,
+    scope: string,
+    configPath: string
+): void {
+    const results = validateBehaviorRaw(behavior, scope);
+    for (const r of results) {
+        if (r.kind === 'error') {
+            throw new CliError(ExitCode.CONFIG, 'CONFIG_PARSE_ERROR', `${r.message} (at ${configPath})`);
+        }
+        process.stderr.write(JSON.stringify({ warning: 'UNKNOWN_BEHAVIOR_KEY', scope, ...(r.kind === 'warning' ? { key: r.key } : {}) }) + '\n');
+    }
+}
+
+function runConfigSmokeTest(config: AppConfig, configPath: string): void {
     warnRulesSmoke('defaults', config.defaults?.permission);
+    validateBehavior(config.defaults?.behavior, 'defaults', configPath);
     for (const [name, ws] of Object.entries(config.workspaces)) {
         warnRulesSmoke(`workspaces.${name}`, ws.permission);
+        validateBehavior(ws.behavior, `workspaces.${name}`, configPath);
     }
 }
 
@@ -219,13 +308,28 @@ export function loadConfig(configPath?: string): AppConfig {
                 'Delete the old config file and recreate workspaces in alpha stage.'
             );
         }
+        // Validate behavior on raw parsed data BEFORE normalization,
+        // so invalid shapes are caught before normalizeBehavior() strips them.
+        validateBehavior(parsed.defaults?.behavior, 'defaults', path);
+        if (parsed.workspaces) {
+            for (const [name, ws] of Object.entries(parsed.workspaces)) {
+                if (ws && typeof ws === 'object') {
+                    const wsRecord = ws as unknown as Record<string, unknown>;
+                    validateBehavior(
+                        wsRecord['behavior'],
+                        `workspaces.${name}`,
+                        path
+                    );
+                }
+            }
+        }
         const result: AppConfig = normalizeConfig({
             schemaVersion: SCHEMA_VERSION,
             current: parsed.current ?? '',
             workspaces: parsed.workspaces ?? {},
             defaults: parsed.defaults
         });
-        runConfigSmokeTest(result);
+        runConfigSmokeTest(result, path);
         return result;
     } catch (e) {
         if (e instanceof CliError) throw e;
@@ -323,6 +427,9 @@ export function resolveEffectiveWorkspace(
         ...(projectConfig?.permission
             ? { effectivePermission: projectConfig.permission }
             : {}),
+        ...(projectConfig?.behavior
+            ? { effectiveBehavior: projectConfig.behavior }
+            : {}),
         ...(location ? { projectConfigPath: location.path } : {})
     };
 }
@@ -381,6 +488,7 @@ export function resolveWorkspace(
         source,
         ...(token ? { token } : {}),
         ...(entry.tokenSource ? { tokenSource: entry.tokenSource } : {}),
-        ...(entry.permission ? { permission: entry.permission } : {})
+        ...(entry.permission ? { permission: entry.permission } : {}),
+        ...(entry.behavior ? { behavior: entry.behavior } : {})
     };
 }
