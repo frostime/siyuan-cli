@@ -9,7 +9,14 @@
 export type InputSource = 'literal' | 'file' | 'stdin' | 'env';
 
 // ————— Permission rule model —————
-export type PermissionEffect = 'allow' | 'deny' | 'confirm';
+export type PermissionEffect = 'allow' | 'deny' | 'approval';
+
+/**
+ * Legacy config input accepted at config/permission boundaries only.
+ * Internal engine state normalizes `confirm` to `approval`.
+ */
+export type LegacyPermissionEffect = 'confirm';
+export type PermissionEffectInput = PermissionEffect | LegacyPermissionEffect;
 
 export interface PermissionRule {
     endpoint?: string;    // glob on endpoint id
@@ -18,13 +25,21 @@ export interface PermissionRule {
     notebook?: string;    // exact match notebook id
     path?: string;        // glob on SiYuan id-based path
     // workspacePath reserved for Phase 2
-    effect: PermissionEffect;
+    effect: PermissionEffectInput;
     note?: string;        // human annotation, ignored by engine
 }
 
+export interface NormalizedPermissionRule extends Omit<PermissionRule, 'effect'> {
+    effect: PermissionEffect;
+}
+
 export interface PermissionConfig {
-    default?: PermissionEffect;    // fallback when no rule matches; defaults to 'allow'
+    default?: PermissionEffectInput;    // fallback when no rule matches; defaults to 'allow'
     rules?: PermissionRule[];
+}
+
+export function normalizePermissionEffect(effect: PermissionEffectInput): PermissionEffect {
+    return effect === 'confirm' ? 'approval' : effect;
 }
 
 // ————— Behavior config model —————
@@ -194,8 +209,8 @@ export interface PayloadTargetSpec {
     access: 'read' | 'write';
 }
 
-export interface GuardSpec {
-    /** New payload guard contract (P1+). */
+export interface FilterSpec {
+    /** Payload resource filter contract. */
     payloadTargets?: PayloadTargetSpec[];
     /** @deprecated Legacy payload guard — no endpoint uses this; kept for type compat only. Will be removed. */
     payload?: Record<string, GuardFieldKind>;
@@ -232,8 +247,10 @@ export interface DerivedMeta {
     classification: EndpointClassification;
     tags: string[];
     risk: RiskLabel;
-    /** Base confirmation derived from risk only. Workspace policies may extend it at runtime. */
-    requiresConfirmation: boolean;
+}
+
+export function isHighRisk(risk: RiskLabel): boolean {
+    return risk === 'destructive' || risk === 'critical';
 }
 
 /**
@@ -281,7 +298,7 @@ export interface EndpointSchema<TResponseData = unknown> {
     /** For endpoints that use multipart/form-data instead of JSON body. */
     multipart?: { fileFields: string[] };
     cli?: CliBehavior;
-    guard?: GuardSpec;
+    guard?: FilterSpec;
     /** Optional compact renderer for `siyuan api <id> --print compact`. */
     format?: (ctx: EndpointFormatContext<TResponseData>) => string;
 }

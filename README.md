@@ -91,7 +91,7 @@ All `api` and `tool` invocations share these flags:
 | `-w, --workspace` | Override active workspace |
 | `--baseUrl / --token` | Ad-hoc connection without a configured workspace |
 | `--dry-run` | Preview write operations without sending to kernel |
-| `-y, --yes` | Auto-confirm prompts from permission confirm rules |
+| `-y, --yes` | Bypass approval-gated operations when allowed by config |
 | `--print compact\|json` | Output mode — compact text (default) or raw JSON |
 | `-j, --json` / `-f, --file` | Pass payload as inline JSON or from a file (`-` for stdin) |
 | `--debug` | Print curl-equivalent request to stderr |
@@ -144,7 +144,7 @@ defaults:
 
 ### Permission rules
 
-Permission rules are evaluated before any request reaches the kernel. A `deny` rule is a hard block. A `confirm` rule opens the Approval Center and waits for human approval before proceeding.
+Permission rules are evaluated before any request reaches the kernel. A `deny` rule is a hard block. An `approval` rule opens the Approval Center and waits for human approval before proceeding. Legacy configs that use `confirm` are normalized to `approval`.
 
 Rules can target endpoints by id or glob, content by notebook id or ID-based `path` (not `hpath` — those change on rename), and operations by mode (`read`, `write`, `invoke`) or surface (`content`, `workspace`, `runtime`, `network`).
 

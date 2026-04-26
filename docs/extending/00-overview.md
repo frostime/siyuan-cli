@@ -69,9 +69,9 @@ docs/ (dev)                this file lives in docs/extending/ (not published)
        ├── engine.checkEndpoint(id)              Phase 1: deny by pure-caller rule or default
        ├── applyPayloadGuard(schema, ...)        Phase 2: payloadTargets → PointerPath → checkContentRef
        ├── debug preview (optional)
-       ├── engine.evaluate() + risk-auto         ruleEffect / wouldConfirm post-processing
+       ├── engine.evaluate() + risk-auto         ruleEffect / wouldRequestApproval post-processing
        ├── dry-run short-circuit for write-like
-       ├── wouldConfirm → broker + inline wait   Approval Center (or --yes bypass)
+       ├── wouldRequestApproval → broker + inline wait   Approval Center (or --yes bypass)
        ├── client.call(endpoint, payload)        or client.upload() for multipart
        └── applyResponseGuard(...)               declarative response filter + write-back
  7. render result to stdout                      src/core/output.ts + src/commands/api.ts
@@ -113,7 +113,7 @@ Both are pulled in by `src/cli.ts` and by any command that needs the registries.
 ## Key invariants
 
 - endpoint id format: `/api/<group>/<name>` → id `<group>.<name>`
-- every `EndpointSchema` must have `classification`; `risk` and `requiresConfirmation` are derived, not authored
+- every `EndpointSchema` must have `classification`; `risk` is derived, not authored
 - every `payloadTargets[*].path` must start with a property declared in `schema.payload.properties`
 - every `mode:"read" + scope:"global"` endpoint must have `guard.response` or `guard.filterResponse`
 - `format(ctx)` is optional and affects only `siyuan api ... --print compact` output

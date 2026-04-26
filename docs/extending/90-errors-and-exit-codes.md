@@ -60,7 +60,7 @@ stdout remains clean — an agent can `>/dev/null` stdout on error and still get
 | `ENDPOINT_DENIED` | 5 | permission.ts | endpoint or tool denied by rule or default policy |
 | `CONTENT_DENIED` | 5 | permission.ts / guard.ts | content access denied by rule or default policy |
 | `BLOCK_NOT_FOUND` | 1 | permission.ts | id did not resolve in kernel |
-| `CONFIRMATION_REQUIRED` | 1 | guard.ts | confirm-gated write when broker unavailable and no `--yes` |
+| `APPROVAL_UNAVAILABLE` | 1 | guard.ts | approval-gated write when broker unavailable and no `--yes` |
 | `APPROVAL_REJECTED` | 1 | approval/errors.ts | human rejected the request in the Approval Center |
 | `APPROVAL_TIMEOUT` | 1 | approval/errors.ts | no decision within the timeout window |
 | `APPROVAL_CANCELLED` | 1 | approval/errors.ts | broker shut down while CLI was waiting |
@@ -144,7 +144,7 @@ exit 5                                  → permission policy; surface reason an
 exit 1 + error: APPROVAL_REJECTED      → human rejected; surface the decision to the caller
 exit 1 + error: APPROVAL_TIMEOUT       → no decision in time; re-run
 exit 1 + error: APPROVAL_CANCELLED     → broker shut down mid-wait; re-run
-exit 1 + error: CONFIRMATION_REQUIRED  → broker unavailable; inspect broker state
+exit 1 + error: APPROVAL_UNAVAILABLE  → broker unavailable; inspect broker state
 exit 1 + error: PAYLOAD_INVALID        → fix input and retry
 exit 1 + error: KERNEL_ERROR           → data-level problem; show message as-is
 exit 1 other                            → generic failure; show message

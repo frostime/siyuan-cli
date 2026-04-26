@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { isHighRisk } from '../src/core/schema.ts';
 
 import { EndpointRegistry } from '../src/core/registry.ts';
 import { deriveEndpointId } from '../src/core/schema.ts';
@@ -108,12 +109,12 @@ test('system.exit and pushMsg demonstrate runtime riskOverride extremes', () => 
     assert.equal(exitEntry.meta.classification.mode, 'invoke');
     assert.equal(exitEntry.meta.classification.surface, 'runtime');
     assert.equal(exitEntry.meta.risk, 'critical');
-    assert.equal(exitEntry.meta.requiresConfirmation, true);
+    assert.equal(isHighRisk(exitEntry.meta.risk), true);
 
     assert.equal(msgEntry.meta.classification.mode, 'invoke');
     assert.equal(msgEntry.meta.classification.surface, 'runtime');
     assert.equal(msgEntry.meta.risk, 'safe');
-    assert.equal(msgEntry.meta.requiresConfirmation, false);
+    assert.equal(isHighRisk(msgEntry.meta.risk), false);
 });
 
 test('moveBlock denies when parentID resolves into denied content.write path', async () => {

@@ -21,6 +21,7 @@ import {
 } from '../utils/project-config.js';
 import { CliError, ExitCode } from '../utils/errors.js';
 import {
+    normalizePermissionEffect,
     validateBehaviorRaw,
     type BehaviorConfig,
     type PermissionConfig,
@@ -142,8 +143,11 @@ function defaultConfig(): AppConfig {
 
 function normalizePermission(permission?: PermissionConfig): PermissionConfig {
     return {
-        default: permission?.default ?? 'allow',
-        rules: permission?.rules ?? []
+        default: normalizePermissionEffect(permission?.default ?? 'allow'),
+        rules: (permission?.rules ?? []).map((rule) => ({
+            ...rule,
+            effect: normalizePermissionEffect(rule.effect)
+        }))
     };
 }
 
@@ -199,10 +203,10 @@ function renderConfigYaml(config: AppConfig): string {
         '#',
         '# Global defaults:',
         '# - permission.default: allow',
-        '# - add deny/confirm rules to restrict access',
-        '# - behavior.allowYes: true (--yes bypasses confirm)',
+        '# - add deny/approval rules to restrict access',
+        '# - behavior.allowYes: true (--yes bypasses approval)',
         '# - behavior.approval.timeout: 60 (seconds)',
-        '# - behavior.approval.autoOpen: true (open browser on confirm)',
+        '# - behavior.approval.autoOpen: true (open browser on approval)',
         '# - token and tokenSource are global-only and should stay out of project files',
         ''
     ].join('\n');

@@ -65,7 +65,7 @@ export const schema: EndpointSchema = {
 | `scope` | `single` | one id in, one object out |
 | `operation` | `inspect` | not a search, not a query |
 
-Risk will derive to `sensitive`. No confirmation needed.
+Risk will derive to `sensitive`. No approval needed unless a permission rule requires it.
 
 ### 3. Guard
 

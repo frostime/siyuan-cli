@@ -1,9 +1,11 @@
 /**
- * Schema guard execution — payload checking + response filtering.
+ * Runtime guard execution — permission checks, data filtering, approval handoff,
+ * endpoint call, and response filtering.
  */
 import {
     deriveEndpointId,
     evaluatePointerPath,
+    isHighRisk,
     runPointerFilterTerminal,
     type CallerContext,
     type EndpointSchema,
@@ -12,7 +14,7 @@ import {
 } from './schema.js';
 import { buildPreparedApprovalRequest, requestAndWait } from '../approval/index.js';
 import {
-    ConfirmationRequiredError,
+    ApprovalUnavailableError,
     ContentDeniedError,
     type PermissionEngine
 } from './permission.js';
@@ -192,20 +194,19 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
 
     if (debug) debugPreview(schema, payload);
 
-    // Confirm: rule-based + risk-auto post-processing
-    // Risk-auto: if the rule says 'allow' but risk is destructive/critical,
-    // upgrade to 'confirm'. User-written 'deny' or 'confirm' are never downgraded.
+    // Approval gate: rule-based + high-risk post-processing.
+    // High risk only upgrades `allow`; explicit `deny` and `approval` are honored.
     const ruleEffect = engine.evaluate({ ...caller, action });
-    const wouldConfirm =
-        ruleEffect === 'confirm' ||
-        (ruleEffect === 'allow' && entry.meta.requiresConfirmation);
+    const wouldRequestApproval =
+        ruleEffect === 'approval' ||
+        (ruleEffect === 'allow' && isHighRisk(entry.meta.risk));
 
     if (dryRun && isWriteLike(entry)) {
         return {
             dryRun: true,
             endpoint: schema.endpoint,
             payload,
-            wouldConfirm
+            wouldRequestApproval
         };
     }
 
@@ -218,7 +219,7 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
     const allowYes = behavior.allowYes;
     const effectiveYes = yes && allowYes;
 
-    if (wouldConfirm && !effectiveYes) {
+    if (wouldRequestApproval && !effectiveYes) {
         // Notify when --yes was passed but ignored
         if (yes && !allowYes) {
             const source =
@@ -238,7 +239,7 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
             );
         }
         if (!workspace) {
-            throw new ConfirmationRequiredError(id);
+            throw new ApprovalUnavailableError(id);
         }
         const timeoutSec = behavior.approval.timeout;
         const autoOpen = behavior.approval.autoOpen;
