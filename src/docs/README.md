@@ -27,6 +27,8 @@ schemaVersion: 1
 workspace: main    # must exist in `siyuan workspace list`
 ```
 
+The global configuration is stored at `~/.config/siyuan-cli/config.yaml`. It set the workspace and permissions, see `cli-usage/config-and-permission.md` for details.
+
 Inspect resolution: `siyuan workspace which`
 
 Resolution priority: `--workspace` flag > `$SIYUAN_CLI_WORKSPACE` > `.siyuan-cli.yaml` > `config.current`.
