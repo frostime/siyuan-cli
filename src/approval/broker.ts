@@ -75,7 +75,17 @@ export async function startApprovalBroker(port = 0): Promise<void> {
         const set = waiters.get(request.id);
         if (!set) return;
         for (const waiter of set) {
-            waiter.resolve(request.decision);
+            try {
+                waiter.resolve(request.decision);
+            } catch (error) {
+                process.stderr.write(
+                    JSON.stringify({
+                        warning: 'APPROVAL_WAITER_RESOLVE_FAILED',
+                        requestId: request.id,
+                        message: error instanceof Error ? error.message : String(error)
+                    }) + '\n'
+                );
+            }
         }
         waiters.delete(request.id);
     }

@@ -79,6 +79,18 @@ async function waitForDecisionWithResolvedBroker(
             signal: AbortSignal.timeout(timeoutMs + 1_000)
         }
     );
+    if (response.status === 504) {
+        const body = await response.json().catch(() => ({}));
+        const error = body as { error?: string };
+        if (error?.error === 'APPROVAL_WAIT_TIMEOUT') {
+            // Return a timed_out decision so the caller can throw ApprovalTimeoutError
+            return {
+                status: 'timed_out',
+                decidedAt: new Date().toISOString(),
+                actor: 'caller'
+            };
+        }
+    }
     return readJsonOrThrow<ApprovalDecision>(response);
 }
 
