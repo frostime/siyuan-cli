@@ -8,10 +8,9 @@ import {
 } from './errors.js';
 import {
     DEFAULT_REQUEST_TIMEOUT_SEC,
-    cleanupStaleApprovalBrokerState,
-    getBrokerBaseUrl,
+    acquireBrokerStartLock,
+    getRunningBroker,
     openApprovalBrowser,
-    pingBroker,
     readBrokerPort,
     spawnApprovalBroker,
     waitForApprovalBroker
@@ -21,6 +20,7 @@ import type {
     ApprovalCreateResponse,
     ApprovalDecision,
     ApprovalPendingEvent,
+    ApprovalResolvedBroker,
     PreparedApprovalRequest,
     RequestApprovalInput
 } from './types.js';
@@ -33,65 +33,101 @@ async function readJson<T>(response: Response): Promise<T> {
     return (await response.json()) as T;
 }
 
-export async function ensureBroker(
-    _opts?: ApprovalClientOptions
-): Promise<{ baseUrl: string }> {
-    cleanupStaleApprovalBrokerState();
-    const port = readBrokerPort();
-    if (port !== null) {
-        const baseUrl = getBrokerBaseUrl(port);
-        if (await pingBroker(baseUrl)) return { baseUrl };
+async function readJsonOrThrow<T>(response: Response): Promise<T> {
+    const body = await readJson<unknown>(response);
+    if (!response.ok) {
+        throw new ApprovalBrokerUnavailableError(
+            `Approval broker returned HTTP ${response.status}.`,
+            body
+        );
     }
-
-    await spawnApprovalBroker();
-    const ready = await waitForApprovalBroker();
-    return { baseUrl: ready.baseUrl };
+    return body as T;
 }
 
-export async function createApproval(
+async function createApprovalWithResolvedBroker(
+    broker: ApprovalResolvedBroker,
     request: PreparedApprovalRequest,
     opts?: ApprovalClientOptions
 ): Promise<ApprovalCreateResponse> {
-    const { baseUrl } = await ensureBroker(opts);
-    const response = await fetch(`${baseUrl}/api/approval/requests`, {
+    const response = await fetch(`${broker.baseUrl}/api/approval/requests`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: authHeaders(broker.token),
         body: JSON.stringify({ ...request, autoOpen: opts?.autoOpen ?? true })
     });
-    if (!response.ok) {
-        throw new ApprovalBrokerUnavailableError(
-            `Approval broker rejected request creation with HTTP ${response.status}.`
-        );
-    }
-    return readJson<ApprovalCreateResponse>(response);
+    return readJsonOrThrow<ApprovalCreateResponse>(response);
 }
 
-export async function waitForDecision(
-    baseUrl: string,
+async function waitForDecisionWithResolvedBroker(
+    broker: ApprovalResolvedBroker,
     requestId: string,
     timeoutMs: number
 ): Promise<ApprovalDecision> {
     const response = await fetch(
-        `${baseUrl}/api/approval/requests/${requestId}/wait?timeoutMs=${timeoutMs}`,
+        `${broker.baseUrl}/api/approval/requests/${requestId}/wait?timeoutMs=${timeoutMs}`,
         {
             signal: AbortSignal.timeout(timeoutMs + 1_000)
         }
     );
-    if (!response.ok) {
-        throw new ApprovalBrokerUnavailableError(
-            `Approval broker wait failed with HTTP ${response.status}.`,
-            { requestId }
-        );
+    return readJsonOrThrow<ApprovalDecision>(response);
+}
+
+function authHeaders(token: string): Record<string, string> {
+    return {
+        'content-type': 'application/json',
+        'x-siyuan-approval-token': token
+    };
+}
+
+export async function ensureBroker(
+    _opts?: ApprovalClientOptions
+): Promise<ApprovalResolvedBroker> {
+    const running = await getRunningBroker();
+    if (running) return running;
+
+    const releaseLock = await acquireBrokerStartLock();
+    try {
+        const afterLock = await getRunningBroker();
+        if (afterLock) return afterLock;
+        await spawnApprovalBroker();
+        return await waitForApprovalBroker();
+    } finally {
+        releaseLock();
     }
-    return readJson<ApprovalDecision>(response);
+}
+
+export async function createApproval(
+    broker: ApprovalResolvedBroker,
+    request: PreparedApprovalRequest,
+    opts?: ApprovalClientOptions
+): Promise<ApprovalCreateResponse> {
+    return createApprovalWithResolvedBroker(broker, request, opts);
+}
+
+export async function waitForDecision(
+    broker: ApprovalResolvedBroker,
+    requestId: string,
+    timeoutMs: number
+): Promise<ApprovalDecision> {
+    return waitForDecisionWithResolvedBroker(broker, requestId, timeoutMs);
 }
 
 export async function requestAndWait(
     request: PreparedApprovalRequest,
     opts?: ApprovalClientOptions
 ): Promise<ApprovalDecision> {
-    const { baseUrl } = await ensureBroker(opts);
-    const created = await createApproval(request, opts);
+    const broker = await ensureBroker(opts);
+    const shouldAutoOpen = opts?.autoOpen ?? true;
+    const created = await createApprovalWithResolvedBroker(broker, request, {
+        ...opts,
+        autoOpen: false
+    });
+    if (shouldAutoOpen) {
+        if (opts?.openBrowser) {
+            await opts.openBrowser(created.url);
+        } else {
+            await openApprovalBrowser(created.url);
+        }
+    }
     writePendingEvent({
         event: 'APPROVAL_PENDING',
         requestId: created.requestId,
@@ -99,8 +135,8 @@ export async function requestAndWait(
         summary: request.summary,
         expiresAt: created.expiresAt
     });
-    const decision = await waitForDecision(
-        baseUrl,
+    const decision = await waitForDecisionWithResolvedBroker(
+        broker,
         created.requestId,
         request.timeoutSec * 1_000 + 1_000
     );
@@ -160,38 +196,61 @@ export function buildPreparedApprovalRequest(
 }
 
 export async function getBrokerStatus(): Promise<unknown> {
-    const port = readBrokerPort();
-    if (port === null) {
-        return { running: false, pid: null, port: null, pendingCount: 0, waiterCount: 0 };
+    const broker = await getRunningBroker();
+    if (!broker) {
+        return {
+            running: false,
+            pid: null,
+            port: null,
+            pendingCount: 0,
+            waiterCount: 0
+        };
     }
-    const baseUrl = getBrokerBaseUrl(port);
-    if (!(await pingBroker(baseUrl))) {
-        return { running: false, pid: null, port: null, pendingCount: 0, waiterCount: 0 };
-    }
-    const response = await fetch(`${baseUrl}/api/approval/status`);
-    return readJson(response);
+    const response = await fetch(`${broker.baseUrl}/api/approval/status`);
+    return readJsonOrThrow(response);
 }
 
 export async function listApprovals(): Promise<unknown> {
-    const { baseUrl } = await ensureBroker({ autoOpen: false });
-    const response = await fetch(`${baseUrl}/api/approval/requests`);
-    return readJson(response);
+    const broker = await getRunningBroker();
+    if (!broker) {
+        return { pending: [], recent: [] };
+    }
+    const response = await fetch(`${broker.baseUrl}/api/approval/requests`);
+    return readJsonOrThrow(response);
 }
 
 export async function getApproval(requestId: string): Promise<unknown> {
-    const { baseUrl } = await ensureBroker({ autoOpen: false });
-    const response = await fetch(`${baseUrl}/api/approval/requests/${requestId}`);
-    return readJson(response);
+    const broker = await getRunningBroker();
+    if (!broker) {
+        throw new ApprovalBrokerUnavailableError(
+            'Approval broker is not running.',
+            { requestId }
+        );
+    }
+    const response = await fetch(`${broker.baseUrl}/api/approval/requests/${requestId}`);
+    return readJsonOrThrow(response);
 }
 
-async function postDecision(requestId: string, action: 'approve' | 'reject'): Promise<unknown> {
-    const { baseUrl } = await ensureBroker({ autoOpen: false });
-    const response = await fetch(`${baseUrl}/api/approval/requests/${requestId}/${action}`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ actor: 'human-cli' })
-    });
-    return readJson(response);
+async function postDecision(
+    requestId: string,
+    action: 'approve' | 'reject'
+): Promise<unknown> {
+    const broker = await getRunningBroker();
+    if (!broker) {
+        throw new ApprovalBrokerUnavailableError(
+            'Approval broker is not running.',
+            { requestId, action }
+        );
+    }
+    const response = await fetch(
+        `${broker.baseUrl}/api/approval/requests/${requestId}/${action}`,
+        {
+            method: 'POST',
+            headers: authHeaders(broker.token),
+            body: JSON.stringify({ actor: 'human-cli' })
+        }
+    );
+    return readJsonOrThrow(response);
 }
 
 export async function approveApproval(requestId: string): Promise<unknown> {
@@ -203,17 +262,24 @@ export async function rejectApproval(requestId: string): Promise<unknown> {
 }
 
 export async function openApprovalCenter(): Promise<{ url: string }> {
-    const { baseUrl } = await ensureBroker({ autoOpen: false });
-    const url = `${baseUrl}/approval`;
+    const broker = await ensureBroker({ autoOpen: false });
+    const url = `${broker.baseUrl}/approval?token=${encodeURIComponent(broker.token)}`;
     await openApprovalBrowser(url);
     return { url };
 }
 
 export async function stopApprovalBroker(): Promise<{ ok: boolean }> {
-    const port = readBrokerPort();
-    if (port === null) return { ok: true };
-    const baseUrl = getBrokerBaseUrl(port);
-    if (!(await pingBroker(baseUrl))) return { ok: true };
-    await fetch(`${baseUrl}/api/approval/shutdown`, { method: 'POST' });
+    const broker = await getRunningBroker();
+    if (!broker) return { ok: true };
+    const response = await fetch(`${broker.baseUrl}/api/approval/shutdown`, {
+        method: 'POST',
+        headers: authHeaders(broker.token),
+        body: JSON.stringify({ actor: 'caller' })
+    });
+    await readJsonOrThrow(response);
     return { ok: true };
+}
+
+export function currentBrokerPort(): number | null {
+    return readBrokerPort();
 }

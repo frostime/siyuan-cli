@@ -33,6 +33,21 @@ updated: ""
 - [ ] Add or update tests for single approval, multiple pending approvals, timeout, and broker auto-shutdown behavior
 **Verification**: Docs describe the new flow accurately and tests cover the designed approval lifecycle.
 
+### Feedback Tasks (→ [revisions/001-stabilize-approval-broker-flow.md](./revisions/001-stabilize-approval-broker-flow.md))
+- [x] Fix broker single-instance behavior in `src/approval/runtime.ts` and `src/approval/client.ts` so create/open/wait stay bound to one broker instance
+- [x] Add broker-local authorization in `src/approval/runtime.ts`, `src/approval/broker.ts`, `src/approval/client.ts`, and `src/approval/ui.ts` for all mutating routes
+- [x] Tighten broker lifecycle and read-only command behavior in `src/approval/broker.ts` and `src/approval/client.ts` so waiters prevent shutdown and read-only commands do not start a broker unnecessarily
+- [x] Improve Approval Center failure states in `src/approval/ui.ts` so broker disconnects and expired requests are visible to the user
+- [x] Add regression tests for broker binding, non-2xx broker responses, timeout, and concurrent startup in `tests/approval-*.test.ts`
+**Verification**: A real confirm-gated command opens a working Approval Center, stays attached to one broker URL, can be approved end-to-end, and no localhost process can mutate approvals without the broker token.
+
+### Feedback Tasks (→ [revisions/002-externalize-approval-center-template.md](./revisions/002-externalize-approval-center-template.md))
+- [x] Move Approval Center markup/script into a standalone HTML template file under `src/approval/`
+- [x] Replace the inline HTML string in `src/approval/ui.ts` with file loading + placeholder substitution
+- [x] Ensure the Approval Center HTML asset is copied into `dist/approval/` during build/publish
+- [x] Re-run browser-based approval testing against the extracted template
+**Verification**: The served Approval Center comes from a standalone HTML file, template variables are injected correctly, and browser debugging works directly against the extracted asset.
+
 <!-- @RULE: Organize by phases. Each task <2h, independently testable.
 Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
 
@@ -56,7 +71,7 @@ If the work belongs in a new follow-up or replacement change, the agent MUST NOT
 
 ## Progress
 
-**Overall**: 80%
+**Overall**: 88%
 
 | Phase | Progress | Status |
 |-------|----------|--------|
@@ -64,8 +79,10 @@ If the work belongs in a new follow-up or replacement change, the agent MUST NOT
 | Phase 2 | 100% | ✅ |
 | Phase 3 | 100% | ✅ |
 | Phase 4 | 50% | 🚧 |
+| Feedback / Revision 001 | 100% | ✅ |
+| Feedback / Revision 002 | 100% | ✅ |
 
 **Recent**:
-- Implemented the cohesive `src/approval/` module with broker, store, client, UI, runtime, errors, and command surface.
-- Integrated `src/core/guard.ts` with `approval.requestAndWait()` and verified the broker can start/list/stop from the CLI.
-- Updated overview and recipe docs for Approval Center behavior and broker lifecycle.
+- Extracted Approval Center into `src/approval/approval-center.html` and converted `ui.ts` into a loader/renderer.
+- Updated build packaging to copy the Approval Center HTML into `dist/approval/` and verified token substitution works.
+- Moved browser auto-open responsibility into the CLI-side approval flow so a confirm-gated command now opens the approval URL directly.

@@ -61,9 +61,16 @@ export interface ApprovalBrokerStatus {
     waiterCount: number;
 }
 
+export interface ApprovalResolvedBroker {
+    baseUrl: string;
+    port: number;
+    token: string;
+}
+
 export interface ApprovalClientOptions {
     cwd?: string;
     autoOpen?: boolean;
+    openBrowser?: (url: string) => void | Promise<void>;
 }
 
 export interface RequestApprovalInput {

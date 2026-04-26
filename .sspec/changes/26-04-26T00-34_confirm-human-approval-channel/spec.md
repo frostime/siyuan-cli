@@ -1,6 +1,6 @@
 ---
 name: confirm-human-approval-channel
-status: PLANNING
+status: DOING
 change-type: single
 created: 2026-04-26 00:34:51
 reference:

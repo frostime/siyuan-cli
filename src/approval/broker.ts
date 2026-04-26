@@ -52,7 +52,16 @@ async function readBody(req: IncomingMessage): Promise<unknown> {
     return JSON.parse(Buffer.concat(chunks).toString('utf-8')) as unknown;
 }
 
+function requireToken(req: IncomingMessage, expectedToken: string): boolean {
+    return req.headers['x-siyuan-approval-token'] === expectedToken;
+}
+
 export async function startApprovalBroker(port = 0): Promise<void> {
+    const brokerToken = process.env['SIYUAN_APPROVAL_BROKER_TOKEN'];
+    if (!brokerToken) {
+        throw new Error('Missing SIYUAN_APPROVAL_BROKER_TOKEN for approval broker startup.');
+    }
+
     const waiters = new Map<string, Set<Waiter>>();
     let graceTimer: NodeJS.Timeout | null = null;
     let lastWorkAt = Date.now();
@@ -116,7 +125,11 @@ export async function startApprovalBroker(port = 0): Promise<void> {
             const path = url.pathname;
 
             if (method === 'GET' && path === '/approval') {
-                text(res, 200, renderApprovalCenter());
+                if (url.searchParams.get('token') !== brokerToken) {
+                    json(res, 403, { error: 'APPROVAL_FORBIDDEN' });
+                    return;
+                }
+                text(res, 200, renderApprovalCenter(brokerToken));
                 return;
             }
 
@@ -141,6 +154,10 @@ export async function startApprovalBroker(port = 0): Promise<void> {
             }
 
             if (method === 'POST' && path === '/api/approval/requests') {
+                if (!requireToken(req, brokerToken)) {
+                    json(res, 403, { error: 'APPROVAL_FORBIDDEN' });
+                    return;
+                }
                 const body = (await readBody(req)) as PreparedApprovalRequest & {
                     autoOpen?: boolean;
                 };
@@ -150,13 +167,14 @@ export async function startApprovalBroker(port = 0): Promise<void> {
                 refreshLifecycle(server);
                 const brokerPort = readBrokerPort()!;
                 const urlBase = `http://127.0.0.1:${brokerPort}`;
+                const approvalUrl = `${urlBase}/approval?token=${encodeURIComponent(brokerToken)}`;
                 if (autoOpen && countPendingApprovalRequests() === 1) {
-                    await openApprovalBrowser(`${urlBase}/approval`);
+                    await openApprovalBrowser(approvalUrl);
                 }
                 json(res, 200, {
                     requestId: request.id,
                     status: request.status,
-                    url: `${urlBase}/approval`,
+                    url: approvalUrl,
                     expiresAt: request.expiresAt
                 });
                 return;
@@ -185,6 +203,7 @@ export async function startApprovalBroker(port = 0): Promise<void> {
                     json(res, 200, request.decision);
                     return;
                 }
+                touchWork();
                 const timeoutMs = Number.parseInt(
                     url.searchParams.get('timeoutMs') ?? '61000',
                     10
@@ -220,6 +239,10 @@ export async function startApprovalBroker(port = 0): Promise<void> {
             const decisionMatch =
                 /^\/api\/approval\/requests\/([^/]+)\/(approve|reject|cancel)$/.exec(path);
             if (method === 'POST' && decisionMatch) {
+                if (!requireToken(req, brokerToken)) {
+                    json(res, 403, { error: 'APPROVAL_FORBIDDEN' });
+                    return;
+                }
                 const [, requestId, action] = decisionMatch;
                 const body = (await readBody(req)) as {
                     actor?: ApprovalActor;
@@ -249,6 +272,10 @@ export async function startApprovalBroker(port = 0): Promise<void> {
             }
 
             if (method === 'POST' && path === '/api/approval/shutdown') {
+                if (!requireToken(req, brokerToken)) {
+                    json(res, 403, { error: 'APPROVAL_FORBIDDEN' });
+                    return;
+                }
                 json(res, 200, { ok: true });
                 await shutdown(server);
                 return;
@@ -284,7 +311,7 @@ export async function startApprovalBroker(port = 0): Promise<void> {
             if (!address || typeof address === 'string') {
                 throw new Error('Approval broker did not bind to a TCP port.');
             }
-            writeBrokerState(process.pid, address.port);
+            writeBrokerState(process.pid, address.port, brokerToken);
             resolve();
         });
     });

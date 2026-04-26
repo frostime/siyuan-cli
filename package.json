@@ -10,6 +10,7 @@
         "bin/**",
         "dist/**",
         "src/docs/**",
+        "src/approval/approval-center.html",
         "skills/**"
     ],
     "publishConfig": {
@@ -20,7 +21,7 @@
         "node": ">=20"
     },
     "scripts": {
-        "build": "tsdown src/cli.ts --format esm --out-dir dist --dts --unbundle",
+        "build": "tsdown src/cli.ts --format esm --out-dir dist --dts --unbundle && node -e \"import('node:fs').then(fs => { fs.mkdirSync('dist/approval', { recursive: true }); fs.copyFileSync('src/approval/approval-center.html', 'dist/approval/approval-center.html'); })\"",
         "dev": "tsdown src/cli.ts --format esm --out-dir dist --no-dts --sourcemap --watch",
         "siyuan": "node bin/siyuan.mjs",
         "typecheck": "tsc --noEmit",
