@@ -214,12 +214,7 @@ export function buildPreparedApprovalRequest(
         endpointId: id,
         endpointPath: input.entry.schema.endpoint,
         ...(input.callerTool ? { callerTool: input.callerTool } : {}),
-        risk:
-            input.entry.meta.risk === 'elevated' ||
-            input.entry.meta.risk === 'destructive' ||
-            input.entry.meta.risk === 'critical'
-                ? input.entry.meta.risk
-                : 'confirm',
+        risk: input.entry.meta.risk,
         summary: `Approve write: ${id}`,
         payloadPreview: input.payload,
         payloadDigest: hashPayload(input.payload),

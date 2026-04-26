@@ -92,7 +92,7 @@ permission:
       effect: deny
 
     - action: write
-      effect: confirm    # all writes open the Approval Center; --yes bypasses it but is not recommended
+      effect: approval   # all writes open the Approval Center; --yes bypasses it but is not recommended
 ```
 
 ### Rule fields
@@ -104,7 +104,7 @@ permission:
 | `action` | `"read"` \| `"write"` | exact | any action |
 | `notebook` | string | exact match (must be kernel id format) | any notebook |
 | `path` | string | glob (micromatch) | any path |
-| `effect` | `"allow"` \| `"deny"` \| `"confirm"` | — | **required** |
+| `effect` | `"allow"` \| `"deny"` \| `"approval"` | — | **required** |
 | `note` | string | — | human annotation, ignored by engine |
 
 ### Evaluation: top-to-bottom, first match wins
@@ -148,7 +148,7 @@ rules:
 | `/journal/**` | `/journal/x.sy`, `/journal/a/b.sy` |
 | `/journal/*` | `/journal/x.sy` (one level only) |
 
-### Risk-based auto-confirmation
+### Risk-based approval
 
 Endpoints classified as `destructive` or `critical` (e.g. batch delete, file write, system exit) automatically require human approval via the Approval Center, **even if permission rules return `allow`**. Passing `--yes` bypasses this gate, but doing so defeats the safety intent and is not recommended. Set `behavior.allowYes: false` to enforce the approval flow and disable the `--yes` bypass.
 
@@ -218,7 +218,7 @@ Final rule chain for workspace `main`: workspace rules (5) ++ defaults rules (3)
 
 ## Behavior
 
-Optional `behavior` section controls how the CLI handles confirm-gated writes.
+Optional `behavior` section controls how the CLI handles approval-gated writes.
 
 | Field | Type | Default | Effect |
 |-------|------|---------|--------|
@@ -307,7 +307,7 @@ Output includes `source`, active workspace, project config path (if found), and 
 4. Common fixes:
    - `ENDPOINT_DENIED` → add an `allow` rule for this endpoint, or check that an existing rule's glob pattern matches
    - `CONTENT_DENIED` → add an `allow` rule scoped to the target notebook/path
-   - `CONFIRMATION_REQUIRED` → the Approval Center was unavailable; inspect broker state with `siyuan approval status`, or relax the rule to `allow`
+   - `APPROVAL_UNAVAILABLE` → the Approval Center was unavailable; inspect broker state with `siyuan approval status`, or relax the rule to `allow`
 
 ## Config smoke warnings
 

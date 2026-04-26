@@ -108,7 +108,7 @@ The runtime values are concrete (`SiyuanClient`, `EndpointRegistry`, `console`),
 
 ### `callEndpoint` vs `callEndpointRaw`
 
-| | guards | confirmation | dry-run | debug | use when |
+| | guards | approval | dry-run | debug | use when |
 |---|---|---|---|---|---|
 | `callEndpoint` | yes | yes | yes | yes | normal case — every call a user could make directly |
 | `callEndpointRaw` | **no** | no | no | no | tool's own internal probe (e.g. SQL lookup to resolve an id before the real call) |
@@ -156,7 +156,7 @@ Tools should honor:
 When a tool is invoked:
 
 1. `createToolContext()` calls `permission.checkTool(id)` → Phase 1 check; rejects if a pure-caller deny rule matches or default is deny
-2. Each `ctx.callEndpoint(...)` runs full endpoint guards (Phase 2 content check, confirm gate) with `callerTool` threaded through for rule matching
+2. Each `ctx.callEndpoint(...)` runs full endpoint guards (Phase 2 content check, approval gate) with `callerTool` threaded through for rule matching
 3. `ctx.callEndpointRaw(...)` skips endpoint guards — use only for internal read probes
 
 The tool itself doesn't need to call `permission.checkContentRef()` directly — delegating to `callEndpoint` is enough.

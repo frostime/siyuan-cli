@@ -44,8 +44,7 @@ function deriveMeta(schema: EndpointSchema): RegisteredEndpoint['meta'] {
     return {
         classification,
         risk,
-        tags,
-        requiresConfirmation: risk === 'destructive' || risk === 'critical'
+        tags
     };
 }
 

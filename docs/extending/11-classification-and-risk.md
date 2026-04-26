@@ -1,12 +1,12 @@
 ---
 title: Classification and Risk Derivation
 slug: classification-and-risk
-summary: How to pick mode/surface/scope/operation and what risk/confirmation falls out of them.
+summary: How to pick mode/surface/scope/operation and what risk falls out of them.
 ---
 
 # Classification and Risk Derivation
 
-GATE: fill this in every `EndpointSchema`. Risk and confirmation are derived from it.
+GATE: fill this in every `EndpointSchema`. Risk is derived from it.
 
 ## The four axes
 
@@ -52,7 +52,7 @@ invoke + network                 → critical
 else                             → elevated
 ```
 
-`requiresConfirmation` is then derived: `destructive` or `critical` → `true`.
+High-risk approval is computed at runtime: `destructive` or `critical` → approval required.
 
 ## `riskOverride` — when to bypass
 
@@ -79,27 +79,27 @@ Real examples from `src/apis/`:
 | `system.logoutAuth` | destructive | `sensitive` | session only, no data loss |
 | `system.getConf` | safe (read+meta) | `sensitive` | full system config is sensitive |
 
-**Do not** use `riskOverride` to silence a confirmation you find annoying. The confirmation is the feature.
+**Do not** use `riskOverride` to silence an approval gate you find annoying. The approval gate is the feature.
 
-## Confirmation policy (user-controlled extension)
+## Approval policy (user-controlled extension)
 
-Confirmation is triggered when **either** is true:
+Approval is required when **either** is true:
 
-1. **Risk-auto**: `meta.requiresConfirmation = true` (derived from `destructive` or `critical` risk)
-2. **Rule effect**: the permission engine's `evaluate()` returns `'confirm'` for this call
+1. **Risk-auto**: endpoint risk is `destructive` or `critical`
+2. **Rule effect**: the permission engine's `evaluate()` returns `'approval'` for this call
 
-This post-processing happens in `guard.ts::executeEndpoint` — the engine itself just returns the effect. User rules that return `deny` are never overridden. Risk-auto only upgrades `allow` to `confirm`.
+This post-processing happens in `guard.ts::executeEndpoint` — the engine itself just returns the effect. User rules that return `deny` are never overridden. Risk-auto only sends `allow` through approval.
 
-To require confirmation on all writes (for example):
+To require approval on all writes (for example):
 
 ```yaml
 permission:
   rules:
     - action: write
-      effect: confirm
+      effect: approval
 ```
 
-The schema author cannot disable risk-auto confirmation — only the user can extend it via rules.
+The schema author cannot disable risk-auto approval — only the user can extend it via rules.
 
 ## Picking the right classification
 
@@ -114,19 +114,19 @@ The schema author cannot disable risk-auto confirmation — only the user can ex
 
 `/api/block/updateBlock`
 - `mode: write` + `surface: content` + `scope: single` + `operation: update`
-- risk = elevated, no auto-confirm
+- risk = elevated, no auto-approval
 
 `/api/filetree/moveDocs`
 - `write + content + batch + move`
-- risk = destructive, auto-confirm
+- risk = destructive, auto-approval
 
 `/api/network/forwardProxy`
 - `invoke + network + single + control`
-- risk = critical, auto-confirm
+- risk = critical, auto-approval
 
 `/api/file/putFile`
 - `write + workspace + single + update`
-- risk = critical, auto-confirm
+- risk = critical, auto-approval
 
 `/api/system/exit`
 - `invoke + runtime + single + control` with `riskOverride: "critical"`
@@ -137,4 +137,4 @@ The schema author cannot disable risk-auto confirmation — only the user can ex
 
 ## One-line summary
 
-**Classification is authored once; risk and confirmation are computed. Don't author the computed fields.**
+**Classification is authored once; risk is computed. Don't author computed fields.**

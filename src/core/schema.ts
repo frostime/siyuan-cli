@@ -9,7 +9,24 @@
 export type InputSource = 'literal' | 'file' | 'stdin' | 'env';
 
 // ————— Permission rule model —————
-export type PermissionEffect = 'allow' | 'deny' | 'confirm';
+export type PermissionEffect = 'allow' | 'deny' | 'approval';
+
+/**
+ * Alias table for effect values accepted at config boundaries.
+ * Maps accepted synonyms to their canonical PermissionEffect.
+ * Extend here to support additional aliases without touching callers.
+ */
+const EFFECT_ALIASES: Record<string, PermissionEffect> = {
+    confirm: 'approval',
+};
+
+/**
+ * Resolve a raw effect string from config/YAML to its canonical PermissionEffect.
+ * Unknown values are passed through as-is (TypeScript callers are already typed).
+ */
+export function resolvePermissionEffect(raw: PermissionEffect | string): PermissionEffect {
+    return EFFECT_ALIASES[raw] ?? (raw as PermissionEffect);
+}
 
 export interface PermissionRule {
     endpoint?: string;    // glob on endpoint id
@@ -194,8 +211,8 @@ export interface PayloadTargetSpec {
     access: 'read' | 'write';
 }
 
-export interface GuardSpec {
-    /** New payload guard contract (P1+). */
+export interface FilterSpec {
+    /** Payload resource filter contract. */
     payloadTargets?: PayloadTargetSpec[];
     /** @deprecated Legacy payload guard — no endpoint uses this; kept for type compat only. Will be removed. */
     payload?: Record<string, GuardFieldKind>;
@@ -232,8 +249,10 @@ export interface DerivedMeta {
     classification: EndpointClassification;
     tags: string[];
     risk: RiskLabel;
-    /** Base confirmation derived from risk only. Workspace policies may extend it at runtime. */
-    requiresConfirmation: boolean;
+}
+
+export function isHighRisk(risk: RiskLabel): boolean {
+    return risk === 'destructive' || risk === 'critical';
 }
 
 /**
@@ -281,7 +300,7 @@ export interface EndpointSchema<TResponseData = unknown> {
     /** For endpoints that use multipart/form-data instead of JSON body. */
     multipart?: { fileFields: string[] };
     cli?: CliBehavior;
-    guard?: GuardSpec;
+    guard?: FilterSpec;
     /** Optional compact renderer for `siyuan api <id> --print compact`. */
     format?: (ctx: EndpointFormatContext<TResponseData>) => string;
 }

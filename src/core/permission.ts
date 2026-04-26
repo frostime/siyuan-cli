@@ -3,7 +3,7 @@
  *
  * Rules are evaluated top-to-bottom; first full match wins.
  * Each rule has optional conditions (endpoint, tool, action, notebook, path)
- * and a mandatory effect (allow | deny | confirm).
+ * and a mandatory effect (allow | deny | approval).
  * Omitted conditions act as wildcards.
  *
  * Two-phase evaluation:
@@ -14,21 +14,22 @@
  *     - First full-match rule wins.
  *     - No match → default effect.
  *
- * Risk-auto confirm is a post-processing step in guard.ts:
- *   if evaluate() returns 'allow' but the endpoint's derived risk demands
- *   confirmation, the result is upgraded to 'confirm'.
+ * Risk-auto approval is a post-processing step in guard.ts:
+ *   if evaluate() returns 'allow' but the endpoint is high risk,
+ *   the execution guard sends it through the approval flow.
  */
 import micromatch from 'micromatch';
 import type { AppConfig, ResolvedWorkspace } from './config.js';
-import type {
-    CallerContext,
-    PermissionConfig,
-    PermissionContext,
-    PermissionEffect,
-    PermissionEngineLike,
-    PermissionRule,
-    RegisteredEndpoint,
-    ResourceKind
+import {
+    resolvePermissionEffect,
+    type CallerContext,
+    type PermissionConfig,
+    type PermissionContext,
+    type PermissionEffect,
+    type PermissionEngineLike,
+    type PermissionRule,
+    type RegisteredEndpoint,
+    type ResourceKind
 } from './schema.js';
 import { CliError, ExitCode } from '../utils/errors.js';
 import type { SiyuanClient } from './client.js';
@@ -50,39 +51,20 @@ export function cascadePermission(
         ...(projectPermission?.rules ?? []),
         ...(ws?.permission?.rules ?? []),
         ...(config.defaults?.permission?.rules ?? [])
-    ];
-    const defaultEffect: PermissionEffect =
+    ].map((rule) => ({
+        ...rule,
+        effect: resolvePermissionEffect(rule.effect)
+    }));
+    const defaultEffect = resolvePermissionEffect(
         projectPermission?.default ??
-        ws?.permission?.default ??
-        config.defaults?.permission?.default ??
-        'allow';
+            ws?.permission?.default ??
+            config.defaults?.permission?.default ??
+            'allow'
+    );
     return { defaultEffect, rules };
 }
 
-export function resolveEffectivePermission(
-    config: AppConfig,
-    resolved: ResolvedWorkspace
-): { defaultEffect: PermissionEffect; rules: PermissionRule[] } {
-    return cascadePermission(
-        config,
-        resolved.name,
-        resolved.effectivePermission
-    );
-}
-
 // ─── Errors ──────────────────────────────────────────────────────────────────
-
-export class PermissionDeniedError extends CliError {
-    constructor(reason: string, ruleIndex?: number) {
-        const source =
-            ruleIndex !== undefined ? ` (rule #${ruleIndex})` : ' (default)';
-        super(
-            ExitCode.PERMISSION,
-            'PERMISSION_DENIED',
-            `${reason}${source}`
-        );
-    }
-}
 
 export class EndpointDeniedError extends CliError {
     constructor(label: string, reason: string) {
@@ -110,13 +92,13 @@ export class BlockNotFoundError extends CliError {
     }
 }
 
-export class ConfirmationRequiredError extends CliError {
+export class ApprovalUnavailableError extends CliError {
     constructor(endpoint: string) {
         super(
             ExitCode.GENERAL,
-            'CONFIRMATION_REQUIRED',
-            `Endpoint "${endpoint}" requires confirmation.`,
-            'Re-run with --yes to confirm, or --dry-run to preview.'
+            'APPROVAL_UNAVAILABLE',
+            `Endpoint "${endpoint}" requires approval, but no approval broker can be used without a resolved workspace.`,
+            'Pass --workspace, set $SIYUAN_CLI_WORKSPACE, add .siyuan-cli.yaml, or re-run with --yes when behavior.allowYes is true.'
         );
     }
 }
@@ -283,7 +265,7 @@ export class PermissionEngine implements PermissionEngineLike {
                     `denied by rule #${firstPureIndex}`
                 );
             }
-            // allow or confirm → pass through to Phase 2 / confirm handling
+            // allow or approval → pass through to Phase 2 / approval handling
             return;
         }
 
@@ -331,7 +313,7 @@ export class PermissionEngine implements PermissionEngineLike {
                 `${ref.kind} "${ref.value}" (access: ${ref.access}) ${reason}`
             );
         }
-        // allow or confirm → pass (confirm handled in executeEndpoint)
+        // allow or approval → pass (approval handled in executeEndpoint)
     }
 
     // ── ID resolution ──────────────────────────────────────────────────────

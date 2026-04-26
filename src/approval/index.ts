@@ -31,7 +31,6 @@ export type {
     ApprovalDecision,
     ApprovalPendingEvent,
     ApprovalRequest,
-    ApprovalRisk,
     ApprovalStatus,
     PreparedApprovalRequest,
     RequestApprovalInput

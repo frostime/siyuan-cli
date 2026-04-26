@@ -77,22 +77,6 @@ These represent different failure modes (no broker vs broker-mediated rejection)
 - Code comments, type names, and error classes reflect the clarified terminology.
 - No behavioral change — this is a rename-only refactor.
 
-## Scope of Impact
-
-Files with terminology that may need adjustment:
-- `src/core/schema.ts` — `PermissionEffect`, `RiskLabel`, `GuardSpec`, `DerivedMeta.requiresConfirmation`
-- `src/core/permission.ts` — `ConfirmationRequiredError`, `PermissionEngine` comments
-- `src/core/guard.ts` — `wouldConfirm`, `ExecuteOptions`, comments
-- `src/core/registry.ts` — `deriveRisk()`, `requiresConfirmation`
-- `src/approval/types.ts` — `ApprovalRisk`
-- `src/approval/client.ts` — `buildPreparedApprovalRequest()` risk mapping
-- `src/approval/errors.ts` — error class names
-
-## Relational Context
-
-This issue was discovered during design discussion of behavior config fields (allowYes, approval.timeout, approval.autoOpen). Resolving the terminology first will prevent further accumulation of ambiguity when new config knobs are added.
-
-Related request: `confirm-human-approval-channel` (DONE) — the approval broker that introduced the `ApprovalRisk` type.
 
 ---
 

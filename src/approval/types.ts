@@ -1,4 +1,4 @@
-import type { RegisteredEndpoint } from '../core/schema.js';
+import type { RegisteredEndpoint, RiskLabel } from '../core/schema.js';
 
 export type ApprovalStatus =
     | 'pending'
@@ -7,7 +7,6 @@ export type ApprovalStatus =
     | 'timed_out'
     | 'cancelled';
 
-export type ApprovalRisk = 'confirm' | 'elevated' | 'destructive' | 'critical';
 export type ApprovalActor = 'human-browser' | 'human-cli' | 'caller';
 
 export interface PreparedApprovalRequest {
@@ -15,7 +14,7 @@ export interface PreparedApprovalRequest {
     endpointId: string;
     endpointPath: string;
     callerTool?: string;
-    risk: ApprovalRisk;
+    risk: RiskLabel;
     summary: string;
     payloadPreview: unknown;
     payloadDigest: string;

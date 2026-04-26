@@ -5,7 +5,8 @@ import { EndpointRegistry } from '../src/core/registry.ts';
 import {
     PermissionEngine,
     BlockNotFoundError,
-    WorkspaceAccessDeniedError
+    WorkspaceAccessDeniedError,
+    cascadePermission
 } from '../src/core/permission.ts';
 import { applyPayloadGuard } from '../src/core/guard.ts';
 import type { AppConfig, PermissionConfig } from '../src/core/config.ts';
@@ -14,6 +15,7 @@ import {
     isTerminalFilterCompatiblePointerPath,
     PointerPathShapeError,
     runPointerFilterTerminal,
+    isHighRisk,
     type EndpointSchema,
     type PermissionEngineLike
 } from '../src/core/schema.ts';
@@ -77,7 +79,7 @@ test('riskOverride wins over matrix', () => {
     });
     const entry = registry.get('system.exit')!;
     assert.equal(entry.meta.risk, 'critical');
-    assert.equal(entry.meta.requiresConfirmation, true);
+    assert.equal(isHighRisk(entry.meta.risk), true);
 });
 
 test('global read endpoint without response guard fails loud', () => {
@@ -339,9 +341,6 @@ test('endpoint without payloadTargets has no payload guard', async () => {
         filterItems(items) {
             return { kept: items, removed: 0, reasons: {} };
         },
-        requiresConfirmation() {
-            return false;
-        }
     };
 
     await applyPayloadGuard(

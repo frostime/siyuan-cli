@@ -73,7 +73,7 @@ permission:
   rules:
     - endpoint: "query.sql"      # glob on endpoint id (micromatch)
       action: read               # read | write  (omit = any action)
-      effect: allow              # allow | deny | confirm
+      effect: allow              # allow | deny | approval
 
     - tool: "append-content"     # glob on tool id
       notebook: "20260101-life"  # exact notebook id
@@ -84,7 +84,7 @@ permission:
       effect: deny
 
     - action: write
-      effect: confirm            # all writes require --yes
+      effect: approval           # all writes require approval unless --yes is allowed
 ```
 
 ### Rule fields
@@ -96,7 +96,7 @@ permission:
 | `action` | `"read"` \| `"write"` | exact | any action |
 | `notebook` | string | exact match | any notebook |
 | `path` | string | glob (micromatch) | any path |
-| `effect` | `"allow"` \| `"deny"` \| `"confirm"` | — | (required) |
+| `effect` | `"allow"` \| `"deny"` \| `"approval"` | — | (required) |
 | `note` | string | — | ignored; human annotation |
 
 ### Evaluation
@@ -152,9 +152,9 @@ Permission checks happen in two phases because the available context differs:
 - First full-match rule wins.
 - No match → `default` effect.
 
-### Risk-auto confirm (post-processing in guard.ts)
+### Risk-auto approval (post-processing in guard.ts)
 
-If the rule evaluation returns `allow` but the endpoint's derived risk is `destructive` or `critical` (`meta.requiresConfirmation = true`), the effect is upgraded to `confirm`. User rules that return `deny` are never overridden (deny is always honored).
+If the rule evaluation returns `allow` but the endpoint's derived risk is `destructive` or `critical`, the guard sends the call through approval. User rules that return `deny` are never overridden (deny is always honored).
 
 This post-processing lives in `guard.ts::executeEndpoint`, not inside the engine. The engine's `evaluate()` always returns the raw rule result.
 
@@ -175,11 +175,11 @@ If a project `.siyuan-cli.yaml` declares `permission`, that block becomes the ef
 |---|---|---|
 | `ENDPOINT_DENIED` | `checkEndpoint()` / `checkTool()` | caller denied by a pure-caller rule or default |
 | `CONTENT_DENIED` | `checkContentRef()` | content access denied by a resource-matching rule or default |
-| `CONFIRMATION_REQUIRED` | `executeEndpoint()` | needs `--yes` (rule effect = `confirm`, or risk-auto) |
+| `APPROVAL_UNAVAILABLE` | `executeEndpoint()` | approval required, but no approval broker is available and no `--yes` bypass is active |
 | `BLOCK_NOT_FOUND` | id resolution | id doesn't exist in the kernel |
 
 Exit code `5` (`ExitCode.PERMISSION`) applies to hard policy denials: `ENDPOINT_DENIED` and `CONTENT_DENIED`.
-`BLOCK_NOT_FOUND` and `CONFIRMATION_REQUIRED` are general failures (exit code `1`).
+`BLOCK_NOT_FOUND` and `APPROVAL_UNAVAILABLE` are general failures (exit code `1`).
 
 ## Full config example
 

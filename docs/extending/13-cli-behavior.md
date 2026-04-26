@@ -129,7 +129,7 @@ All `siyuan api <id>` and `siyuan tool <id>` commands accept these:
 |---|---|
 | `--workspace`, `-w` | override active workspace name |
 | `--dry-run` | preview write-like endpoints without calling the kernel |
-| `--yes`, `-y` | confirm write-like endpoints that require confirmation |
+| `--yes`, `-y` | bypass approval for write-like endpoints when allowed by behavior config |
 | `--debug` | print the intended request (curl equivalent) to stderr |
 | `--json`, `-j` | JSON-encoded payload |
 | `--file`, `-f` | JSON payload from file; `-f -` = stdin |
