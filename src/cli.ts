@@ -7,6 +7,7 @@ import { apiCommand } from './commands/api.js';
 import { toolCommand } from './commands/tool.js';
 import { skillCommand } from './commands/skill.js';
 import { docCommand, formatDocsHint } from './commands/doc.js';
+import { approvalCommand } from './approval/command.js';
 import { buildEndpointHelp } from './core/argv.js';
 import { registry } from './core/registry.js';
 import { buildToolHelp, toolRegistry } from './core/tools.js';
@@ -33,7 +34,8 @@ const main = defineCommand({
         api: apiCommand,
         tool: toolCommand,
         doc: docCommand,
-        skill: skillCommand
+        skill: skillCommand,
+        approval: approvalCommand
     }
 });
 

@@ -83,7 +83,7 @@ permission:
       effect: deny
 
     - action: write
-      effect: confirm    # all writes require --yes
+      effect: confirm    # all writes open the Approval Center; --yes bypasses it but is not recommended
 ```
 
 ### Rule fields
@@ -141,7 +141,7 @@ rules:
 
 ### Risk-based auto-confirmation
 
-Endpoints classified as `destructive` or `critical` (e.g. batch delete, file write, system exit) automatically require `--yes`, **even if permission rules return `allow`**. This is a safety net that cannot be disabled by config.
+Endpoints classified as `destructive` or `critical` (e.g. batch delete, file write, system exit) automatically require human approval via the Approval Center, **even if permission rules return `allow`**. Passing `--yes` bypasses this gate, but doing so defeats the safety intent and is not recommended. This is a safety net that cannot be disabled by config.
 
 ### Permission cascade
 
@@ -252,7 +252,7 @@ Output includes `source`, active workspace, project config path (if found), and 
 4. Common fixes:
    - `ENDPOINT_DENIED` → add an `allow` rule for this endpoint, or check that an existing rule's glob pattern matches
    - `CONTENT_DENIED` → add an `allow` rule scoped to the target notebook/path
-   - `CONFIRMATION_REQUIRED` → add `--yes` flag, or add a `confirm` → `allow` rule
+   - `CONFIRMATION_REQUIRED` → the Approval Center was unavailable; inspect broker state with `siyuan approval status`, or relax the rule to `allow`
 
 ## Config smoke warnings
 

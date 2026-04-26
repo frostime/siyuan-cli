@@ -66,6 +66,14 @@ siyuan
 ├── doc          Discover and read built-in docs
 │   ├── list     List docs with real file paths
 │   └── read     Read a doc by path or name
+├── approval     Manage the local human-approval broker
+│   ├── status   Show broker status
+│   ├── list     List pending and recent approvals
+│   ├── show     Show one approval request
+│   ├── approve  Approve a request from the terminal
+│   ├── reject   Reject a request from the terminal
+│   ├── open     Open the Approval Center in the browser
+│   └── stop     Stop the broker
 └── skill        Manage the bundled agent skill
     ├── install  Install or update to a target directory
     ├── read     Read the bundled SKILL.md
@@ -136,7 +144,7 @@ defaults:
 
 ### Permission rules
 
-Permission rules are evaluated before any request reaches the kernel. A `deny` rule is a hard block. A `confirm` rule pauses and requires `--yes` to proceed.
+Permission rules are evaluated before any request reaches the kernel. A `deny` rule is a hard block. A `confirm` rule opens the Approval Center and waits for human approval before proceeding.
 
 Rules can target endpoints by id or glob, content by notebook id or ID-based `path` (not `hpath` — those change on rename), and operations by mode (`read`, `write`, `invoke`) or surface (`content`, `workspace`, `runtime`, `network`).
 

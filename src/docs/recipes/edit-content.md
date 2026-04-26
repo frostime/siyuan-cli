@@ -63,9 +63,11 @@ siyuan tool get-block-content <doc-or-block-id>
 - use `get-block-content --showId true`
 - narrow to block id before retrying
 
-## Write denied or confirmation required
+## Write denied or approval required
 
 - inspect permission rules
+- if the Approval Center opens, approve or reject the request there
+- `siyuan approval list` shows pending requests and their ids
 - retry with `--yes` only when the action is intended and safe
 
 # Related docs

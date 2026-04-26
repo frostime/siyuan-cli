@@ -36,6 +36,19 @@ src/
 ├── utils/
 │   ├── errors.ts        CliError, ExitCode, fatalError
 │   └── paths.ts         config dir resolution (XDG + legacy APPDATA migration)
+├── approval/            human-in-the-loop approval broker
+│   ├── types.ts         shared types and contracts
+│   ├── errors.ts        ApprovalBrokerUnavailableError, ApprovalCancelledError
+│   ├── broker-paths.ts  broker state dir paths and file I/O primitives
+│   ├── broker-browser.ts  browser opening (cross-platform)
+│   ├── runtime.ts       broker process lifecycle: spawn, wait, lock, ping
+│   ├── store.ts         request persistence and queue management
+│   ├── broker.ts        localhost HTTP server, waiter queue, idle shutdown
+│   ├── client.ts        broker connection, request lifecycle, request building
+│   ├── command.ts       `siyuan approval` CLI command implementations
+│   ├── ui.ts            Approval Center template loader and renderer
+│   ├── approval-center.html  built-in Approval Center UI asset
+│   └── index.ts         module public API (re-exports for guard.ts)
 ├── docs/                agent-facing reference (published with CLI; see src/docs/README.md)
 skills/                        builtin SKILL.md bundles (copied out by `siyuan skill install`)
 docs/ (dev)                this file lives in docs/extending/ (not published)
@@ -58,7 +71,7 @@ docs/ (dev)                this file lives in docs/extending/ (not published)
        ├── debug preview (optional)
        ├── engine.evaluate() + risk-auto         ruleEffect / wouldConfirm post-processing
        ├── dry-run short-circuit for write-like
-       ├── wouldConfirm + --yes                  confirm gate
+       ├── wouldConfirm → broker + inline wait   Approval Center (or --yes bypass)
        ├── client.call(endpoint, payload)        or client.upload() for multipart
        └── applyResponseGuard(...)               declarative response filter + write-back
  7. render result to stdout                      src/core/output.ts + src/commands/api.ts
