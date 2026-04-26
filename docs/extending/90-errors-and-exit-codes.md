@@ -60,7 +60,10 @@ stdout remains clean — an agent can `>/dev/null` stdout on error and still get
 | `ENDPOINT_DENIED` | 5 | permission.ts | endpoint or tool denied by rule or default policy |
 | `CONTENT_DENIED` | 5 | permission.ts / guard.ts | content access denied by rule or default policy |
 | `BLOCK_NOT_FOUND` | 1 | permission.ts | id did not resolve in kernel |
-| `CONFIRMATION_REQUIRED` | 1 | guard.ts | write-like without `--yes` |
+| `CONFIRMATION_REQUIRED` | 1 | guard.ts | confirm-gated write when broker unavailable and no `--yes` |
+| `APPROVAL_REJECTED` | 1 | approval/errors.ts | human rejected the request in the Approval Center |
+| `APPROVAL_TIMEOUT` | 1 | approval/errors.ts | no decision within the timeout window |
+| `APPROVAL_CANCELLED` | 1 | approval/errors.ts | broker shut down while CLI was waiting |
 | `ENDPOINT_NOT_FOUND` | 1 | commands/api.ts | `describe` / call unknown id |
 | `TOOL_NOT_FOUND` | 1 | commands/tool.ts | unknown tool id |
 | `PROJECT_CONFIG_PARSE_ERROR` | 2 | utils/project-config.ts | `.siyuan-cli.yaml` unreadable or invalid YAML |
@@ -135,13 +138,16 @@ All go to stderr and never change exit code. Agents can parse them line-by-line 
 ## Agent-side error handling pattern
 
 ```text
-exit 0          → use stdout as result
-exit 2 / 3 / 4  → environment issue, surface to user ("check workspace / kernel / token")
-exit 5          → scope issue, surface reason and hint (user's config explicitly restricts this)
-exit 1 + error: CONFIRMATION_REQUIRED  → re-invoke with --yes (if policy permits)
+exit 0                                  → use stdout as result
+exit 2 / 3 / 4                          → environment issue, surface to user
+exit 5                                  → permission policy; surface reason and hint
+exit 1 + error: APPROVAL_REJECTED      → human rejected; surface the decision to the caller
+exit 1 + error: APPROVAL_TIMEOUT       → no decision in time; re-run
+exit 1 + error: APPROVAL_CANCELLED     → broker shut down mid-wait; re-run
+exit 1 + error: CONFIRMATION_REQUIRED  → broker unavailable; inspect broker state
 exit 1 + error: PAYLOAD_INVALID        → fix input and retry
-exit 1 + error: KERNEL_ERROR           → likely a data-level problem, show message as-is
-exit 1 other    → generic failure, show message
+exit 1 + error: KERNEL_ERROR           → data-level problem; show message as-is
+exit 1 other                            → generic failure; show message
 ```
 
 ## Debugging surfaces
