@@ -12,11 +12,21 @@ export type InputSource = 'literal' | 'file' | 'stdin' | 'env';
 export type PermissionEffect = 'allow' | 'deny' | 'approval';
 
 /**
- * Legacy config input accepted at config/permission boundaries only.
- * Internal engine state normalizes `confirm` to `approval`.
+ * Alias table for effect values accepted at config boundaries.
+ * Maps accepted synonyms to their canonical PermissionEffect.
+ * Extend here to support additional aliases without touching callers.
  */
-export type LegacyPermissionEffect = 'confirm';
-export type PermissionEffectInput = PermissionEffect | LegacyPermissionEffect;
+const EFFECT_ALIASES: Record<string, PermissionEffect> = {
+    confirm: 'approval',
+};
+
+/**
+ * Resolve a raw effect string from config/YAML to its canonical PermissionEffect.
+ * Unknown values are passed through as-is (TypeScript callers are already typed).
+ */
+export function resolvePermissionEffect(raw: PermissionEffect | string): PermissionEffect {
+    return EFFECT_ALIASES[raw] ?? (raw as PermissionEffect);
+}
 
 export interface PermissionRule {
     endpoint?: string;    // glob on endpoint id
@@ -25,21 +35,13 @@ export interface PermissionRule {
     notebook?: string;    // exact match notebook id
     path?: string;        // glob on SiYuan id-based path
     // workspacePath reserved for Phase 2
-    effect: PermissionEffectInput;
+    effect: PermissionEffect;
     note?: string;        // human annotation, ignored by engine
 }
 
-export interface NormalizedPermissionRule extends Omit<PermissionRule, 'effect'> {
-    effect: PermissionEffect;
-}
-
 export interface PermissionConfig {
-    default?: PermissionEffectInput;    // fallback when no rule matches; defaults to 'allow'
+    default?: PermissionEffect;    // fallback when no rule matches; defaults to 'allow'
     rules?: PermissionRule[];
-}
-
-export function normalizePermissionEffect(effect: PermissionEffectInput): PermissionEffect {
-    return effect === 'confirm' ? 'approval' : effect;
 }
 
 // ————— Behavior config model —————

@@ -144,7 +144,7 @@ defaults:
 
 ### Permission rules
 
-Permission rules are evaluated before any request reaches the kernel. A `deny` rule is a hard block. An `approval` rule opens the Approval Center and waits for human approval before proceeding. Legacy configs that use `confirm` are normalized to `approval`.
+Permission rules are evaluated before any request reaches the kernel. A `deny` rule is a hard block. An `approval` rule opens the Approval Center and waits for human approval before proceeding.
 
 Rules can target endpoints by id or glob, content by notebook id or ID-based `path` (not `hpath` — those change on rename), and operations by mode (`read`, `write`, `invoke`) or surface (`content`, `workspace`, `runtime`, `network`).
 

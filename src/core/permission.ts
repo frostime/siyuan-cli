@@ -21,9 +21,8 @@
 import micromatch from 'micromatch';
 import type { AppConfig, ResolvedWorkspace } from './config.js';
 import {
-    normalizePermissionEffect,
+    resolvePermissionEffect,
     type CallerContext,
-    type NormalizedPermissionRule,
     type PermissionConfig,
     type PermissionContext,
     type PermissionEffect,
@@ -46,17 +45,17 @@ export function cascadePermission(
     config: AppConfig,
     workspaceName: string,
     projectPermission?: PermissionConfig
-): { defaultEffect: PermissionEffect; rules: NormalizedPermissionRule[] } {
+): { defaultEffect: PermissionEffect; rules: PermissionRule[] } {
     const ws = config.workspaces[workspaceName];
-    const rules: NormalizedPermissionRule[] = [
+    const rules: PermissionRule[] = [
         ...(projectPermission?.rules ?? []),
         ...(ws?.permission?.rules ?? []),
         ...(config.defaults?.permission?.rules ?? [])
     ].map((rule) => ({
         ...rule,
-        effect: normalizePermissionEffect(rule.effect)
+        effect: resolvePermissionEffect(rule.effect)
     }));
-    const defaultEffect = normalizePermissionEffect(
+    const defaultEffect = resolvePermissionEffect(
         projectPermission?.default ??
             ws?.permission?.default ??
             config.defaults?.permission?.default ??
@@ -180,7 +179,7 @@ export interface FilterResult<T> {
 }
 
 export class PermissionEngine implements PermissionEngineLike {
-    private readonly rules: NormalizedPermissionRule[];
+    private readonly rules: PermissionRule[];
     private readonly defaultEffect: PermissionEffect;
     private readonly client: SiyuanClient;
     private readonly idCache = new Map<
@@ -189,7 +188,7 @@ export class PermissionEngine implements PermissionEngineLike {
     >();
 
     constructor(
-        rules: NormalizedPermissionRule[],
+        rules: PermissionRule[],
         defaultEffect: PermissionEffect,
         client: SiyuanClient
     ) {

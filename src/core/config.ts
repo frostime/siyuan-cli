@@ -21,7 +21,7 @@ import {
 } from '../utils/project-config.js';
 import { CliError, ExitCode } from '../utils/errors.js';
 import {
-    normalizePermissionEffect,
+    resolvePermissionEffect,
     validateBehaviorRaw,
     type BehaviorConfig,
     type PermissionConfig,
@@ -143,10 +143,10 @@ function defaultConfig(): AppConfig {
 
 function normalizePermission(permission?: PermissionConfig): PermissionConfig {
     return {
-        default: normalizePermissionEffect(permission?.default ?? 'allow'),
+        default: resolvePermissionEffect(permission?.default ?? 'allow'),
         rules: (permission?.rules ?? []).map((rule) => ({
             ...rule,
-            effect: normalizePermissionEffect(rule.effect)
+            effect: resolvePermissionEffect(rule.effect)
         }))
     };
 }
