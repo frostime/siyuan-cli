@@ -48,6 +48,12 @@ updated: ""
 - [x] Re-run browser-based approval testing against the extracted template
 **Verification**: The served Approval Center comes from a standalone HTML file, template variables are injected correctly, and browser debugging works directly against the extracted asset.
 
+### Feedback Tasks (→ [revisions/003-auto-open-and-reject-reason.md](./revisions/003-auto-open-and-reject-reason.md))
+- [ ] Improve browser auto-open reliability and fallback reporting in `src/approval/runtime.ts` and `src/approval/client.ts`
+- [ ] Add optional reject reason plumbing through `src/approval/approval-center.html`, `src/approval/client.ts`, `src/approval/store.ts`, `src/approval/errors.ts`, and `src/approval/command.ts`
+- [ ] Validate auto-open and reject-reason behavior in the current Windows/MSYS environment
+**Verification**: A confirm-gated CLI call attempts to open the approval page automatically, reject can carry a human reason, and that reason is visible to downstream CLI/agent handling.
+
 <!-- @RULE: Organize by phases. Each task <2h, independently testable.
 Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
 
@@ -81,8 +87,9 @@ If the work belongs in a new follow-up or replacement change, the agent MUST NOT
 | Phase 4 | 50% | 🚧 |
 | Feedback / Revision 001 | 100% | ✅ |
 | Feedback / Revision 002 | 100% | ✅ |
+| Feedback / Revision 003 | 0% | ⏳ |
 
 **Recent**:
 - Extracted Approval Center into `src/approval/approval-center.html` and converted `ui.ts` into a loader/renderer.
 - Updated build packaging to copy the Approval Center HTML into `dist/approval/` and verified token substitution works.
-- Moved browser auto-open responsibility into the CLI-side approval flow so a confirm-gated command now opens the approval URL directly.
+- User requested two UX improvements: more reliable automatic browser opening and an optional reject reason for human-in-the-loop feedback.

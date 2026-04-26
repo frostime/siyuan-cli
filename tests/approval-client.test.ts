@@ -162,3 +162,47 @@ test('requestAndWait auto-opens the created approval URL', async () => {
         }
     });
 });
+
+test('rejectApproval passes optional reason through to broker', async () => {
+    await withTempConfigDir(async () => {
+        const runtime = await import('../src/approval/runtime.ts');
+        const client = await import('../src/approval/client.ts');
+
+        runtime.ensureApprovalStateDirs();
+        let seenBody = '';
+        const server = createServer(async (req, res) => {
+            if (req.url === '/api/approval/status') {
+                res.writeHead(200, { 'content-type': 'application/json' });
+                res.end(JSON.stringify({ running: true }));
+                return;
+            }
+            if (req.url === '/api/approval/requests/apr_reject/reject' && req.method === 'POST') {
+                for await (const chunk of req) {
+                    seenBody += chunk.toString();
+                }
+                res.writeHead(200, { 'content-type': 'application/json' });
+                res.end(JSON.stringify({ id: 'apr_reject', status: 'rejected' }));
+                return;
+            }
+            res.writeHead(404, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({ error: 'NOT_FOUND', url: req.url }));
+        });
+
+        await new Promise<void>((resolve) => {
+            server.listen(0, '127.0.0.1', () => resolve());
+        });
+        const address = server.address();
+        assert.ok(address && typeof address !== 'string');
+        runtime.writeBrokerState(process.pid, address.port, 'secret');
+
+        try {
+            await client.rejectApproval('apr_reject', 'Need human confirmation on scope');
+            assert.match(seenBody, /Need human confirmation on scope/);
+        } finally {
+            await new Promise<void>((resolve, reject) => {
+                server.close((error) => (error ? reject(error) : resolve()));
+            });
+            runtime.cleanupApprovalBrokerState();
+        }
+    });
+});

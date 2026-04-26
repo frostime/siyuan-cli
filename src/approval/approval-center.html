@@ -34,6 +34,7 @@
   <script>
     const approvalToken = __APPROVAL_TOKEN__;
     let selectedId = null;
+    const rejectReasonDrafts = new Map();
 
     function logDebug(message, extra) {
       console.log('[approval-ui]', message, extra || '');
@@ -101,6 +102,7 @@
     async function refreshList() {
       try {
         logDebug('refreshList:start');
+        const previousSelectedId = selectedId;
         const data = await fetchJson('/api/approval/requests');
         const pending = data.pending || [];
         const list = document.getElementById('list');
@@ -120,9 +122,18 @@
             '</div>';
         }).join('');
         Array.from(document.querySelectorAll('[data-id]')).forEach((el) => {
-          el.onclick = () => { selectedId = el.getAttribute('data-id'); refreshDetail(); refreshList(); };
+          el.onclick = () => {
+            const nextId = el.getAttribute('data-id');
+            if (nextId !== selectedId) {
+              selectedId = nextId;
+              refreshDetail();
+            }
+            refreshList();
+          };
         });
-        await refreshDetail();
+        if (selectedId !== previousSelectedId || !previousSelectedId) {
+          await refreshDetail();
+        }
       } catch (error) {
         renderDisconnected(safeMessage(error, 'Unknown broker error'));
       }
@@ -131,13 +142,24 @@
     async function act(action) {
       if (!selectedId) return;
       try {
+        const reasonInput = document.getElementById('rejectReason');
+        const note =
+          action === 'reject' && reasonInput && typeof reasonInput.value === 'string'
+            ? reasonInput.value.trim()
+            : '';
+        if (action === 'reject' && note) {
+          rejectReasonDrafts.set(selectedId, note);
+        }
         await fetchJson('/api/approval/requests/' + selectedId + '/' + action, {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
             'x-siyuan-approval-token': approvalToken
           },
-          body: JSON.stringify({ actor: 'human-browser' })
+          body: JSON.stringify({
+            actor: 'human-browser',
+            ...(note ? { note } : {})
+          })
         });
         await refreshList();
       } catch (error) {
@@ -169,7 +191,16 @@
           '<pre>' + escapeHtml((item.resourceSummary || []).join('\\n')) + '</pre>' +
           '<h3>Preview</h3>' +
           '<pre>' + escapeHtml(JSON.stringify(item.payloadPreview, null, 2)) + '</pre>' +
+          '<h3>Reject reason (optional)</h3>' +
+          '<textarea id="rejectReason" rows="4" style="width: 100%; box-sizing: border-box; margin-bottom: 12px;"></textarea>' +
           '<p><button id="approve">Approve</button><button id="reject">Reject</button></p>';
+        const rejectReason = document.getElementById('rejectReason');
+        if (rejectReason) {
+          rejectReason.value = rejectReasonDrafts.get(selectedId) || '';
+          rejectReason.oninput = () => {
+            rejectReasonDrafts.set(selectedId, rejectReason.value);
+          };
+        }
         document.getElementById('approve').onclick = () => act('approve');
         document.getElementById('reject').onclick = () => act('reject');
         logDebug('refreshDetail:loaded', { id: selectedId });

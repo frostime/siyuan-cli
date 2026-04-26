@@ -29,6 +29,17 @@ function writePendingEvent(event: ApprovalPendingEvent): void {
     process.stderr.write(JSON.stringify(event) + '\n');
 }
 
+function writeAutoOpenWarning(url: string, details?: unknown): void {
+    process.stderr.write(
+        JSON.stringify({
+            warning: 'APPROVAL_AUTO_OPEN_FAILED',
+            url,
+            hint: 'Open the approval URL manually in a browser.',
+            ...(details !== undefined ? { details } : {})
+        }) + '\n'
+    );
+}
+
 async function readJson<T>(response: Response): Promise<T> {
     return (await response.json()) as T;
 }
@@ -122,10 +133,18 @@ export async function requestAndWait(
         autoOpen: false
     });
     if (shouldAutoOpen) {
-        if (opts?.openBrowser) {
-            await opts.openBrowser(created.url);
-        } else {
-            await openApprovalBrowser(created.url);
+        try {
+            const opened = opts?.openBrowser
+                ? (await opts.openBrowser(created.url), true)
+                : await openApprovalBrowser(created.url);
+            if (!opened) {
+                writeAutoOpenWarning(created.url);
+            }
+        } catch (error) {
+            writeAutoOpenWarning(
+                created.url,
+                error instanceof Error ? { message: error.message } : { error: String(error) }
+            );
         }
     }
     writePendingEvent({
@@ -142,7 +161,11 @@ export async function requestAndWait(
     );
     if (decision.status === 'approved') return decision;
     if (decision.status === 'rejected') {
-        throw new ApprovalRejectedError(created.requestId, created.url);
+        throw new ApprovalRejectedError(
+            created.requestId,
+            created.url,
+            decision.note
+        );
     }
     if (decision.status === 'timed_out') {
         throw new ApprovalTimeoutError(
@@ -233,7 +256,8 @@ export async function getApproval(requestId: string): Promise<unknown> {
 
 async function postDecision(
     requestId: string,
-    action: 'approve' | 'reject'
+    action: 'approve' | 'reject',
+    note?: string
 ): Promise<unknown> {
     const broker = await getRunningBroker();
     if (!broker) {
@@ -247,7 +271,10 @@ async function postDecision(
         {
             method: 'POST',
             headers: authHeaders(broker.token),
-            body: JSON.stringify({ actor: 'human-cli' })
+            body: JSON.stringify({
+                actor: 'human-cli',
+                ...(note ? { note } : {})
+            })
         }
     );
     return readJsonOrThrow(response);
@@ -257,15 +284,18 @@ export async function approveApproval(requestId: string): Promise<unknown> {
     return postDecision(requestId, 'approve');
 }
 
-export async function rejectApproval(requestId: string): Promise<unknown> {
-    return postDecision(requestId, 'reject');
+export async function rejectApproval(
+    requestId: string,
+    note?: string
+): Promise<unknown> {
+    return postDecision(requestId, 'reject', note);
 }
 
-export async function openApprovalCenter(): Promise<{ url: string }> {
+export async function openApprovalCenter(): Promise<{ url: string; opened: boolean }> {
     const broker = await ensureBroker({ autoOpen: false });
     const url = `${broker.baseUrl}/approval?token=${encodeURIComponent(broker.token)}`;
-    await openApprovalBrowser(url);
-    return { url };
+    const opened = await openApprovalBrowser(url);
+    return { url, opened };
 }
 
 export async function stopApprovalBroker(): Promise<{ ok: boolean }> {

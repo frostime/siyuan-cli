@@ -73,11 +73,15 @@ const rejectCommand = defineCommand({
             type: 'positional',
             description: 'Approval request id',
             required: true
+        },
+        reason: {
+            type: 'string',
+            description: 'Optional reject reason shown to the caller'
         }
     },
     run: ({ args }) =>
         tryRun(async () => {
-            out(await rejectApproval(args.id));
+            out(await rejectApproval(args.id, args.reason));
         })
 });
 

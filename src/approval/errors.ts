@@ -1,13 +1,17 @@
 import { CliError, ExitCode } from '../utils/errors.js';
 
 export class ApprovalRejectedError extends CliError {
-    constructor(requestId: string, url: string) {
+    constructor(requestId: string, url: string, note?: string) {
         super(
             ExitCode.GENERAL,
             'APPROVAL_REJECTED',
             `Approval request "${requestId}" was rejected.`,
             undefined,
-            { requestId, url }
+            {
+                requestId,
+                url,
+                ...(note ? { note } : {})
+            }
         );
     }
 }

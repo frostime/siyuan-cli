@@ -1,0 +1,14 @@
+schemaVersion: 1
+workspace: local
+permission:
+  default: allow
+  rules:
+    - endpoint: "system.exit"
+      effect: deny
+      note: "Never allow the CLI to exit SiYuan during local testing"
+    - endpoint: "system.version"
+      effect: allow
+      note: "Keep a simple read-only health check available"
+    - endpoint: "system.currentTime"
+      effect: confirm
+      note: "Force the approval flow for the current approval UX tests"

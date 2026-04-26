@@ -12,6 +12,7 @@ import {
 } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { join } from 'pathe';
+import { execFile } from 'node:child_process';
 import { spawn } from 'node:child_process';
 import { getConfigDir } from '../utils/paths.js';
 import { ApprovalBrokerUnavailableError } from './errors.js';
@@ -257,25 +258,25 @@ export async function getRunningBroker(): Promise<ApprovalResolvedBroker | null>
     return { baseUrl, port, token };
 }
 
-export async function openApprovalBrowser(url: string): Promise<void> {
-    const commands =
-        process.platform === 'win32'
-            ? [
-                  {
-                      cmd: 'powershell.exe',
-                      args: ['-NoProfile', '-Command', `Start-Process ${JSON.stringify(url)}`]
-                  },
-                  {
-                      cmd: 'cmd',
-                      args: ['/c', 'start', '""', url]
-                  }
-              ]
-            : process.platform === 'darwin'
-              ? [{ cmd: 'open', args: [url] }]
-              : [{ cmd: 'xdg-open', args: [url] }];
-
-    for (const command of commands) {
+async function tryOpenCommand(
+    command: { cmd: string; args: string[]; useExec?: boolean }
+): Promise<boolean> {
+    return await new Promise<boolean>((resolve) => {
         try {
+            if (command.useExec) {
+                execFile(
+                    command.cmd,
+                    command.args,
+                    {
+                        windowsHide: true
+                    },
+                    (error) => {
+                        resolve(!error);
+                    }
+                );
+                return;
+            }
+
             const child = spawn(command.cmd, command.args, {
                 detached: true,
                 stdio: 'ignore',
@@ -283,12 +284,52 @@ export async function openApprovalBrowser(url: string): Promise<void> {
                     ? { windowsHide: true }
                     : {})
             });
-            child.unref();
-            return;
+            child.once('error', () => resolve(false));
+            child.once('spawn', () => {
+                child.unref();
+                resolve(true);
+            });
         } catch {
-            // try next launcher
+            resolve(false);
+        }
+    });
+}
+
+export async function openApprovalBrowser(url: string): Promise<boolean> {
+    const commands =
+        process.platform === 'win32'
+            ? [
+                  {
+                      cmd: 'powershell.exe',
+                      args: ['-NoProfile', '-Command', `Start-Process ${JSON.stringify(url)}`],
+                      useExec: true
+                  },
+                  {
+                      cmd: 'cmd.exe',
+                      args: ['/c', 'start', '', url],
+                      useExec: true
+                  },
+                  {
+                      cmd: 'rundll32.exe',
+                      args: ['url.dll,FileProtocolHandler', url],
+                      useExec: true
+                  },
+                  {
+                      cmd: 'explorer.exe',
+                      args: [url],
+                      useExec: true
+                  }
+              ]
+            : process.platform === 'darwin'
+              ? [{ cmd: 'open', args: [url] }]
+              : [{ cmd: 'xdg-open', args: [url] }];
+
+    for (const command of commands) {
+        if (await tryOpenCommand(command)) {
+            return true;
         }
     }
+    return false;
 }
 
 export function removeApprovalStateDir(): void {

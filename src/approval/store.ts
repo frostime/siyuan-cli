@@ -88,7 +88,8 @@ function appendAuditRecord(request: ApprovalRequest): void {
         endpointId: request.endpointId,
         workspaceName: request.workspaceName,
         payloadDigest: request.payloadDigest,
-        summary: request.summary
+        summary: request.summary,
+        ...(request.decision.note ? { note: request.decision.note } : {})
     });
     ensureApprovalStateDirs();
     writeFileSync(getAuditPath(date), `${line}\n`, {
