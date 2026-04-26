@@ -8,13 +8,15 @@ SiYuan exposes an HTTP API — one could call it directly with curl. This CLI ex
 
 **Workspace management.** When multiple agents, sessions, or projects connect to different SiYuan instances, keeping credentials and base URLs consistent becomes brittle. `siyuan-cli` stores named workspaces globally and lets each project pin itself to one via a `.siyuan-cli.yaml` file at its root — safe to commit, cannot hold secrets. Resolution priority is explicit: `--workspace` flag → `$SIYUAN_CLI_WORKSPACE` → `.siyuan-cli.yaml` → `config.current`.
 
-**Permission layer.** Agents operating on personal notes need guardrails. The CLI enforces deny and allow rules per workspace — blocking specific endpoints, restricting content access to certain notebooks or ID-based paths. Rules are declarative YAML and evaluated before any kernel request is sent.
+**Permission layer.** Agents operating on personal notes need guardrails. The CLI enforces deny and allow rules per workspace — blocking specific endpoints, restricting content access to certain notebooks or ID-based paths. Destructive operations can route through a browser-based Approval Center for human sign-off. Rules are declarative YAML and evaluated before any kernel request is sent.
 
 **Structured API surface.** Each registered SiYuan endpoint becomes a typed subcommand with named flags, schema introspection, `--help`, `--dry-run` preview, and compact output formatting. The current built-in set covers [SiYuan's public API](https://github.com/siyuan-note/siyuan/blob/master/API.md) plus a small number of necessary non-public endpoints. Support for user-defined custom endpoints is planned.
 
 **High-level tools and built-in docs.** Beyond raw API calls, the CLI ships composite tools (document tree traversal, daily note listing, content append) and a full doc set that agents can discover and read through the CLI itself — so an agent can orient itself without external documentation.
 
 ## Install
+
+Requires Node.js >= 20.
 
 ```bash
 npm install -g @frostime/siyuan-cli
@@ -40,7 +42,7 @@ siyuan api block.getBlockKramdown --id <block-id>
 # Append markdown to a document
 siyuan tool append-content --targetId <doc-id> --targetType document --markdown "## New section"
 
-# Install the bundled agent skill
+# Install agent skill so coding agents can self-discover CLI commands & docs
 siyuan skill install
 ```
 
@@ -144,7 +146,9 @@ defaults:
 
 ### Permission rules
 
-Permission rules are evaluated before any request reaches the kernel. A `deny` rule is a hard block. An `approval` rule opens the Approval Center and waits for human approval before proceeding.
+Permission rules are evaluated before any request reaches the kernel. A `deny` rule is a hard block. An `approval` rule opens the Approval Center WebUI and waits for human approval before proceeding.
+
+![Approval Center](assets/approval-center.png)
 
 Rules can target endpoints by id or glob, content by notebook id or ID-based `path` (not `hpath` — those change on rename), and operations by mode (`read`, `write`, `invoke`) or surface (`content`, `workspace`, `runtime`, `network`).
 
