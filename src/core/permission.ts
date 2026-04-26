@@ -64,30 +64,7 @@ export function cascadePermission(
     return { defaultEffect, rules };
 }
 
-export function resolveEffectivePermission(
-    config: AppConfig,
-    resolved: ResolvedWorkspace
-): { defaultEffect: PermissionEffect; rules: PermissionRule[] } {
-    return cascadePermission(
-        config,
-        resolved.name,
-        resolved.effectivePermission
-    );
-}
-
 // ─── Errors ──────────────────────────────────────────────────────────────────
-
-export class PermissionDeniedError extends CliError {
-    constructor(reason: string, ruleIndex?: number) {
-        const source =
-            ruleIndex !== undefined ? ` (rule #${ruleIndex})` : ' (default)';
-        super(
-            ExitCode.PERMISSION,
-            'PERMISSION_DENIED',
-            `${reason}${source}`
-        );
-    }
-}
 
 export class EndpointDeniedError extends CliError {
     constructor(label: string, reason: string) {

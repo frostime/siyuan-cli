@@ -92,7 +92,7 @@ export interface ResolvedWorkspace extends WorkspaceEntry {
 
 const SCHEMA_VERSION = 1;
 
-export const BUILT_IN_BEHAVIOR: ResolvedBehaviorConfig = {
+const BUILT_IN_BEHAVIOR: ResolvedBehaviorConfig = {
     allowYes: true,
     approval: { timeout: 60, autoOpen: true }
 };

@@ -10,7 +10,7 @@ import {
     resolveEffectiveWorkspace,
     type WorkspaceEntry
 } from '../core/config.js';
-import { resolveEffectivePermission } from '../core/permission.js';
+import { cascadePermission } from '../core/permission.js';
 import { SiyuanClient } from '../core/client.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../utils/errors.js';
 import { diagnoseConnection } from '../utils/diagnostics.js';
@@ -423,7 +423,7 @@ const whichCommand = defineCommand({
                 {},
                 args.cwd ?? process.cwd()
             );
-            const effectivePerm = resolveEffectivePermission(config, resolved);
+            const effectivePerm = cascadePermission(config, resolved.name, resolved.effectivePermission);
             out({
                 workspace: resolved.name,
                 source: resolved.source,
