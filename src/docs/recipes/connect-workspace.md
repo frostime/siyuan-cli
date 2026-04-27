@@ -33,6 +33,13 @@ siyuan workspace verify main
 siyuan workspace which
 ```
 
+For a local workspace where the port is unknown (e.g. second workspace in multi-workspace setup), use directory auto-discovery:
+
+```bash
+siyuan workspace add devspace --workspace-dir /path/to/SiYuanDevSpace --token <token>
+siyuan workspace verify devspace
+```
+
 # Success checks
 
 - `workspace verify` returns `ok: true`

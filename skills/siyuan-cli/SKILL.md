@@ -30,7 +30,12 @@ SiYuan is a block-centric database, not a Markdown filesystem.
 ## Quick start
 
 ```bash
+# Direct URL (local or remote)
 siyuan workspace add main --url http://127.0.0.1:6806 --token <token>
+
+# Or: auto-discover port from workspace directory (local only)
+siyuan workspace add devspace --workspace-dir /path/to/SiYuanDevSpace --token <token>
+
 siyuan workspace verify main
 siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
 ```
@@ -57,8 +62,11 @@ siyuan tool append-content --targetId <id> --targetType document --markdown @fil
 siyuan tool list-doc-tree --notebook <notebook-id>
 
 # Workspace
+siyuan workspace add <name> --workspace-dir <path> --token <t>  # auto-discover port by directory
 siyuan workspace which               # show current resolution
 siyuan workspace list                # list all configured workspaces
+siyuan workspace verify <name>       # test connection
+siyuan workspace show <name>         # show details + resolved baseUrl
 ```
 
 ## Key rules

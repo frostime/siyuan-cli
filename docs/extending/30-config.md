@@ -28,6 +28,7 @@ workspaces:
   home:
     baseUrl: http://127.0.0.1:6806
     token: <literal-token>             # pick ONE token source
+    # workspaceDir: /abs/path/siyuan   # or: auto-discover port (local only)
     # tokenSource:                     # or env / file / command
     #   type: env
     #   value: SIYUAN_TOKEN
@@ -63,6 +64,15 @@ Runtime overrides (highest priority wins):
 4. literal `token`
 
 Workspace override: `--workspace <name>` or `SIYUAN_CLI_WORKSPACE` env var.
+
+### Workspace connection modes
+
+Each workspace needs a connection target. Two fields provide it, at least one required:
+
+- `baseUrl` — explicit URL (local or remote). Best when the port is known.
+- `workspaceDir` — absolute path to the SiYuan workspace directory. Only for local instances. The CLI auto-discovers the runtime port by reading `<workspaceDir>/conf/conf.json` and verifying against the running kernel.
+
+When both are present, `baseUrl` takes priority.
 
 ## `PermissionConfig` shape
 

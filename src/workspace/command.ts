@@ -8,6 +8,7 @@ import {
     saveConfig,
     resolveWorkspace,
     resolveEffectiveWorkspace,
+    materializeWorkspace,
     type WorkspaceEntry
 } from './config.js';
 import { cascadePermission } from '../shared/permission.js';
@@ -78,6 +79,10 @@ const addCommand = defineCommand({
             type: 'boolean',
             description: 'Overwrite existing workspace with the same name',
             default: false
+        },
+        'workspace-dir': {
+            type: 'string',
+            description: 'Workspace directory for local port auto-discovery (alternative to --url)'
         }
     },
     run: ({ args }) =>
@@ -107,7 +112,9 @@ const addCommand = defineCommand({
             }
 
             const entry: WorkspaceEntry = {
-                baseUrl: args.url,
+                ...(args['workspace-dir']
+                    ? { workspaceDir: args['workspace-dir'] }
+                    : { baseUrl: args.url }),
                 ...(args.token ? { token: args.token } : {}),
                 ...(args['token-env']
                     ? {
@@ -145,10 +152,11 @@ const addCommand = defineCommand({
                 const resolved = resolveWorkspace(verifyConfig, {
                     workspace: args.name
                 });
-                const client = new SiyuanClient(resolved);
+                const materialized = await materializeWorkspace(resolved);
+                const client = new SiyuanClient(materialized);
                 const ping = await client.ping();
                 if (!ping.ok) {
-                    const diagnosis = await diagnoseConnection(args.url);
+                    const diagnosis = await diagnoseConnection(materialized.baseUrl);
                     const hint =
                         diagnosis.hints.length > 0
                             ? diagnosis.hints.join(' | ')
@@ -156,7 +164,7 @@ const addCommand = defineCommand({
                     throw new CliError(
                         ExitCode.NETWORK,
                         'VERIFY_FAILED',
-                        `Cannot connect to ${args.url}: ${ping.message}`,
+                        `Cannot connect to ${materialized.baseUrl}: ${ping.message}`,
                         hint,
                         { diagnosis }
                     );
@@ -174,7 +182,10 @@ const addCommand = defineCommand({
 
             out({
                 added: args.name,
-                baseUrl: args.url,
+                baseUrl: args['workspace-dir'] ? '(auto-discovered)' : args.url,
+                ...(args['workspace-dir']
+                    ? { workspaceDir: args['workspace-dir'] }
+                    : {}),
                 hasToken: !!args.token || !!entry.tokenSource,
                 tokenSource: entry.tokenSource ?? null,
                 isCurrent: config.current === args.name,
@@ -200,7 +211,7 @@ const listCommand = defineCommand({
             const workspaces = Object.entries(config.workspaces).map(
                 ([name, ws]) => ({
                     name,
-                    baseUrl: ws.baseUrl,
+                    baseUrl: ws.baseUrl ?? (ws.workspaceDir ? '(auto)' : 'unknown'),
                     hasToken: !!ws.token || !!ws.tokenSource,
                     tokenSource: ws.tokenSource ?? null,
                     isCurrent: name === config.current
@@ -269,38 +280,54 @@ const verifyCommand = defineCommand({
 
             if (args.all) {
                 const results: unknown[] = [];
-                for (const [name, ws] of Object.entries(config.workspaces)) {
+                for (const name of Object.keys(config.workspaces)) {
                     const t0 = Date.now();
-                    const client = new SiyuanClient(ws);
-                    const ping = await client.ping();
-                    const diagnosis = ping.ok
-                        ? undefined
-                        : await diagnoseConnection(ws.baseUrl);
-                    results.push({
-                        workspace: name,
-                        baseUrl: ws.baseUrl,
-                        ok: ping.ok,
-                        version: ping.version,
-                        message: ping.message,
-                        elapsedMs: Date.now() - t0,
-                        ...(diagnosis ? { diagnosis } : {})
-                    });
+                    try {
+                        const resolved = resolveWorkspace(config, {
+                            workspace: name
+                        });
+                        const materialized = await materializeWorkspace(resolved);
+                        const client = new SiyuanClient(materialized);
+                        const ping = await client.ping();
+                        const diagnosis = ping.ok
+                            ? undefined
+                            : await diagnoseConnection(materialized.baseUrl);
+                        results.push({
+                            workspace: name,
+                            baseUrl: materialized.baseUrl,
+                            ok: ping.ok,
+                            version: ping.version,
+                            message: ping.message,
+                            elapsedMs: Date.now() - t0,
+                            ...(diagnosis ? { diagnosis } : {})
+                        });
+                    } catch (e) {
+                        const err = toCliError(e);
+                        results.push({
+                            workspace: name,
+                            ok: false,
+                            message: err.message,
+                            error: err.errorType,
+                            elapsedMs: Date.now() - t0
+                        });
+                    }
                 }
                 out(results);
                 return;
             }
 
             const resolved = resolveWorkspace(config, { workspace: args.name });
+            const materialized = await materializeWorkspace(resolved);
             const t0 = Date.now();
-            const client = new SiyuanClient(resolved);
+            const client = new SiyuanClient(materialized);
             const ping = await client.ping();
             const diagnosis = ping.ok
                 ? undefined
-                : await diagnoseConnection(resolved.baseUrl);
+                : await diagnoseConnection(materialized.baseUrl);
             const result = {
                 ok: ping.ok,
                 workspace: resolved.name,
-                baseUrl: resolved.baseUrl,
+                baseUrl: materialized.baseUrl,
                 version: ping.version,
                 message: ping.message,
                 elapsedMs: Date.now() - t0,
@@ -345,7 +372,8 @@ const showCommand = defineCommand({
 
             out({
                 name: resolved.name,
-                baseUrl: ws.baseUrl,
+                baseUrl: resolved.baseUrl ?? null,
+                workspaceDir: resolved.workspaceDir ?? null,
                 isCurrent: resolved.name === config.current,
                 token: args['reveal-token']
                     ? (resolved.token ?? null)
@@ -427,7 +455,8 @@ const whichCommand = defineCommand({
             out({
                 workspace: resolved.name,
                 source: resolved.source,
-                baseUrl: resolved.baseUrl,
+                baseUrl: resolved.baseUrl ?? null,
+                workspaceDir: resolved.workspaceDir ?? null,
                 hasToken: !!resolved.token,
                 projectConfigPath: resolved.projectConfigPath ?? null,
                 permissionOverriddenByProject: !!resolved.effectivePermission,

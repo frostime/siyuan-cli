@@ -12,6 +12,8 @@ summary: Agent-facing reference shipped with siyuan-cli. Start here.
 siyuan workspace list                  # check configured workspaces
 # If empty:
 siyuan workspace add main --url http://127.0.0.1:6806 --token <token>
+# Or for local auto-discovery when port is unknown:
+# siyuan workspace add devspace --workspace-dir /path/to/SiYuanDevSpace --token <token>
 siyuan workspace verify main           # test connection
 
 siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"

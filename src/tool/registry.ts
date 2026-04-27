@@ -1,5 +1,5 @@
 import { registry as endpointRegistry } from '../api/registry.js';
-import { loadConfig, resolveEffectiveWorkspace } from '../workspace/config.js';
+import { loadConfig, materializeWorkspace, resolveEffectiveWorkspace } from '../workspace/config.js';
 import { SiyuanClient } from '../shared/client.js';
 import { createPermissionEngine } from '../shared/permission.js';
 import { executeEndpoint } from '../api/guard.js';
@@ -46,7 +46,8 @@ export async function createToolContext(
         baseUrl: args.baseUrl,
         token: args.token
     });
-    const client = new SiyuanClient(workspace);
+    const materialized = await materializeWorkspace(workspace);
+    const client = new SiyuanClient(materialized);
     const permission = createPermissionEngine(config, workspace, client);
     if (toolId) permission.checkTool(toolId);
 
