@@ -21,6 +21,28 @@ GATE: read when the workspace picked by an invocation doesn't match what you exp
 
 **Why `--baseUrl` skips project-file permission**: an ad-hoc URL may point at a kernel that has nothing in common with the current project — different notebooks, different ids, possibly a completely unrelated workspace. Project permission rules are anchored to specific notebook ids and id-based paths, so forcing them onto an unknown kernel would be either incoherent (rules reference ids that don't exist there and silently match nothing) or silently wrong (rules happen to match unrelated blocks). Ad-hoc mode is a diagnostic/emergency escape hatch — "talk to this URL with these credentials, no other assumptions". If you want project permission to apply, use `--workspace <name>` instead: that route respects the project file's permission block regardless of which workspace name was ultimately chosen (see "Independence of workspace selection and permission" below).
 
+## Runtime port discovery
+
+When a workspace is configured with `workspaceDir` instead of `baseUrl`, the CLI auto-discovers the port at runtime:
+
+1. POST `/api/system/getWorkspaces` via seed port 6806 → get all running workspace paths
+2. Match `workspaceDir` against returned paths (full path or basename)
+3. Read `<workspaceDir>/conf/conf.json` → extract `serverAddrs` → pick localhost port
+4. Verify via `POST /api/system/getConf` on the discovered port
+5. Cache result (TTL 60s); re-verify on every subsequent cache hit
+
+This means `siyuan workspace which` for a `workspaceDir`-configured workspace shows:
+
+```json
+{
+  "workspace": "devspace",
+  "source": "flag",
+  "baseUrl": "http://127.0.0.1:12713"
+}
+```
+
+The `baseUrl` field is always a concrete URL by the time `SuyuanClient` sees it — callers are shielded from the resolution mechanism.
+
 ## ResolvedWorkspace.source
 
 Each invocation produces a `ResolvedWorkspace` with a `source` tag describing which step of the chain won:

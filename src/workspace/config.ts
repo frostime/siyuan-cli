@@ -27,6 +27,7 @@ import {
     type PermissionConfig,
     type ResolvedBehaviorConfig
 } from '../shared/schema.js';
+import { resolveWorkspaceDirToBaseUrl } from './resolver.js';
 export type { BehaviorConfig, PermissionConfig, ResolvedBehaviorConfig };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -42,7 +43,8 @@ export interface TokenSource {
 }
 
 export interface WorkspaceEntry {
-    baseUrl: string;
+    baseUrl?: string;
+    workspaceDir?: string;
     token?: string;
     tokenSource?: TokenSource;
     permission?: PermissionConfig;
@@ -88,6 +90,11 @@ export interface ResolvedWorkspace extends WorkspaceEntry {
      * with workspace and defaults behavior (field-level, not object-level).
      */
     effectiveBehavior?: BehaviorConfig;
+}
+
+export interface MaterializedWorkspace extends Omit<ResolvedWorkspace, 'baseUrl'> {
+    /** Concrete URL ready for SiyuanClient. */
+    baseUrl: string;
 }
 
 const SCHEMA_VERSION = 1;
@@ -175,7 +182,8 @@ function normalizeConfig(config: AppConfig): AppConfig {
         Object.entries(config.workspaces ?? {}).map(([name, ws]) => [
             name,
             {
-                baseUrl: ws.baseUrl,
+                ...(ws.baseUrl ? { baseUrl: ws.baseUrl } : {}),
+                ...(ws.workspaceDir ? { workspaceDir: ws.workspaceDir } : {}),
                 ...(ws.token ? { token: ws.token } : {}),
                 ...(ws.tokenSource ? { tokenSource: ws.tokenSource } : {}),
                 permission: normalizePermission(ws.permission),
@@ -488,11 +496,33 @@ export function resolveWorkspace(
         entry.token;
     return {
         name,
-        baseUrl: entry.baseUrl,
+        ...(entry.baseUrl ? { baseUrl: entry.baseUrl } : {}),
+        ...(entry.workspaceDir ? { workspaceDir: entry.workspaceDir } : {}),
         source,
         ...(token ? { token } : {}),
         ...(entry.tokenSource ? { tokenSource: entry.tokenSource } : {}),
         ...(entry.permission ? { permission: entry.permission } : {}),
         ...(entry.behavior ? { behavior: entry.behavior } : {})
+    };
+}
+
+export async function materializeWorkspace(
+    workspace: ResolvedWorkspace
+): Promise<MaterializedWorkspace> {
+    if (workspace.baseUrl) {
+        return workspace as MaterializedWorkspace;
+    }
+    if (!workspace.workspaceDir) {
+        throw new CliError(
+            ExitCode.CONFIG,
+            'WORKSPACE_MISSING_CONNECTION',
+            `Workspace "${workspace.name}" has neither baseUrl nor workspaceDir configured. Add one.`,
+            'Use `siyuan workspace add` with --url or --workspace-dir.'
+        );
+    }
+    const resolved = await resolveWorkspaceDirToBaseUrl(workspace.workspaceDir);
+    return {
+        ...workspace,
+        baseUrl: resolved.baseUrl
     };
 }

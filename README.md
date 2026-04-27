@@ -30,6 +30,9 @@ pnpm add -g @frostime/siyuan-cli
 # Add a workspace pointing at your local SiYuan kernel
 siyuan workspace add local --url http://127.0.0.1:6806 --token <token>
 
+# Or use directory auto-discovery when the port is unknown
+siyuan workspace add devspace --workspace-dir H:\Project_Active\SiYuanDevSpace --token <token>
+
 # Verify the connection
 siyuan workspace verify local
 

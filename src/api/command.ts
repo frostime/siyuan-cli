@@ -3,7 +3,7 @@
  */
 import { defineCommand } from 'citty';
 import { registry } from './registry.js';
-import { loadConfig, resolveEffectiveWorkspace } from '../workspace/config.js';
+import { loadConfig, materializeWorkspace, resolveEffectiveWorkspace } from '../workspace/config.js';
 import { SiyuanClient } from '../shared/client.js';
 import { createPermissionEngine } from '../shared/permission.js';
 import { executeEndpoint } from './guard.js';
@@ -81,7 +81,8 @@ async function callEndpoint(
         baseUrl: rawArgs['baseUrl'] as string | undefined,
         token: rawArgs['token'] as string | undefined
     });
-    const client = new SiyuanClient(workspace);
+    const materialized = await materializeWorkspace(workspace);
+    const client = new SiyuanClient(materialized);
     const engine = createPermissionEngine(config, workspace, client);
 
     const args = {

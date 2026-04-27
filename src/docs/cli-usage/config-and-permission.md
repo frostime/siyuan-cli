@@ -16,6 +16,23 @@ Resolution order:
 
 Created automatically by `siyuan workspace add`. File mode `0600` on POSIX.
 
+## Workspace connection strategies
+
+Two ways to specify where the kernel lives:
+
+| Method | Field | Works for |
+|--------|-------|-----------|
+| Direct URL | `baseUrl` | Local or remote |
+| Directory auto-discovery | `workspaceDir` | Local only — reads `conf.json` to find the runtime port |
+
+At least one must be present per workspace. When both are given, `baseUrl` wins.
+
+Add with `--workspace-dir`:
+
+```bash
+siyuan workspace add devspace --workspace-dir /path/to/SiYuanDevSpace --token <token>
+```
+
 ## Config structure
 
 ```yaml
@@ -26,6 +43,7 @@ workspaces:
   home:
     baseUrl: http://127.0.0.1:6806
     token: <literal-token>             # pick ONE token source per workspace
+    # workspaceDir: /abs/path/to/siyuan # or: auto-discover port (local only)
     # tokenSource:                     # alternative: external source
     #   type: env
     #   value: SIYUAN_TOKEN
@@ -37,7 +55,9 @@ workspaces:
       approval:
         timeout: 30
 
-  work:
+  devspace:
+    workspaceDir: /path/to/SiYuanDevSpace  # auto-discover port (local only)
+    token: <token>
     baseUrl: http://192.168.1.10:6806
     tokenSource:
       type: command
