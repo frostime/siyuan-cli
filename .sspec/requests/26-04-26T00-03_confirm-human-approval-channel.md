@@ -2,7 +2,7 @@
 name: confirm-human-approval-channel
 created: 2026-04-26 00:03:26
 status: DOING
-attach-change: .sspec/changes/26-04-26T00-34_confirm-human-approval-channel/spec.md
+attach-change: .sspec/changes/archive/26-04-26T00-34_confirm-human-approval-channel/spec.md
 tldr: Add a human approval path for confirm-gated operations so agent-driven calls
   can pause for user approval instead of only failing and requiring manual re-run
   with --yes.

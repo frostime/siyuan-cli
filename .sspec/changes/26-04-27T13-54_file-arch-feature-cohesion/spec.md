@@ -1,6 +1,6 @@
 ---
 name: file-arch-feature-cohesion
-status: PLANNING
+status: REVIEW
 change-type: single
 created: 2026-04-27 13:54:28
 reference:
