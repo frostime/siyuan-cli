@@ -8,7 +8,8 @@
  *   4. POST <port>/api/system/getConf → verify workspaceDir consistency.
  */
 import { readFileSync } from 'node:fs';
-import { resolve, basename } from 'pathe';
+import { basename, resolve } from 'pathe';
+import { resolve as resolveFsPath, win32 } from 'node:path';
 import { CliError, ExitCode } from '../shared/errors.js';
 
 export interface ResolvedPort {
@@ -65,6 +66,13 @@ interface GetConfResponse {
     };
 }
 
+function normalizeWorkspacePath(input: string): string {
+    if (/^[A-Za-z]:[\\/]/.test(input)) {
+        return win32.normalize(input).toLowerCase();
+    }
+    return resolveFsPath(input).toLowerCase();
+}
+
 function parseLocalhostPort(addrs: string[] | undefined): number | undefined {
     if (!addrs) return undefined;
     for (const addr of addrs) {
@@ -91,7 +99,7 @@ async function verifyPortMatchesWorkspace(
         if (data.code !== 0) return false;
         const runtimeDir = data.data?.conf?.system?.workspaceDir;
         if (!runtimeDir) return false;
-        return resolve(runtimeDir).toLowerCase() === resolve(expectedDir).toLowerCase();
+        return normalizeWorkspacePath(runtimeDir) === normalizeWorkspacePath(expectedDir);
     } catch {
         return false;
     }
@@ -106,7 +114,7 @@ export async function resolveWorkspaceDirToBaseUrl(
     workspaceDir: string,
     opts?: { seedPort?: number; timeoutMs?: number }
 ): Promise<ResolvedPort> {
-    const targetDir = resolve(workspaceDir);
+    const targetDir = workspaceDir;
     const timeoutMs = opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const seedPort = opts?.seedPort ?? DEFAULT_SEED_PORT;
 
@@ -138,12 +146,12 @@ export async function resolveWorkspaceDirToBaseUrl(
     }
 
     // —— Step 2: match workspace path ——
-    const targetLower = targetDir.toLowerCase();
+    const targetNormalized = normalizeWorkspacePath(targetDir);
     const match = workspaces.find((w) => {
-        const wsPath = resolve(w.path);
+        const wsPath = w.path;
         return (
-            wsPath.toLowerCase() === targetLower ||
-            basename(wsPath).toLowerCase() === basename(targetLower)
+            normalizeWorkspacePath(wsPath) === targetNormalized ||
+            basename(wsPath).toLowerCase() === basename(targetDir).toLowerCase()
         );
     });
 
@@ -156,7 +164,16 @@ export async function resolveWorkspaceDirToBaseUrl(
         );
     }
 
-    const matchedPath = resolve(match.path);
+    if (match.closed) {
+        throw new CliError(
+            ExitCode.CONFIG,
+            'WORKSPACE_CLOSED',
+            `Workspace "${match.path}" is currently closed in SiYuan.`,
+            'Open the workspace in SiYuan first, then retry.'
+        );
+    }
+
+    const matchedPath = match.path;
 
     // —— Step 3: read conf.json → serverAddrs ——
     let confJson: { serverAddrs?: string[] };

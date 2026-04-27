@@ -368,12 +368,12 @@ const showCommand = defineCommand({
         tryRun(async () => {
             const config = loadConfig();
             const resolved = resolveWorkspace(config, { workspace: args.name });
-            const materialized = await materializeWorkspace(resolved);
             const ws = config.workspaces[resolved.name]!;
 
             out({
                 name: resolved.name,
-                baseUrl: materialized.baseUrl,
+                baseUrl: resolved.baseUrl ?? null,
+                workspaceDir: resolved.workspaceDir ?? null,
                 isCurrent: resolved.name === config.current,
                 token: args['reveal-token']
                     ? (resolved.token ?? null)
@@ -451,12 +451,12 @@ const whichCommand = defineCommand({
                 {},
                 args.cwd ?? process.cwd()
             );
-            const materialized = await materializeWorkspace(resolved);
             const effectivePerm = cascadePermission(config, resolved.name, resolved.effectivePermission);
             out({
                 workspace: resolved.name,
                 source: resolved.source,
-                baseUrl: materialized.baseUrl,
+                baseUrl: resolved.baseUrl ?? null,
+                workspaceDir: resolved.workspaceDir ?? null,
                 hasToken: !!resolved.token,
                 projectConfigPath: resolved.projectConfigPath ?? null,
                 permissionOverriddenByProject: !!resolved.effectivePermission,
