@@ -161,8 +161,8 @@ Use `riskOverride` if the derived risk is obviously wrong, with a comment.
 
 ```sh
 # Write the schema + register it
-edit src/apis/<group>/<n>.ts
-edit src/apis/index.ts
+edit src/api/endpoints/<group>/<n>.ts
+edit src/api/endpoints/index.ts
 
 # Type and lint
 pnpm typecheck
@@ -214,7 +214,7 @@ description: [
 - **guarding an id field you're not sure is a block id**: wrong `kind` makes the guard resolve it as a block id and fail with `BLOCK_NOT_FOUND`
 - **using `additionalProperties: true` "just in case"**: defeats schema validation; the whole point of schema here is to fail fast
 - **skipping `payloadTargets` for non-public ids**: permission model still applies; private endpoints don't get a pass
-- **forgetting to add to `src/apis/index.ts`**: file exists, builds fine, endpoint silently absent
+- **forgetting to add to `src/api/endpoints/index.ts`**: file exists, builds fine, endpoint silently absent
 
 ## One-line summary
 

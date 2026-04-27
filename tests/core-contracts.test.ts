@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { EndpointRegistry } from '../src/core/registry.ts';
+import { EndpointRegistry } from '../src/api/registry.ts';
 import {
     PermissionEngine,
     BlockNotFoundError,
-    WorkspaceAccessDeniedError,
+    ContentDeniedError,
     cascadePermission
-} from '../src/core/permission.ts';
-import { applyPayloadGuard } from '../src/core/guard.ts';
-import type { AppConfig, PermissionConfig } from '../src/core/config.ts';
+} from '../src/shared/permission.ts';
+import { applyPayloadGuard } from '../src/api/guard.ts';
+import type { AppConfig, PermissionConfig } from '../src/workspace/config.ts';
 import {
     evaluatePointerPath,
     isTerminalFilterCompatiblePointerPath,
@@ -18,7 +18,7 @@ import {
     isHighRisk,
     type EndpointSchema,
     type PermissionEngineLike
-} from '../src/core/schema.ts';
+} from '../src/shared/schema.ts';
 
 function makeConfig(permission?: PermissionConfig): AppConfig {
     return {
@@ -31,6 +31,13 @@ function makeConfig(permission?: PermissionConfig): AppConfig {
             }
         }
     };
+}
+
+function makeEngine(client: any, permission?: PermissionConfig) {
+    const config = makeConfig(permission);
+    const { rules, defaultEffect } = cascadePermission(config, 'local');
+    const engine = new PermissionEngine(rules, defaultEffect, client);
+    return { config, engine };
 }
 
 test('registry derives meta from authored classification', () => {
@@ -215,77 +222,31 @@ test('runPointerFilterTerminal rejects multiple array expansions', () => {
     );
 });
 
-test('requiresConfirmation uses risk-auto and policy-match union', () => {
+test('approval decision uses rule effect plus high-risk fallback', () => {
     const client = { call: async () => [] } as any;
-    const config = makeConfig({
-        confirm: { modes: ['write'] }
-    });
-    const engine = new PermissionEngine(config, 'local', client);
-
-    const elevatedWrite = {
-        id: 'block.updateBlock',
-        group: 'block',
-        name: 'updateBlock',
-        schema: {
-            endpoint: '/api/block/updateBlock',
-            summary: 'Update',
-            payload: { type: 'object', properties: { id: { type: 'string' } } },
-            classification: {
-                mode: 'write',
-                surface: 'content',
-                scope: 'single',
-                operation: 'update'
+    const { engine } = makeEngine(client, {
+        rules: [
+            {
+                endpoint: 'block.updateBlock',
+                action: 'write',
+                effect: 'approval'
             }
-        },
-        meta: {
-            classification: {
-                mode: 'write',
-                surface: 'content',
-                scope: 'single',
-                operation: 'update'
-            },
-            risk: 'elevated',
-            tags: ['mode:write'],
-            requiresConfirmation: false
-        }
-    } as any;
+        ]
+    });
 
-    const criticalInvoke = {
-        ...elevatedWrite,
-        id: 'system.exit',
-        meta: {
-            classification: {
-                mode: 'invoke',
-                surface: 'runtime',
-                scope: 'single',
-                operation: 'control',
-                riskOverride: 'critical'
-            },
-            risk: 'critical',
-            tags: ['risk:critical'],
-            requiresConfirmation: true
-        }
-    } as any;
+    const wouldRequestApproval = (effect: string, risk: string): boolean =>
+        effect === 'approval' || (effect === 'allow' && isHighRisk(risk as any));
 
-    const sensitiveRead = {
-        ...elevatedWrite,
-        id: 'query.sql',
-        meta: {
-            classification: {
-                mode: 'read',
-                surface: 'content',
-                scope: 'global',
-                operation: 'query'
-            },
-            risk: 'sensitive',
-            tags: ['mode:read'],
-            requiresConfirmation: false
-        }
-    } as any;
+    const byRule = engine.evaluate({
+        endpoint: 'block.updateBlock',
+        action: 'write'
+    });
+    const byRisk = engine.evaluate({ endpoint: 'system.exit', action: 'write' });
+    const plainRead = engine.evaluate({ endpoint: 'query.sql', action: 'read' });
 
-    assert.equal(engine.requiresConfirmation(elevatedWrite), true);
-    assert.equal(engine.requiresConfirmation(criticalInvoke), true);
-    assert.equal(engine.requiresConfirmation(sensitiveRead), false);
+    assert.equal(wouldRequestApproval(byRule, 'elevated'), true);
+    assert.equal(wouldRequestApproval(byRisk, 'critical'), true);
+    assert.equal(wouldRequestApproval(plainRead, 'sensitive'), false);
 });
 
 test('resolveContentIds caches and throws BlockNotFoundError for missing ids', async () => {
@@ -306,7 +267,7 @@ test('resolveContentIds caches and throws BlockNotFoundError for missing ids', a
         }
     } as any;
 
-    const engine = new PermissionEngine(makeConfig(), 'local', client);
+    const { engine } = makeEngine(client);
     const one = await engine.resolveContentId('known');
     assert.deepEqual(one, {
         notebook: 'nb',
@@ -520,11 +481,9 @@ test('array payload targets reject on any denied item', async () => {
 
 test('workspace deny rejects workspace-path refs', async () => {
     const client = { call: async () => [] } as any;
-    const engine = new PermissionEngine(
-        makeConfig({ workspace: { write: { paths: { deny: ['**'] } } } }),
-        'local',
-        client
-    );
+    const { engine } = makeEngine(client, {
+        rules: [{ action: 'write', effect: 'deny' }]
+    });
     await assert.rejects(
         () =>
             engine.checkContentRef({
@@ -532,6 +491,6 @@ test('workspace deny rejects workspace-path refs', async () => {
                 value: '/workspace/notes.txt',
                 access: 'write'
             }),
-        WorkspaceAccessDeniedError
+        ContentDeniedError
     );
 });

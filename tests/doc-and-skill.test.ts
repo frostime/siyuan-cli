@@ -7,7 +7,7 @@ import {
     readBuiltinDoc,
     resolveBuiltinDoc,
     resolveDocsRoot
-} from '../src/core/docs.ts';
+} from '../src/doc/runtime.ts';
 import {
     installSkill,
     normalizeSkillTargetName,
@@ -15,7 +15,7 @@ import {
     resolveBuiltinSkillsDir,
     resolveSkillTargetDir,
     uninstallSkill
-} from '../src/core/skills.ts';
+} from '../src/skill/runtime.ts';
 
 const originalCwd = process.cwd();
 
@@ -32,12 +32,12 @@ test('docs root points to shipped docs and listBuiltinDocs includes recipes', ()
 test('resolveDocsRoot supports both dev and packaged layouts', () => {
     const normalize = (path: string) => path.replace(/\\/g, '/');
 
-    const devRoot = resolveDocsRoot('H:/repo/src/core', (path) =>
+    const devRoot = resolveDocsRoot('H:/repo/src/doc', (path) =>
         normalize(path) === 'H:/repo/src/docs'
     );
     assert.equal(normalize(devRoot), 'H:/repo/src/docs');
 
-    const packagedRoot = resolveDocsRoot('H:/repo/dist/core', (path) =>
+    const packagedRoot = resolveDocsRoot('H:/repo/dist/doc', (path) =>
         normalize(path) === 'H:/repo/src/docs'
     );
     assert.equal(normalize(packagedRoot), 'H:/repo/src/docs');
@@ -64,12 +64,12 @@ test('readSkill returns bundled skill content', () => {
 test('resolveBuiltinSkillsDir supports both dev and packaged layouts', () => {
     const normalize = (path: string) => path.replace(/\\/g, '/');
 
-    const devRoot = resolveBuiltinSkillsDir('H:/repo/src/core', (path) =>
+    const devRoot = resolveBuiltinSkillsDir('H:/repo/src/skill', (path) =>
         normalize(path) === 'H:/repo/skills'
     );
     assert.equal(normalize(devRoot), 'H:/repo/skills');
 
-    const packagedRoot = resolveBuiltinSkillsDir('H:/repo/dist/core', (path) =>
+    const packagedRoot = resolveBuiltinSkillsDir('H:/repo/dist/skill', (path) =>
         normalize(path) === 'H:/repo/skills'
     );
     assert.equal(normalize(packagedRoot), 'H:/repo/skills');

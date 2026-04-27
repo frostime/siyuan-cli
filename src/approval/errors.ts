@@ -1,4 +1,4 @@
-import { CliError, ExitCode } from '../utils/errors.js';
+import { CliError, ExitCode } from '../shared/errors.js';
 
 export class ApprovalRejectedError extends CliError {
     constructor(requestId: string, url: string, note?: string) {

@@ -11,13 +11,13 @@ GATE: you have a documented kernel API (`/api/<group>/<n>`) with known payload a
 ## Checklist
 
 ```text
-[ ] 1. Create src/apis/<group>/<n>.ts
+[ ] 1. Create src/api/endpoints/<group>/<n>.ts
 [ ] 2. Fill payload JSONSchema
 [ ] 3. Pick classification (mode/surface/scope/operation)
 [ ] 4. Decide guard (payloadTargets / response / filterResponse / none)
 [ ] 5. Consider cli (primary / allowSource / examples)
 [ ] 6. Consider compact `format` for read-heavy output
-[ ] 7. Register in src/apis/index.ts
+[ ] 7. Register in src/api/endpoints/index.ts
 [ ] 8. Verify: pnpm typecheck && pnpm build && siyuan api <id> --help
 ```
 
@@ -28,7 +28,7 @@ Goal: wrap `/api/block/getRefIDs` that takes `{ id }` and returns `{ refIDs: str
 ### 1. Create the schema file
 
 ```ts
-// src/apis/block/getRefIDs.ts
+// src/api/endpoints/block/getRefIDs.ts
 import type { EndpointSchema } from "../../core/schema.js";
 
 export const schema: EndpointSchema = {
@@ -126,7 +126,7 @@ Keep the formatter lossy only in presentation terms. `--print json` remains the 
 ### 6. Register
 
 ```ts
-// src/apis/index.ts
+// src/api/endpoints/index.ts
 import { schema as blockGetRefIDs } from "./block/getRefIDs.js";
 
 const schemas = [
@@ -194,7 +194,7 @@ response is a scalar or a fixed-shape object with no lists?
 - **forgetting `pattern` on id fields**: lets garbage through to the kernel, producing cryptic errors
 - **guarding the wrong kind**: `{ path: "hpath", kind: "path", ... }` — `path` kind expects a SiYuan id-based path, not an hpath
 - **setting `additionalProperties: true` to hush an error**: find the missing property declaration instead
-- **skipping registration**: file exists, `pnpm build` passes, but `siyuan api list` doesn't show it → add to `src/apis/index.ts`
+- **skipping registration**: file exists, `pnpm build` passes, but `siyuan api list` doesn't show it → add to `src/api/endpoints/index.ts`
 
 ## After adding
 

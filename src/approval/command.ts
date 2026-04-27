@@ -6,7 +6,7 @@
  */
 import { defineCommand } from 'citty';
 import { ensureBroker, startApprovalBroker } from './index.js';
-import { fatalError, toCliError } from '../utils/errors.js';
+import { fatalError, toCliError } from '../shared/errors.js';
 import { getRunningBroker } from './runtime.js';
 import { openApprovalBrowser } from './broker-browser.js';
 import { ApprovalBrokerUnavailableError } from './errors.js';

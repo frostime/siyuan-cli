@@ -62,7 +62,7 @@ guard: {
 }
 ```
 
-Use only when the response shape needs logic that the declarative form can't express — typically nested write-back, conditional field location, or partial rejection of a wrapped object. See `src/apis/filetree/listDocsByPath.ts`.
+Use only when the response shape needs logic that the declarative form can't express — typically nested write-back, conditional field location, or partial rejection of a wrapped object. See `src/api/endpoints/filetree/listDocsByPath.ts`.
 
 ## PointerPath grammar
 
@@ -129,7 +129,7 @@ global-read endpoint with no payload that resolves to a resource?
 ### Scalar payload target
 
 ```ts
-// src/apis/block/getBlockKramdown.ts
+// src/api/endpoints/block/getBlockKramdown.ts
 guard: {
   payloadTargets: [
     { path: "id", kind: "id", access: "read" },
@@ -140,7 +140,7 @@ guard: {
 ### Array payload target
 
 ```ts
-// src/apis/block/transferBlockRef.ts
+// src/api/endpoints/block/transferBlockRef.ts
 guard: {
   payloadTargets: [
     { path: "fromID", kind: "id", access: "write" },
@@ -153,7 +153,7 @@ guard: {
 ### Root-array response filter
 
 ```ts
-// src/apis/query/sql.ts
+// src/api/endpoints/query/sql.ts
 guard: {
   response: {
     itemsAt: "[*]",
@@ -165,7 +165,7 @@ guard: {
 ### Nested-array response filter
 
 ```ts
-// src/apis/search/fullTextSearchBlock.ts
+// src/api/endpoints/search/fullTextSearchBlock.ts
 guard: {
   response: {
     itemsAt: "blocks[*]",
@@ -177,7 +177,7 @@ guard: {
 ### Imperative fallback for wrapped + write-back response
 
 ```ts
-// src/apis/filetree/listDocsByPath.ts
+// src/api/endpoints/filetree/listDocsByPath.ts
 guard: {
   payloadTargets: [
     { path: "notebook", kind: "notebook", access: "read" },
@@ -209,7 +209,7 @@ guard: {
 
 ## Runtime internals (for debugging)
 
-`src/core/schema.ts` exposes:
+`src/shared/schema.ts` exposes:
 
 - `compilePointerPath(path)` → `PathOp[]`
 - `runPointerGet(root, ops, path, policy?)` → `unknown[]`

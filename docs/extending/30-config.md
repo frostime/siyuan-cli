@@ -10,7 +10,7 @@ GATE: read this before writing a new guard or debugging a `CONTENT_DENIED` or `E
 
 ## File location
 
-Resolution order in `src/utils/paths.ts`:
+Resolution order in `src/workspace/paths.ts`:
 
 1. `SIYUAN_CLI_CONFIG` env var (file path or dir)
 2. `XDG_CONFIG_HOME/siyuan-cli/config.yaml`
