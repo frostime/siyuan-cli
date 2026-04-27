@@ -63,9 +63,9 @@ created: 2026-04-27T18:43:16
 ## Phase 7: Final Verification
 
 - [x] **7.1** `pnpm build` clean pass ✓
-- [ ] **7.2** Spot-check endpoints with `--print compact` (requires running kernel)
-- [ ] **7.3** Verify `--print json` unaffected (requires running kernel)
-- [ ] **7.4** Verify existing `format` functions unaffected (requires running kernel)
+- [x] **7.2** Spot-check endpoints with `--print compact` (kernel-backed checks completed)
+- [x] **7.3** Verify `--print json` unaffected (kernel-backed checks completed)
+- [x] **7.4** Verify existing `format` functions unaffected (kernel-backed checks completed)
 
 ---
 
@@ -79,4 +79,4 @@ created: 2026-04-27T18:43:16
 | 4: transaction | ✅ done | 29/29 |
 | 5: object | ✅ done | 10/10 |
 | 6: json | ✅ done | 5/5 |
-| 7: Verify | ⚠️ partial | 1/4 (build only; runtime tests need kernel) |
+| 7: Verify | ✅ done | 4/4 (build + kernel-backed runtime checks) |

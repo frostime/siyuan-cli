@@ -204,18 +204,13 @@ const rendered = preparePrintedOutput({
 
 | Strategy | Endpoints |
 |----------|-----------|
-| `direct` | `system.version`, `system.currentTime`, `filetree.getHPathByID`, `filetree.getHPathByPath`, `filetree.getPathByID`, `filetree.createDocWithMd`, `filetree.createDailyNote`, `filetree.getIDsByHPath`, `template.renderSprig` |
-| `records` | `block.getChildBlocks`, `block.getBlockBreadcrumb`, `filetree.searchDocs`, `notebook.lsNotebooks` |
-| `transaction` | `block.appendBlock`, `block.prependBlock`, `block.insertBlock`, `block.updateBlock`, `block.deleteBlock`, `block.moveBlock`, `block.foldBlock`, `block.unfoldBlock`, `block.transferBlockRef`, `attr.setBlockAttrs`, `filetree.renameDoc`, `filetree.renameDocByID`, `filetree.removeDoc`, `filetree.removeDocByID`, `filetree.moveDocs`, `filetree.moveDocsByID`, `notebook.renameNotebook`, `notebook.removeNotebook`, `notebook.openNotebook`, `notebook.closeNotebook`, `notebook.setNotebookConf`, `file.putFile`, `file.removeFile`, `file.renameFile`, `sqlite.flushTransaction`, `notification.pushMsg`, `notification.pushErrMsg`, `system.exit`, `system.logoutAuth` |
-| `object` | `block.getBlockInfo`, `block.getBlockDOM`, `attr.getBlockAttrs`, `export.exportMdContent`, `export.exportResources`, `convert.pandoc`, `template.render`, `network.forwardProxy`, `notebook.createNotebook` |
-| `json` | `system.getConf`, `system.bootProgress`, `notebook.getNotebookConf`, `file.getFile`, `asset.upload` |
+| `direct` (6) | `filetree.getHPathByID`, `filetree.getHPathByPath`, `filetree.getPathByID`, `filetree.createDocWithMd`, `filetree.getIDsByHPath`, `template.renderSprig` |
+| `records` (4) | `block.getChildBlocks`, `block.getBlockBreadcrumb`, `filetree.searchDocs`, `notebook.lsNotebooks` |
+| `transaction` (29) | `block.appendBlock`, `block.prependBlock`, `block.insertBlock`, `block.updateBlock`, `block.deleteBlock`, `block.moveBlock`, `block.foldBlock`, `block.unfoldBlock`, `block.transferBlockRef`, `attr.setBlockAttrs`, `filetree.renameDoc`, `filetree.renameDocByID`, `filetree.removeDoc`, `filetree.removeDocByID`, `filetree.moveDocs`, `filetree.moveDocsByID`, `notebook.renameNotebook`, `notebook.removeNotebook`, `notebook.openNotebook`, `notebook.closeNotebook`, `notebook.setNotebookConf`, `file.putFile`, `file.removeFile`, `file.renameFile`, `sqlite.flushTransaction`, `notification.pushMsg`, `notification.pushErrMsg`, `system.exit`, `system.logoutAuth` |
+| `object` (10) | `block.getBlockInfo`, `block.getBlockDOM`, `attr.getBlockAttrs`, `export.exportMdContent`, `export.exportResources`, `convert.pandoc`, `template.render`, `network.forwardProxy`, `notebook.createNotebook`, `filetree.createDailyNote` |
+| `json` (5) | `system.getConf`, `system.bootProgress`, `notebook.getNotebookConf`, `file.getFile`, `asset.upload` |
 
-**Unchanged** (already have `format`): `system.version` (has format), `system.currentTime` (has format), `query.sql`, `search.fullTextSearchBlock`, `file.readDir`, `filetree.listDocsByPath`, `block.getBlockKramdown`
-
-Wait — `system.version` and `system.currentTime` already have `format`. They should NOT get `formatStrategy`. Let me correct the `direct` list:
-
-| `direct` | `filetree.getHPathByID`, `filetree.getHPathByPath`, `filetree.getPathByID`, `filetree.createDocWithMd`, `filetree.createDailyNote`, `filetree.getIDsByHPath`, `template.renderSprig` |
-| `records` | `block.getChildBlocks`, `block.getBlockBreadcrumb`, `filetree.searchDocs`, `notebook.lsNotebooks` |
+**Unchanged (existing `format`)**: `system.version`, `system.currentTime`, `query.sql`, `search.fullTextSearchBlock`, `file.readDir`, `filetree.listDocsByPath`, `block.getBlockKramdown`
 
 ## 6. Outcome Preview
 

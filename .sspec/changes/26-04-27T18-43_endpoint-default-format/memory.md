@@ -1,6 +1,6 @@
 # Memory: endpoint-default-format
 
-**Updated**: <!-- ISO timestamp, minute precision -->
+**Updated**: 2026-04-27T21:06+08:00
 
 ## Git Baseline (Immutable)
 <!-- Captured during `sspec change new` before any change files are written.
@@ -18,22 +18,25 @@ This section records the change starting point in git and MUST NOT be edited or 
 ```
 
 ## State
-<!-- 当前在哪、下一步做什么 — 一到三行
-这是恢复入口；Agent 冷启动时第一个读的 section。 -->
+
+- Change is in `REVIEW`: implementation complete and verification tasks are checked.
+- Runtime checks were executed against a live kernel for compact/json/custom-format paths.
+- Next step is user acceptance and final status transition (`REVIEW -> DONE`).
 
 ## Key Files
-<!-- 对理解/继续这个 change 至关重要的文件
-- `path/file` — what it contains, why it matters -->
+
+- `src/shared/schema.ts` — defines `FormatStrategy` and `EndpointSchema.formatStrategy`.
+- `src/shared/output.ts` — strategy formatter implementations and dispatcher.
+- `src/api/command.ts` — compact render resolution order (`format` -> `formatStrategy` -> fallback).
+- `.sspec/changes/26-04-27T18-43_endpoint-default-format/tasks.md` — verification completion record.
+- `scripts/try-all-apis.ps1` — runtime validation helper for strategy outputs.
 
 ## Knowledge
-<!-- 不属于 spec/design/tasks/revisions 的独有信息。
-只放 spec/design 没覆盖的：被否决的方案、隐性知识、用户偏好、"这个 API 有坑"。
-格式：- [timestamp] [Type] content
-Types: Decision, Constraint, Gotcha, Rejected
-项目级发现 → ALSO append to project.md Notes。
-过时项标注时间戳，不要静默删除。 -->
+
+- [2026-04-27T21:06+08:00] [Decision] `--print json` in current CLI prints the guarded `data` value directly, consistent with existing `preparePrintedOutput` behavior.
+- [2026-04-27T21:06+08:00] [Gotcha] `filetree.getHPathByID` may return `<no value>` for some docs; this is a kernel/data condition and does not indicate formatter failure.
+- [2026-04-27T21:06+08:00] [Decision] `filetree.createDailyNote` belongs to `object` strategy (`{id}` response), and assignment docs were normalized accordingly.
 
 ## Milestones
-<!-- 每 session 一行，纯事实记录；新记录直接追加
-CLI 会把最后一条有效 bullet 视为 latest milestone
-- [ISO timestamp] 一句话概要 -->
+
+- [2026-04-27T21:06+08:00] Completed cleanup pass: fixed spec/design/task consistency, marked runtime verification done, and aligned memory state for review.

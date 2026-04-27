@@ -1,6 +1,6 @@
 ---
 name: endpoint-default-format
-status: PLANNING
+status: REVIEW
 change-type: single
 created: 2026-04-27T18:43:03
 reference: null
@@ -49,12 +49,14 @@ Five rendering functions, each taking `(data)` and returning `string`. The `reco
 Update `callEndpoint` to check `formatStrategy` when `format` is absent. Single if-else chain, ~10 lines.
 
 **Feat D: Assign strategies to 54 endpoints**
-Add `formatStrategy` to each endpoint schema. Categorization:
-- `direct`: ~9 endpoints (scalar returns)
-- `records`: ~4 endpoints (array returns with guard.response)
-- `transaction`: ~20 endpoints (write operations)
-- `object`: ~12 endpoints (flat object returns)
-- `json`: ~9 endpoints (complex nested objects)
+Add `formatStrategy` to each endpoint schema. Final categorization:
+- `direct`: 6 endpoints (scalar returns)
+- `records`: 4 endpoints (array returns)
+- `transaction`: 29 endpoints (write operations)
+- `object`: 10 endpoints (single-object responses)
+- `json`: 5 endpoints (nested/structured objects)
+
+The remaining 7 endpoints keep authored `format` functions.
 
 ### Scope Summary
 

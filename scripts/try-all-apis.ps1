@@ -34,11 +34,11 @@ function Run-Raw {
     return $json.Trim()
 }
 
-# --print json now returns full {code, msg, data} envelope
+# --print json returns guarded response data directly (no kernel envelope)
 function Get-Data {
     param([string]$Cmd)
     $raw = Run-Raw $Cmd
-    return ($raw | ConvertFrom-Json).data
+    return ($raw | ConvertFrom-Json)
 }
 
 Write-Host "`n$('═' * 60)" -ForegroundColor Yellow
@@ -243,9 +243,9 @@ Run-Test "block.getBlockKramdown (custom format)" `
     "$CLI api block.getBlockKramdown --id $testDocId --print compact"
 
 # ════════════════════════════════════════════════════════════
-# Phase 8: --print json (verify full envelope)
+# Phase 8: --print json (verify guarded data shape)
 # ════════════════════════════════════════════════════════════
-Write-Host "`n━━━ Phase 8: --print json (full envelope) ━━━" -ForegroundColor Green
+Write-Host "`n━━━ Phase 8: --print json (guarded data shape) ━━━" -ForegroundColor Green
 
 Run-Test "system.version --print json" `
     "$CLI api system.version --print json"
