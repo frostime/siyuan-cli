@@ -23,7 +23,8 @@ export const schema: EndpointSchema = {
             { path: 'path', kind: 'workspace-path', access: 'write' },
             { path: 'newPath', kind: 'workspace-path', access: 'write' }
         ]
-    }
+    },
+    formatStrategy: 'transaction'
 };
 
 /**

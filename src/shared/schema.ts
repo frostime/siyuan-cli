@@ -138,6 +138,8 @@ export type ToolTag = 'read' | 'write' | 'aggregate' | 'util';
 export type GuardFieldKind = 'id' | 'path' | 'notebook';
 export type PointerPath = string;
 
+export type FormatStrategy = 'direct' | 'records' | 'transaction' | 'object' | 'json';
+
 export type EndpointMode = 'read' | 'write' | 'invoke';
 export type EndpointSurface =
     | 'meta'
@@ -301,7 +303,9 @@ export interface EndpointSchema<TResponseData = unknown> {
     multipart?: { fileFields: string[] };
     cli?: CliBehavior;
     guard?: FilterSpec;
-    /** Optional compact renderer for `siyuan api <id> --print compact`. */
+    /** Pre-built compact format strategy. Ignored when `format` is present. */
+    formatStrategy?: FormatStrategy;
+    /** Optional compact renderer for `siyuan api <id> --print compact`. Takes precedence over formatStrategy. */
     format?: (ctx: EndpointFormatContext<TResponseData>) => string;
 }
 

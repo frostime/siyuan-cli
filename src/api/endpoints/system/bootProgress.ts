@@ -9,7 +9,8 @@ export const schema: EndpointSchema = {
         surface: 'meta',
         scope: 'single',
         operation: 'inspect'
-    }
+    },
+    formatStrategy: 'json'
 };
 
 /**

@@ -20,7 +20,8 @@ export const schema: EndpointSchema = {
     cli: {
         primary: 'template',
         allowSource: { template: ['literal', 'file', 'stdin'] }
-    }
+    },
+    formatStrategy: 'direct'
 };
 
 /**

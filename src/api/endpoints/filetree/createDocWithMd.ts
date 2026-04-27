@@ -31,7 +31,8 @@ export const schema: EndpointSchema = {
             { path: 'notebook', kind: 'notebook', access: 'write' },
             { path: 'path', kind: 'path', access: 'write' }
         ]
-    }
+    },
+    formatStrategy: 'direct'
 };
 
 /**

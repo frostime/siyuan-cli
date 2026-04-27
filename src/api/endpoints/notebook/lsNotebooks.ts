@@ -25,7 +25,8 @@ export const schema: EndpointSchema = {
             itemsAt: 'notebooks[*]',
             fieldMap: { notebook: 'id' }
         }
-    }
+    },
+    formatStrategy: 'records'
 };
 
 /**

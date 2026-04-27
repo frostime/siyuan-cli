@@ -46,7 +46,8 @@ export const schema: EndpointSchema = {
             { path: 'parentID', kind: 'id', access: 'write' },
             { path: 'previousID', kind: 'id', access: 'write' }
         ]
-    }
+    },
+    formatStrategy: 'transaction'
 };
 
 /**

@@ -31,7 +31,8 @@ export const schema: EndpointSchema = {
     cli: { allowSource: { data: ['literal', 'file', 'stdin'] } },
     guard: {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'write' }]
-    }
+    },
+    formatStrategy: 'transaction'
 };
 
 /**

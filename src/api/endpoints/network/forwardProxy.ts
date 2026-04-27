@@ -33,7 +33,8 @@ export const schema: EndpointSchema = {
         scope: 'single',
         operation: 'control'
         // Critical by fallback: this can drive arbitrary outbound requests through the kernel.
-    }
+    },
+    formatStrategy: 'object'
 };
 
 /**

@@ -33,7 +33,8 @@ export const schema: EndpointSchema = {
             itemsAt: '[*]',
             fieldMap: { path: 'path', notebook: 'box' }
         }
-    }
+    },
+    formatStrategy: 'records'
 };
 
 /**

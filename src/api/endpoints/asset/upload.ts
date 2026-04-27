@@ -26,7 +26,8 @@ export const schema: EndpointSchema = {
         surface: 'asset',
         scope: 'single',
         operation: 'upload'
-    }
+    },
+    formatStrategy: 'json'
 };
 
 /**

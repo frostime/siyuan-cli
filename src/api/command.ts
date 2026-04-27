@@ -9,7 +9,7 @@ import { createPermissionEngine } from '../shared/permission.js';
 import { executeEndpoint } from './guard.js';
 import { parsePayload } from '../shared/argv.js';
 import { normalizePayloadPaths } from './msys-path.js';
-import { preparePrintedOutput } from '../shared/output.js';
+import { applyFormatStrategy, preparePrintedOutput } from '../shared/output.js';
 import { fatalError, toCliError } from '../shared/errors.js';
 import type { GlobalArgs, RegisteredEndpoint } from '../shared/schema.js';
 
@@ -113,7 +113,9 @@ async function callEndpoint(
         details: result,
         compact: entry.schema.format
             ? () => entry.schema.format!({ endpoint: entry, payload, responseData: result, args })
-            : undefined,
+            : entry.schema.formatStrategy
+                ? () => applyFormatStrategy(entry.schema.formatStrategy!, result)
+                : undefined,
         warning: { endpoint: entry.id }
     });
     if (rendered.warning) {

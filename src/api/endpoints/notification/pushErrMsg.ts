@@ -26,7 +26,8 @@ export const schema: EndpointSchema = {
     cli: {
         primary: 'msg',
         allowSource: { msg: ['literal', 'file', 'stdin'] }
-    }
+    },
+    formatStrategy: 'transaction'
 };
 
 /**
