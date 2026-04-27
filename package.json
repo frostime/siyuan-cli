@@ -1,6 +1,6 @@
 {
     "name": "@frostime/siyuan-cli",
-    "version": "0.7.1",
+    "version": "0.8.0",
     "description": "Agent-first CLI for SiYuan Note — workspace management, kernel API proxy, workflow tools, and agent skill install",
     "type": "module",
     "bin": {
@@ -22,7 +22,7 @@
     },
     "scripts": {
         "build": "tsdown --config tsdown.config.ts && node -e \"import('node:fs').then(fs => { fs.mkdirSync('dist/approval', { recursive: true }); fs.copyFileSync('src/approval/approval-center.html', 'dist/approval/approval-center.html'); })\"",
-        "dev": "tsdown --config tsdown.config.ts --no-dts --sourcemap --watch", 
+        "dev": "tsdown --config tsdown.config.ts --no-dts --sourcemap --watch",
         "siyuan": "node bin/siyuan.mjs",
         "typecheck": "tsc --noEmit",
         "test": "tsx --test tests/*.test.ts",
