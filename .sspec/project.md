@@ -22,7 +22,8 @@ Keep ≤10 entries. Agent uses this to orient in the codebase. -->
 | Path | Purpose |
 |------|---------|
 | `src/shared/schema.ts` | 所有核心类型定义：EndpointSchema, ToolSchema, PermissionRule, RiskLabel, classification 等 |
-| `src/workspace/config.ts` | 全局 config (~/.config/siyuan-cli/config.yaml) 加载、workspace 解析链 |
+| `src/workspace/config.ts` | 全局 config (~/.config/siyuan-cli/config.yaml) 加载；同步 resolveWorkspace/resolveEffectiveWorkspace |
+| `src/workspace/resolver.ts` | workspaceDir → runtime baseUrl 的本地解析器；materializeWorkspace 依赖它 |
 | `src/api/registry.ts` | Endpoint 注册表：收集 EndpointSchema，派生 risk/tags/meta |
 | `src/shared/permission.ts` | Permission engine：rule-list 模型，两阶段评估 (caller → resource) |
 | `src/api/guard.ts` | 请求执行入口：payload 校验 → permission check → approval → kernel call → response filter |
@@ -34,9 +35,34 @@ Keep ≤10 entries. Agent uses this to orient in the codebase. -->
 
 ## Architecture Cheat-Sheet
 
-调用链路 (agent 执行 `siyuan api <endpoint>`):
+### Module relationship map
+
+```text
+cli.ts
+├─ workspace/command.ts   # 管理全局 workspace 配置 / verify / which / show
+├─ api/command.ts         # 直接调用 endpoint
+│  └─ api/guard.ts        # payload guard + permission + approval + response filter
+│     └─ shared/client.ts # 最终 HTTP POST 到 SiYuan kernel
+├─ tool/command.ts
+│  └─ tool/registry.ts    # tool 通过 ToolContext 间接复用 api/guard 链路
+└─ doc|skill|approval     # 辅助命令面
 ```
+
+### Workspace resolution split
+
+```text
+config load
+  → resolveWorkspace / resolveEffectiveWorkspace   # sync: 只决定“选中谁”
+  → materializeWorkspace                          # async: 需要时把 workspaceDir 变成 concrete baseUrl
+    → resolver.ts                                # 本地 getWorkspaces + conf.json + getConf 核验
+```
+
+### API 调用链路 (`siyuan api <endpoint>`)
+
+```text
 cli.ts → api/command.ts → shared/argv.ts (parse+validate payload)
+  → workspace/config.ts (resolve workspace ref)
+  → workspace/config.ts:materializeWorkspace()
   → api/guard.ts:executeEndpoint()
     → shared/permission.ts (check rules)
     → approval/ (if effect=confirm or risk≥elevated)
@@ -45,9 +71,11 @@ cli.ts → api/command.ts → shared/argv.ts (parse+validate payload)
     → shared/output.ts (format: compact | json)
 ```
 
-Tool 调用链路 (`siyuan tool <tool>`):
-```
-tool/command.ts → tool/registry.ts:ToolRegistry.execute()
+### Tool 调用链路 (`siyuan tool <tool>`)
+
+```text
+tool/command.ts → tool/registry.ts
+  → resolve workspace ref → materializeWorkspace()
   → tool.run(ctx) — ctx 提供 callEndpoint() 来间接走 guard 链路
 ```
 
