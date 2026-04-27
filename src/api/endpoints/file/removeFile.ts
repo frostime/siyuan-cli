@@ -21,7 +21,8 @@ export const schema: EndpointSchema = {
         payloadTargets: [
             { path: 'path', kind: 'workspace-path', access: 'write' }
         ]
-    }
+    },
+    formatStrategy: 'transaction'
 };
 
 /**

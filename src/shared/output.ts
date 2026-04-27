@@ -1,4 +1,4 @@
-import type { GlobalArgs } from './schema.js';
+import type { FormatStrategy, GlobalArgs } from './schema.js';
 
 export interface PreparedPrintOutput {
     stdout: string;
@@ -216,4 +216,133 @@ export function formatRecords(
         return formatSection(records, keys, label, effectivePageSize === Infinity ? records.length : effectivePageSize as number);
     }
     return formatTable(records, keys, label, effectivePageSize === Infinity ? records.length : effectivePageSize as number);
+}
+
+// ---------------------------------------------------------------------------
+// FormatStrategy renderers — schema-level pre-built compact formats
+// ---------------------------------------------------------------------------
+
+/** `direct`: scalar values → string. Arrays join with newlines. */
+export function formatDirect(data: unknown): string {
+    if (Array.isArray(data)) return data.map(String).join('\n');
+    return String(data ?? 'null');
+}
+
+/**
+ * `records`: auto-detect array location and render as table.
+ * - Top-level array → use directly
+ * - Object with array-valued key → use first such array
+ */
+export function formatRecordsStrategy(data: unknown): string {
+    const { array, label } = findTopArray(data);
+    if (array.length === 0) return jsonStringify(data);
+    return formatRecords(array, { label });
+}
+
+function findTopArray(data: unknown): { array: unknown[]; label: string } {
+    if (Array.isArray(data)) return { array: data, label: 'items' };
+    if (isRecord(data)) {
+        for (const [key, value] of Object.entries(data)) {
+            if (Array.isArray(value)) return { array: value, label: key };
+        }
+    }
+    return { array: [], label: 'items' };
+}
+
+/**
+ * `transaction`: write operation results → `OK | ids=... | ops=...`.
+ * Handles array of `{ doOperations }` objects, or void-like responses.
+ */
+export function formatTransaction(data: unknown): string {
+    if (data === null || data === undefined) return 'OK';
+    if (!Array.isArray(data) || data.length === 0) return 'OK';
+
+    const txs = data as Array<{
+        doOperations?: Array<{ action: string; id?: string }>;
+    }>;
+
+    const ids: string[] = [];
+    const actions: string[] = [];
+    for (const tx of txs) {
+        for (const op of tx.doOperations ?? []) {
+            if (op.id) ids.push(op.id);
+            if (op.action) actions.push(op.action);
+        }
+    }
+
+    const parts = ['OK'];
+    if (ids.length > 0) parts.push(`ids=${ids.join(',')}`);
+    if (actions.length > 0) {
+        const counts = actions.reduce(
+            (acc, a) => {
+                acc[a] = (acc[a] ?? 0) + 1;
+                return acc;
+            },
+            {} as Record<string, number>
+        );
+        parts.push(
+            `ops=${Object.entries(counts)
+                .map(([k, v]) => `${k}×${v}`)
+                .join(',')}`
+        );
+    }
+    return parts.join(' | ');
+}
+
+/**
+ * `object`: single record → inline `k=v | k=v`, or section mode for multiline values.
+ */
+export function formatObject(data: unknown): string {
+    if (!isRecord(data)) return jsonStringify(data);
+
+    const entries = Object.entries(data).filter(([, v]) => v !== undefined);
+    if (entries.length === 0) return '{}';
+
+    const hasMultiline = entries.some(
+        ([, v]) => typeof v === 'string' && v.includes('\n')
+    );
+
+    if (!hasMultiline) {
+        return entries.map(([k, v]) => `${k}=${inlineValue(v)}`).join(' | ');
+    }
+
+    return entries
+        .map(([k, v]) => {
+            if (typeof v === 'string' && v.includes('\n')) {
+                const lines = v
+                    .split('\n')
+                    .map((l) => `  ${l}`)
+                    .join('\n');
+                return `${k}:\n${lines}`;
+            }
+            return `${k}: ${inlineValue(v)}`;
+        })
+        .join('\n');
+}
+
+/** `json`: explicit JSON output. */
+export function formatJson(data: unknown): string {
+    return jsonStringify(data);
+}
+
+/**
+ * Dispatch to the appropriate strategy renderer.
+ * Guard-free: format and guard are fully decoupled.
+ */
+export function applyFormatStrategy(
+    strategy: FormatStrategy,
+    data: unknown
+): string {
+    switch (strategy) {
+        case 'direct':
+            return formatDirect(data);
+        case 'records':
+            return formatRecordsStrategy(data);
+        case 'transaction':
+            return formatTransaction(data);
+        case 'object':
+            return formatObject(data);
+        case 'json':
+            return formatJson(data);
+    }
 }

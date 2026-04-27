@@ -11,7 +11,8 @@ export const schema: EndpointSchema = {
         operation: 'inspect',
         // Returns full system configuration; more sensitive than ordinary meta reads.
         riskOverride: 'sensitive'
-    }
+    },
+    formatStrategy: 'json'
 };
 
 /**

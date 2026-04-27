@@ -37,7 +37,8 @@ export const schema: EndpointSchema = {
             { path: 'toID', kind: 'id', access: 'write' },
             { path: 'refIDs[*]', kind: 'id', access: 'write' }
         ]
-    }
+    },
+    formatStrategy: 'transaction'
 };
 
 /**

@@ -11,7 +11,8 @@ export const schema: EndpointSchema = {
         operation: 'control',
         // Invalidates the current session but does not destroy workspace/content data.
         riskOverride: 'sensitive'
-    }
+    },
+    formatStrategy: 'transaction'
 };
 
 /**

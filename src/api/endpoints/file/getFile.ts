@@ -21,5 +21,6 @@ export const schema: EndpointSchema = {
         payloadTargets: [
             { path: 'path', kind: 'workspace-path', access: 'read' }
         ]
-    }
+    },
+    formatStrategy: 'json'
 };

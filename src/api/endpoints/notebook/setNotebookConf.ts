@@ -31,7 +31,8 @@ export const schema: EndpointSchema = {
         payloadTargets: [
             { path: 'notebook', kind: 'notebook', access: 'write' }
         ]
-    }
+    },
+    formatStrategy: 'transaction'
 };
 
 /**

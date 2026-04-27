@@ -9,7 +9,8 @@ export const schema: EndpointSchema = {
         surface: 'runtime',
         scope: 'single',
         operation: 'control'
-    }
+    },
+    formatStrategy: 'transaction'
 };
 
 /**

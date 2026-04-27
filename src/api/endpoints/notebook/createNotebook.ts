@@ -20,7 +20,8 @@ export const schema: EndpointSchema = {
     cli: {
         primary: 'name',
         allowSource: { name: ['literal'] }
-    }
+    },
+    formatStrategy: 'object'
 };
 
 /**
