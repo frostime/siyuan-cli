@@ -27,7 +27,7 @@ updated: ""
 - [x] Scan and patch textual path references in `src/docs/**` (if any)
 **Verification**: `rg` finds no stale `src/core|src/utils|src/commands|src/apis|src/tools` path references in `src/**`, `tests/**`, `docs/**`, and `src/docs/**`
 
-### Phase 4: Verify and clean legacy dirs 🚧
+### Phase 4: Verify and clean legacy dirs ✅
 - [x] Run `pnpm typecheck`
 - [x] Run `pnpm test` (known failing baseline in permission-related tests; unchanged in this refactor)
 - [x] Remove empty legacy dirs (`src/commands`, `src/core`, `src/utils`, `src/apis`, `src/tools`)

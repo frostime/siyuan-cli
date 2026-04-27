@@ -6,8 +6,9 @@ import { EndpointRegistry } from '../src/api/registry.ts';
 import { deriveEndpointId } from '../src/shared/schema.ts';
 import {
     PermissionEngine,
-    ContentAccessDeniedError,
-    WorkspaceAccessDeniedError
+    ContentDeniedError,
+    EndpointDeniedError,
+    cascadePermission
 } from '../src/shared/permission.ts';
 import { executeEndpoint } from '../src/api/guard.ts';
 import type { AppConfig, PermissionConfig } from '../src/workspace/config.ts';
@@ -37,6 +38,13 @@ function registerOne(schema: any) {
     registry.register(schema);
     const { id } = deriveEndpointId(schema.endpoint);
     return registry.get(id)!;
+}
+
+function makeEngine(client: any, permission?: PermissionConfig) {
+    const config = makeConfig(permission);
+    const { rules, defaultEffect } = cascadePermission(config, 'local');
+    const engine = new PermissionEngine(rules, defaultEffect, client);
+    return { config, engine };
 }
 
 test('moveBlock is normalized as content write move with three write targets', () => {
@@ -133,11 +141,9 @@ test('moveBlock denies when parentID resolves into denied content.write path', a
         },
         upload: async () => ({ ok: true })
     } as any;
-    const engine = new PermissionEngine(
-        makeConfig({ content: { write: { paths: { deny: ['/denied/**'] } } } }),
-        'local',
-        client
-    );
+    const { config, engine } = makeEngine(client, {
+        rules: [{ action: 'write', path: '/denied/**', effect: 'deny' }]
+    });
     const entry = registerOne(moveBlock);
 
     await assert.rejects(
@@ -150,9 +156,10 @@ test('moveBlock denies when parentID resolves into denied content.write path', a
                     previousID: 'prev-ok'
                 },
                 client,
-                engine
+                engine,
+                config
             }),
-        ContentAccessDeniedError
+        ContentDeniedError
     );
     assert.equal(actualCalls, 0);
 });
@@ -169,11 +176,9 @@ test('getBlockKramdown denies when resolved id hits content.read deny', async ()
         },
         upload: async () => ({ ok: true })
     } as any;
-    const engine = new PermissionEngine(
-        makeConfig({ content: { read: { paths: { deny: ['/denied/**'] } } } }),
-        'local',
-        client
-    );
+    const { config, engine } = makeEngine(client, {
+        rules: [{ action: 'read', path: '/denied/**', effect: 'deny' }]
+    });
     const entry = registerOne(getBlockKramdown);
 
     await assert.rejects(
@@ -182,9 +187,10 @@ test('getBlockKramdown denies when resolved id hits content.read deny', async ()
                 entry,
                 payload: { id: 'blk-1' },
                 client,
-                engine
+                engine,
+                config
             }),
-        ContentAccessDeniedError
+        ContentDeniedError
     );
     assert.equal(actualCalls, 0);
 });
@@ -200,18 +206,17 @@ test('query.sql filters denied rows from response', async () => {
         },
         upload: async () => ({ ok: true })
     } as any;
-    const engine = new PermissionEngine(
-        makeConfig({ content: { read: { paths: { deny: ['/denied/**'] } } } }),
-        'local',
-        client
-    );
+    const { config, engine } = makeEngine(client, {
+        rules: [{ action: 'read', path: '/denied/**', effect: 'deny' }]
+    });
     const entry = registerOne(querySql);
 
     const result = (await executeEndpoint({
         entry,
         payload: { stmt: 'SELECT * FROM blocks' },
         client,
-        engine
+        engine,
+        config
     })) as any[];
     assert.deepEqual(result, [{ id: 'a', box: 'nb', path: '/allowed/a.sy' }]);
 });
@@ -227,33 +232,31 @@ test('file.getFile uses workspace.read and ignores content deny', async () => {
     } as any;
     const entry = registerOne(fileGetFile);
 
-    const denyEngine = new PermissionEngine(
-        makeConfig({ workspace: { read: { paths: { deny: ['**'] } } } }),
-        'local',
-        client
-    );
+    const { config: denyConfig, engine: denyEngine } = makeEngine(client, {
+        rules: [{ endpoint: 'file.getFile', action: 'read', effect: 'deny' }]
+    });
     await assert.rejects(
         () =>
             executeEndpoint({
                 entry,
                 payload: { path: '/workspace/a.txt' },
                 client,
-                engine: denyEngine
+                engine: denyEngine,
+                config: denyConfig
             }),
-        WorkspaceAccessDeniedError
+        EndpointDeniedError
     );
     assert.equal(actualCalls, 0);
 
-    const allowEngine = new PermissionEngine(
-        makeConfig({ content: { read: { paths: { deny: ['**'] } } } }),
-        'local',
-        client
-    );
+    const { config: allowConfig, engine: allowEngine } = makeEngine(client, {
+        rules: [{ action: 'read', path: '**', effect: 'deny' }]
+    });
     const res = await executeEndpoint({
         entry,
         payload: { path: '/workspace/a.txt' },
         client,
-        engine: allowEngine
+        engine: allowEngine,
+        config: allowConfig
     });
     assert.equal(res, 'content');
     assert.equal(actualCalls, 1);
@@ -270,13 +273,9 @@ test('file.putFile uses workspace.write and dry-run runs guard before preview', 
     } as any;
     const entry = registerOne(filePutFile);
 
-    const denyEngine = new PermissionEngine(
-        makeConfig({
-            workspace: { write: { paths: { deny: ['/blocked/**'] } } }
-        }),
-        'local',
-        client
-    );
+    const { config: denyConfig, engine: denyEngine } = makeEngine(client, {
+        rules: [{ endpoint: 'file.putFile', action: 'write', effect: 'deny' }]
+    });
     await assert.rejects(
         () =>
             executeEndpoint({
@@ -284,27 +283,28 @@ test('file.putFile uses workspace.write and dry-run runs guard before preview', 
                 payload: { path: '/blocked/file.txt', file: 'abc' },
                 client,
                 engine: denyEngine,
+                config: denyConfig,
                 dryRun: true
             }),
-        WorkspaceAccessDeniedError
+        EndpointDeniedError
     );
 
-    const allowEngine = new PermissionEngine(
-        makeConfig({ content: { write: { paths: { deny: ['**'] } } } }),
-        'local',
-        client
-    );
+    const { config: allowConfig, engine: allowEngine } = makeEngine(client, {
+        rules: [{ action: 'write', path: '**', effect: 'deny' }]
+    });
     const preview = (await executeEndpoint({
         entry,
         payload: { path: '/allowed/file.txt', file: 'abc' },
         client,
         engine: allowEngine,
+        config: allowConfig,
         dryRun: true
     })) as any;
     assert.deepEqual(preview, {
         dryRun: true,
         endpoint: '/api/file/putFile',
-        payload: { path: '/allowed/file.txt', file: 'abc' }
+        payload: { path: '/allowed/file.txt', file: 'abc' },
+        wouldRequestApproval: true
     });
     assert.equal(uploadCalls, 0);
 });

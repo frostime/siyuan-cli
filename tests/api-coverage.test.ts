@@ -6,7 +6,8 @@ import { deriveEndpointId } from '../src/shared/schema.ts';
 import { applyResponseGuard, executeEndpoint } from '../src/api/guard.ts';
 import {
     PermissionEngine,
-    ContentAccessDeniedError
+    ContentDeniedError,
+    cascadePermission
 } from '../src/shared/permission.ts';
 import type { AppConfig, PermissionConfig } from '../src/workspace/config.ts';
 
@@ -71,6 +72,13 @@ function registerOne(schema: any) {
     const registry = new EndpointRegistry();
     registry.register(schema);
     return registry.get(deriveEndpointId(schema.endpoint).id)!;
+}
+
+function makeEngine(client: any, permission?: PermissionConfig) {
+    const config = makeConfig(permission);
+    const { rules, defaultEffect } = cascadePermission(config, 'local');
+    const engine = new PermissionEngine(rules, defaultEffect, client);
+    return { config, engine };
 }
 
 test('Batches A2-B2-C migrated compatible endpoints to authored classification', () => {
@@ -166,7 +174,7 @@ test('workspace, filetree, and global response guards use post-client response s
     assert.equal(notebookLsNotebooks.guard?.response?.itemsAt, 'notebooks[*]');
 });
 
-test('response guards are evaluated against unwrapped data', () => {
+test('response guards are evaluated against unwrapped data', async () => {
     const engine = {
         filterItems(items: any[]) {
             return {
@@ -177,18 +185,18 @@ test('response guards are evaluated against unwrapped data', () => {
         }
     } as any;
 
-    const searchResponse = applyResponseGuard(
+    const searchResponse = (await applyResponseGuard(
         searchFullTextSearchBlock,
         { blocks: [{ id: 'a' }, { id: 'b' }] },
         engine
-    ) as any;
+    )) as any;
     assert.deepEqual(searchResponse.blocks, [{ id: 'a' }]);
 
-    const notebookResponse = applyResponseGuard(
+    const notebookResponse = (await applyResponseGuard(
         notebookLsNotebooks,
         { notebooks: [{ id: 'nb1' }, { id: 'nb2' }] },
         engine
-    ) as any;
+    )) as any;
     assert.deepEqual(notebookResponse.notebooks, [{ id: 'nb1' }]);
 });
 
@@ -201,11 +209,9 @@ test('moveDocs rejects when any fromPaths item is denied before request executio
         },
         upload: async () => ({ ok: true })
     } as any;
-    const engine = new PermissionEngine(
-        makeConfig({ content: { write: { paths: { deny: ['/denied/**'] } } } }),
-        'local',
-        client
-    );
+    const { config, engine } = makeEngine(client, {
+        rules: [{ action: 'write', path: '/denied/**', effect: 'deny' }]
+    });
     const entry = registerOne(filetreeMoveDocs);
 
     await assert.rejects(
@@ -222,14 +228,15 @@ test('moveDocs rejects when any fromPaths item is denied before request executio
                     toPath: '/allowed/target.sy'
                 },
                 client,
-                engine
+                engine,
+                config
             }),
-        ContentAccessDeniedError
+        ContentDeniedError
     );
     assert.equal(actualCalls, 0);
 });
 
-test('declarative root-array response filtering still emits warnings', () => {
+test('declarative root-array response filtering still emits warnings', async () => {
     const engine = {
         filterItems(items: any[]) {
             return {
@@ -246,7 +253,7 @@ test('declarative root-array response filtering still emits warnings', () => {
         return true;
     }) as any;
     try {
-        const filtered = applyResponseGuard(
+        const filtered = await applyResponseGuard(
             filetreeSearchDocs,
             [
                 { box: 'nb', path: '/allowed/doc.sy', hPath: '/Allowed' },

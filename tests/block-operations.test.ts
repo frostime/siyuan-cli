@@ -5,7 +5,8 @@ import { EndpointRegistry } from '../src/api/registry.ts';
 import { deriveEndpointId } from '../src/shared/schema.ts';
 import {
     PermissionEngine,
-    ContentAccessDeniedError
+    ContentDeniedError,
+    cascadePermission
 } from '../src/shared/permission.ts';
 import { executeEndpoint } from '../src/api/guard.ts';
 import type { AppConfig, PermissionConfig } from '../src/workspace/config.ts';
@@ -42,6 +43,13 @@ function registerOne(schema: any) {
     registry.register(schema);
     const { id } = deriveEndpointId(schema.endpoint);
     return registry.get(id)!;
+}
+
+function makeEngine(client: any, permission?: PermissionConfig) {
+    const config = makeConfig(permission);
+    const { rules, defaultEffect } = cascadePermission(config, 'local');
+    const engine = new PermissionEngine(rules, defaultEffect, client);
+    return { config, engine };
 }
 
 test('batch A1 migrated endpoints use authored classification without tags', () => {
@@ -113,11 +121,9 @@ test('insertBlock denies optional write refs independently', async () => {
         },
         upload: async () => ({ ok: true })
     } as any;
-    const engine = new PermissionEngine(
-        makeConfig({ content: { write: { paths: { deny: ['/denied/**'] } } } }),
-        'local',
-        client
-    );
+    const { config, engine } = makeEngine(client, {
+        rules: [{ action: 'write', path: '/denied/**', effect: 'deny' }]
+    });
     const entry = registerOne(blockInsertBlock);
 
     await assert.rejects(
@@ -131,9 +137,10 @@ test('insertBlock denies optional write refs independently', async () => {
                     nextID: 'next-ok'
                 },
                 client,
-                engine
+                engine,
+                config
             }),
-        ContentAccessDeniedError
+        ContentDeniedError
     );
     assert.equal(actualCalls, 0);
 });
