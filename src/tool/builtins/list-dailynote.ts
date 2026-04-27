@@ -1,5 +1,5 @@
-import type { ToolSchema } from '../../shared/schema.js';
-import { escapeSqliteLiteral } from '../../shared/sql.js';
+import type { ToolSchema } from '@/shared/schema.js';
+import { escapeSqliteLiteral } from '@/shared/sql.js';
 
 type DailyRow = {
     id: string;

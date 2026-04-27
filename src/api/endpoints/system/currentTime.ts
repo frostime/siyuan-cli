@@ -1,4 +1,4 @@
-import type { EndpointSchema } from '../../../shared/schema.js';
+import type { EndpointSchema } from '@/shared/schema.js';
 
 export const schema: EndpointSchema<number> = {
     endpoint: '/api/system/currentTime',

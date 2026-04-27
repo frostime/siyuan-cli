@@ -1,5 +1,5 @@
-import { formatRecords, isRecord } from '../../../shared/output.js';
-import type { EndpointSchema } from '../../../shared/schema.js';
+import { formatRecords, isRecord } from '@/shared/output.js';
+import type { EndpointSchema } from '@/shared/schema.js';
 
 export const schema: EndpointSchema<Array<Record<string, unknown>>> = {
     endpoint: '/api/query/sql',

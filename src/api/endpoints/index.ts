@@ -1,5 +1,5 @@
 import { registry } from '../registry.js';
-import type { EndpointSchema } from '../../shared/schema.js';
+import type { EndpointSchema } from '@/shared/schema.js';
 
 // System APIs
 import { schema as systemVersion } from './system/version.js';

@@ -6,7 +6,7 @@
  * @FilePath     : /src/api/endpoints/block/moveBlock.ts
  * @LastEditTime : 2026-04-17 22:15:54
  */
-import type { EndpointSchema } from '../../../shared/schema.js';
+import type { EndpointSchema } from '@/shared/schema.js';
 
 export const schema: EndpointSchema = {
     endpoint: '/api/block/moveBlock',

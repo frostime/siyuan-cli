@@ -6,7 +6,7 @@
  * @FilePath     : /src/api/endpoints/system/version.ts
  * @LastEditTime : 2026-04-24 17:55:00
  */
-import type { EndpointSchema } from '../../../shared/schema.js';
+import type { EndpointSchema } from '@/shared/schema.js';
 
 export const schema: EndpointSchema<string> = {
     endpoint: '/api/system/version',

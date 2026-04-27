@@ -6,8 +6,8 @@
  * @FilePath     : /src/api/endpoints/search/fullTextSearchBlock.ts
  * @LastEditTime : 2026-04-19 01:39:52
  */
-import { formatRecords } from '../../../shared/output.js';
-import type { EndpointSchema } from '../../../shared/schema.js';
+import { formatRecords } from '@/shared/output.js';
+import type { EndpointSchema } from '@/shared/schema.js';
 
 export const schema: EndpointSchema<{
     blocks: SearchBlock[];

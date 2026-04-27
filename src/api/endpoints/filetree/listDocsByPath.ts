@@ -1,5 +1,5 @@
-import { formatRecords } from '../../../shared/output.js';
-import type { EndpointSchema } from '../../../shared/schema.js';
+import { formatRecords } from '@/shared/output.js';
+import type { EndpointSchema } from '@/shared/schema.js';
 
 export const schema: EndpointSchema<{
     box?: string;
