@@ -2,8 +2,6 @@
 
 ---
 
-关于 SiYuan 本身的规范，参考: src/docs/*.md
-
 CLI 内部文档、提示应当使用英文。
 
 开发时，灵活使用 CLI 工具:
@@ -14,6 +12,11 @@ CLI 内部文档、提示应当使用英文。
 - `sspec tool mdtoc` - Inspect long md file
 - `slsp` - LSP CLI (see `slsp --help` for builtin doc)
 - `sspec change [new|list|archive]`
+---
+
+项目代码：src/
+CLI Bundle 自带文档: src/doc/
+CLI 自带 SKILL: skills/
 
 <!-- SSPEC:START -->
 # .sspec Agent Protocol
