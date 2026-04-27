@@ -3,10 +3,10 @@
  * Copyright (c) 2026 by frostime. All Rights Reserved.
  * @Date         : 2026-04-19 18:36:12
  * @Description  :
- * @FilePath     : /src/apis/system/version.ts
+ * @FilePath     : /src/api/endpoints/system/version.ts
  * @LastEditTime : 2026-04-24 17:55:00
  */
-import type { EndpointSchema } from '../../core/schema.js';
+import type { EndpointSchema } from '../../../shared/schema.js';
 
 export const schema: EndpointSchema<string> = {
     endpoint: '/api/system/version',

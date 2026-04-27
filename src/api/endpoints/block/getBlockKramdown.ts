@@ -1,4 +1,4 @@
-import type { EndpointSchema } from '../../core/schema.js';
+import type { EndpointSchema } from '../../../shared/schema.js';
 
 export const schema: EndpointSchema<{ id: string; kramdown: string }> = {
     endpoint: '/api/block/getBlockKramdown',

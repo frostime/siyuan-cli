@@ -1,6 +1,6 @@
 /**
  * Endpoint registry — collects all EndpointSchema definitions and provides lookup.
- * Schemas are registered from src/apis/index.ts at startup.
+ * Schemas are registered from src/api/endpoints/index.ts at startup.
  */
 import {
     deriveEndpointId,
@@ -10,7 +10,7 @@ import {
     type EndpointSchema,
     type RegisteredEndpoint,
     type RiskLabel
-} from './schema.js';
+} from '../shared/schema.js';
 
 function deriveRisk(classification: EndpointClassification): RiskLabel {
     if (classification.riskOverride) return classification.riskOverride;
@@ -127,5 +127,5 @@ export class EndpointRegistry {
     }
 }
 
-/** Global singleton — populated by src/apis/index.ts */
+/** Global singleton — populated by src/api/endpoints/index.ts */
 export const registry = new EndpointRegistry();

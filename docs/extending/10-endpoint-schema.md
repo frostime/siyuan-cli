@@ -1,12 +1,12 @@
 ---
 title: EndpointSchema Reference
 slug: endpoint-schema
-summary: Field-by-field reference for writing EndpointSchema in src/apis/**.
+summary: Field-by-field reference for writing EndpointSchema in src/api/endpoints/**.
 ---
 
 # EndpointSchema Reference
 
-GATE: use this when authoring or editing a file under `src/apis/<group>/<n>.ts`.
+GATE: use this when authoring or editing a file under `src/api/endpoints/<group>/<n>.ts`.
 
 ## Minimal shape
 
@@ -140,7 +140,7 @@ Informational. No runtime effect yet.
 
 - One endpoint per file. Filename = API name (camelCase), e.g. `getBlockKramdown.ts`.
 - Always `export const schema: EndpointSchema = { ... }`.
-- Add to `src/apis/index.ts` in the group's section, then to the `schemas` array.
+- Add to `src/api/endpoints/index.ts` in the group's section, then to the `schemas` array.
 - Write English `description` text; user-facing `summary` can stay concise.
 - Paths in `description` stay in English (markdown / paths only).
 

@@ -19,7 +19,7 @@ GATE: read when throwing from a new endpoint, tool, or guard; or when an agent n
 5  PERMISSION   endpoint/tool/content/workspace scope denied
 ```
 
-Source: `src/utils/errors.ts::ExitCode`.
+Source: `src/shared/errors.ts::ExitCode`.
 
 ## Error envelope on stderr
 

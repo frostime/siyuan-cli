@@ -9,12 +9,12 @@ import {
     resolveWorkspace,
     resolveEffectiveWorkspace,
     type WorkspaceEntry
-} from '../core/config.js';
-import { cascadePermission } from '../core/permission.js';
-import { SiyuanClient } from '../core/client.js';
-import { CliError, ExitCode, fatalError, toCliError } from '../utils/errors.js';
-import { diagnoseConnection } from '../utils/diagnostics.js';
-import { getConfigPath } from '../utils/paths.js';
+} from './config.js';
+import { cascadePermission } from '../shared/permission.js';
+import { SiyuanClient } from '../shared/client.js';
+import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
+import { diagnoseConnection } from './diagnostics.js';
+import { getConfigPath } from './paths.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

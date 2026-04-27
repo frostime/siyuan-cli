@@ -1,7 +1,7 @@
 ---
 title: Adding a Tool
 slug: adding-a-tool
-summary: Walkthrough for writing a composition tool under src/tools/.
+summary: Walkthrough for writing a composition tool under src/tool/builtins/.
 ---
 
 # Adding a Tool
@@ -16,7 +16,7 @@ GATE: the user-facing action requires **more than one endpoint call**, **formatt
 [ ] 3. Sketch output: content (human) + details (program)
 [ ] 4. Implement run() using ctx.callEndpoint
 [ ] 5. Handle dry-run, warnings, meta
-[ ] 6. Register in src/tools/index.ts
+[ ] 6. Register in src/tool/builtins/index.ts
 [ ] 7. Verify
 ```
 
@@ -67,7 +67,7 @@ details:
 ### 4. Implementation
 
 ```ts
-// src/tools/list-backlinks.ts
+// src/tool/builtins/list-backlinks.ts
 import type { ToolSchema } from "../core/schema.js";
 
 type RefRow = { id: string; root_id: string; content: string };
@@ -151,7 +151,7 @@ if (ctx.args.dryRun) {
 ### 6. Register
 
 ```ts
-// src/tools/index.ts
+// src/tool/builtins/index.ts
 import { tool as listBacklinks } from "./list-backlinks.js";
 
 const tools = [listDocTree, listDailynote, appendContent, resolvePath, listBacklinks];

@@ -257,7 +257,7 @@ export function isHighRisk(risk: RiskLabel): boolean {
 
 /**
  * Minimal shape of the permission engine that schema guards need.
- * The real engine (src/core/permission.ts) implements this + more.
+ * The real engine (src/shared/permission.ts) implements this + more.
  */
 export interface CallerContext {
     endpoint?: string;

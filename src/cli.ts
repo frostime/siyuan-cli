@@ -2,16 +2,16 @@ import { defineCommand, runMain, showUsage } from 'citty';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'pathe';
-import { workspaceCommand } from './commands/workspace.js';
-import { apiCommand } from './commands/api.js';
-import { toolCommand } from './commands/tool.js';
-import { skillCommand } from './commands/skill.js';
-import { docCommand, formatDocsHint } from './commands/doc.js';
+import { workspaceCommand } from './workspace/command.js';
+import { apiCommand } from './api/command.js';
+import { toolCommand } from './tool/command.js';
+import { skillCommand } from './skill/command.js';
+import { docCommand, formatDocsHint } from './doc/command.js';
 import { approvalCommand } from './approval/command.js';
-import { buildEndpointHelp } from './core/argv.js';
-import { registry } from './core/registry.js';
-import { buildToolHelp, toolRegistry } from './core/tools.js';
-import './tools/index.js';
+import { buildEndpointHelp } from './shared/argv.js';
+import { registry } from './api/registry.js';
+import { buildToolHelp, toolRegistry } from './tool/registry.js';
+import './tool/builtins/index.js';
 
 function getVersion(): string {
     try {

@@ -19,7 +19,7 @@
  *   the execution guard sends it through the approval flow.
  */
 import micromatch from 'micromatch';
-import type { AppConfig, ResolvedWorkspace } from './config.js';
+import type { AppConfig, ResolvedWorkspace } from '../workspace/config.js';
 import {
     resolvePermissionEffect,
     type CallerContext,
@@ -31,7 +31,7 @@ import {
     type RegisteredEndpoint,
     type ResourceKind
 } from './schema.js';
-import { CliError, ExitCode } from '../utils/errors.js';
+import { CliError, ExitCode } from './errors.js';
 import type { SiyuanClient } from './client.js';
 
 // ─── Rule cascade ────────────────────────────────────────────────────────────

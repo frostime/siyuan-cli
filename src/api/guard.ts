@@ -11,15 +11,15 @@ import {
     type EndpointSchema,
     type PermissionEngineLike,
     type RegisteredEndpoint
-} from './schema.js';
+} from '../shared/schema.js';
 import { buildPreparedApprovalRequest, requestAndWait } from '../approval/index.js';
 import {
     ApprovalUnavailableError,
     ContentDeniedError,
     type PermissionEngine
-} from './permission.js';
-import type { SiyuanClient } from './client.js';
-import { resolveEffectiveBehavior, type AppConfig, type ResolvedWorkspace } from './config.js';
+} from '../shared/permission.js';
+import type { SiyuanClient } from '../shared/client.js';
+import { resolveEffectiveBehavior, type AppConfig, type ResolvedWorkspace } from '../workspace/config.js';
 
 const RISK_TRIGGERS_IMPLICIT_WARNING = new Set<string>([
     'elevated',

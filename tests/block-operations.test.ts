@@ -1,28 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { EndpointRegistry } from '../src/core/registry.ts';
-import { deriveEndpointId } from '../src/core/schema.ts';
+import { EndpointRegistry } from '../src/api/registry.ts';
+import { deriveEndpointId } from '../src/shared/schema.ts';
 import {
     PermissionEngine,
     ContentAccessDeniedError
-} from '../src/core/permission.ts';
-import { executeEndpoint } from '../src/core/guard.ts';
-import type { AppConfig, PermissionConfig } from '../src/core/config.ts';
-import { schema as attrGetBlockAttrs } from '../src/apis/attr/getBlockAttrs.ts';
-import { schema as attrSetBlockAttrs } from '../src/apis/attr/setBlockAttrs.ts';
-import { schema as blockAppendBlock } from '../src/apis/block/appendBlock.ts';
-import { schema as blockDeleteBlock } from '../src/apis/block/deleteBlock.ts';
-import { schema as blockFoldBlock } from '../src/apis/block/foldBlock.ts';
-import { schema as blockGetBlockBreadcrumb } from '../src/apis/block/getBlockBreadcrumb.ts';
-import { schema as blockGetBlockDOM } from '../src/apis/block/getBlockDOM.ts';
-import { schema as blockGetBlockInfo } from '../src/apis/block/getBlockInfo.ts';
-import { schema as blockGetChildBlocks } from '../src/apis/block/getChildBlocks.ts';
-import { schema as blockInsertBlock } from '../src/apis/block/insertBlock.ts';
-import { schema as blockPrependBlock } from '../src/apis/block/prependBlock.ts';
-import { schema as blockUnfoldBlock } from '../src/apis/block/unfoldBlock.ts';
-import { schema as blockUpdateBlock } from '../src/apis/block/updateBlock.ts';
-import { schema as blockTransferBlockRef } from '../src/apis/block/transferBlockRef.ts';
+} from '../src/shared/permission.ts';
+import { executeEndpoint } from '../src/api/guard.ts';
+import type { AppConfig, PermissionConfig } from '../src/workspace/config.ts';
+import { schema as attrGetBlockAttrs } from '../src/api/endpoints/attr/getBlockAttrs.ts';
+import { schema as attrSetBlockAttrs } from '../src/api/endpoints/attr/setBlockAttrs.ts';
+import { schema as blockAppendBlock } from '../src/api/endpoints/block/appendBlock.ts';
+import { schema as blockDeleteBlock } from '../src/api/endpoints/block/deleteBlock.ts';
+import { schema as blockFoldBlock } from '../src/api/endpoints/block/foldBlock.ts';
+import { schema as blockGetBlockBreadcrumb } from '../src/api/endpoints/block/getBlockBreadcrumb.ts';
+import { schema as blockGetBlockDOM } from '../src/api/endpoints/block/getBlockDOM.ts';
+import { schema as blockGetBlockInfo } from '../src/api/endpoints/block/getBlockInfo.ts';
+import { schema as blockGetChildBlocks } from '../src/api/endpoints/block/getChildBlocks.ts';
+import { schema as blockInsertBlock } from '../src/api/endpoints/block/insertBlock.ts';
+import { schema as blockPrependBlock } from '../src/api/endpoints/block/prependBlock.ts';
+import { schema as blockUnfoldBlock } from '../src/api/endpoints/block/unfoldBlock.ts';
+import { schema as blockUpdateBlock } from '../src/api/endpoints/block/updateBlock.ts';
+import { schema as blockTransferBlockRef } from '../src/api/endpoints/block/transferBlockRef.ts';
 
 function makeConfig(permission?: PermissionConfig): AppConfig {
     return {

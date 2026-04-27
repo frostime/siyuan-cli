@@ -1,5 +1,5 @@
-import { formatRecords } from '../../core/output.js';
-import type { EndpointSchema } from '../../core/schema.js';
+import { formatRecords } from '../../../shared/output.js';
+import type { EndpointSchema } from '../../../shared/schema.js';
 
 export const schema: EndpointSchema<FileEntry[]> = {
     endpoint: '/api/file/readDir',

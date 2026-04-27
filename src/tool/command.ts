@@ -1,15 +1,15 @@
 import { defineCommand } from 'citty';
-import { parsePayload } from '../core/argv.js';
+import { parsePayload } from '../shared/argv.js';
 import {
     buildToolHelp,
     createToolContext,
     renderToolResult,
     toolRegistry
-} from '../core/tools.js';
-import { fatalError, toCliError } from '../utils/errors.js';
-import type { ToolSchema } from '../core/schema.js';
+} from './registry.js';
+import { fatalError, toCliError } from '../shared/errors.js';
+import type { ToolSchema } from '../shared/schema.js';
 
-import '../tools/index.js';
+import './builtins/index.js';
 
 const RESERVED_CLI_ARGS = new Set([
     'workspace',

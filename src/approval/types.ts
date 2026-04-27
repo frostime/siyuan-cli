@@ -1,4 +1,4 @@
-import type { RegisteredEndpoint, RiskLabel } from '../core/schema.js';
+import type { RegisteredEndpoint, RiskLabel } from '../shared/schema.js';
 
 export type ApprovalStatus =
     | 'pending'

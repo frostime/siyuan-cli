@@ -1,15 +1,15 @@
-import { registry as endpointRegistry } from './registry.js';
-import { loadConfig, resolveEffectiveWorkspace } from './config.js';
-import { SiyuanClient } from './client.js';
-import { createPermissionEngine } from './permission.js';
-import { executeEndpoint } from './guard.js';
-import { preparePrintedOutput } from './output.js';
+import { registry as endpointRegistry } from '../api/registry.js';
+import { loadConfig, resolveEffectiveWorkspace } from '../workspace/config.js';
+import { SiyuanClient } from '../shared/client.js';
+import { createPermissionEngine } from '../shared/permission.js';
+import { executeEndpoint } from '../api/guard.js';
+import { preparePrintedOutput } from '../shared/output.js';
 import type {
     GlobalArgs,
     ToolContext,
     ToolResult,
     ToolSchema
-} from './schema.js';
+} from '../shared/schema.js';
 
 export class ToolRegistry {
     private readonly map = new Map<string, ToolSchema>();

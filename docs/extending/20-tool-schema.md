@@ -163,7 +163,7 @@ The tool itself doesn't need to call `permission.checkContentRef()` directly —
 
 ## Registration
 
-Add to `src/tools/<tool-id>.ts`, then in `src/tools/index.ts`:
+Add to `src/tool/builtins/<tool-id>.ts`, then in `src/tool/builtins/index.ts`:
 
 ```ts
 import { tool as myTool } from "./my-tool.js";

@@ -1,4 +1,4 @@
-import { toolRegistry } from '../core/tools.js';
+import { toolRegistry } from '../registry.js';
 import { tool as listDocTree } from './list-doc-tree.js';
 import { tool as listDailynote } from './list-dailynote.js';
 import { tool as appendContent } from './append-content.js';

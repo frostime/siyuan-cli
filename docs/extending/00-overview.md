@@ -6,7 +6,7 @@ summary: Map of source layout, request lifecycle, and extension points.
 
 # Architecture Overview
 
-GATE: read this before touching `src/apis/**`, `src/tools/**`, or `src/core/**`.
+GATE: read this before touching `src/api/endpoints/**`, `src/tool/builtins/**`, or `src/shared/** + feature modules under src/{api,tool,workspace,doc,skill}/**`.
 
 ## Source map
 
@@ -57,15 +57,15 @@ docs/ (dev)                this file lives in docs/extending/ (not published)
 ## Request lifecycle: `siyuan api <id> ...`
 
 ```text
- 1. citty parses argv                            src/cli.ts + src/commands/api.ts
- 2. parsePayload() assembles payload             src/core/argv.ts
+ 1. citty parses argv                            src/cli.ts + src/api/command.ts
+ 2. parsePayload() assembles payload             src/shared/argv.ts
        ├── --json / -f / positional primary / --<field>
        ├── @file: / @stdin / @env: resolution by allowSource
        └── ajv validation
- 3. loadConfig() + resolveWorkspace()            src/core/config.ts
- 4. new SiyuanClient(workspace)                  src/core/client.ts
- 5. createPermissionEngine(...)                  src/core/permission.ts
- 6. executeEndpoint({...})                       src/core/guard.ts
+ 3. loadConfig() + resolveWorkspace()            src/workspace/config.ts
+ 4. new SiyuanClient(workspace)                  src/shared/client.ts
+ 5. createPermissionEngine(...)                  src/shared/permission.ts
+ 6. executeEndpoint({...})                       src/api/guard.ts
        ├── engine.checkEndpoint(id)              Phase 1: deny by pure-caller rule or default
        ├── applyPayloadGuard(schema, ...)        Phase 2: payloadTargets → PointerPath → checkContentRef
        ├── debug preview (optional)
@@ -74,7 +74,7 @@ docs/ (dev)                this file lives in docs/extending/ (not published)
        ├── wouldRequestApproval → broker + inline wait   Approval Center (or --yes bypass)
        ├── client.call(endpoint, payload)        or client.upload() for multipart
        └── applyResponseGuard(...)               declarative response filter + write-back
- 7. render result to stdout                      src/core/output.ts + src/commands/api.ts
+ 7. render result to stdout                      src/shared/output.ts + src/api/command.ts
        ├── --print json                          raw JSON
        ├── --print compact + schema.format       compact text
        └── formatter failure                     warning + JSON fallback
@@ -83,8 +83,8 @@ docs/ (dev)                this file lives in docs/extending/ (not published)
 ## Request lifecycle: `siyuan tool <id> ...`
 
 ```text
- 1. parsePayload() for tool input                src/core/argv.ts
- 2. createToolContext(args, toolId)              src/core/tools.ts
+ 1. parsePayload() for tool input                src/shared/argv.ts
+ 2. createToolContext(args, toolId)              src/tool/registry.ts
        ├── permission.checkTool(id)
        └── wires callEndpoint / callEndpointRaw
  3. tool.run(ctx, input) → ToolResult
@@ -96,9 +96,9 @@ docs/ (dev)                this file lives in docs/extending/ (not published)
 
 | You want to | Touch |
 |---|---|
-| Expose a new kernel API as `siyuan api <group>.<name>` | `src/apis/<group>/<name>.ts` + `src/apis/index.ts` |
-| Compose several endpoints into one high-level tool | `src/tools/<tool-id>.ts` + `src/tools/index.ts` |
-| Change how permissions or argv are parsed | `src/core/permission.ts` / `src/core/argv.ts` — rare, last resort |
+| Expose a new kernel API as `siyuan api <group>.<name>` | `src/api/endpoints/<group>/<name>.ts` + `src/api/endpoints/index.ts` |
+| Compose several endpoints into one high-level tool | `src/tool/builtins/<tool-id>.ts` + `src/tool/builtins/index.ts` |
+| Change how permissions or argv are parsed | `src/shared/permission.ts` / `src/shared/argv.ts` — rare, last resort |
 
 ## Registration chain
 

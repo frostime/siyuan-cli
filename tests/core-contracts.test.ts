@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { EndpointRegistry } from '../src/core/registry.ts';
+import { EndpointRegistry } from '../src/api/registry.ts';
 import {
     PermissionEngine,
     BlockNotFoundError,
     WorkspaceAccessDeniedError,
     cascadePermission
-} from '../src/core/permission.ts';
-import { applyPayloadGuard } from '../src/core/guard.ts';
-import type { AppConfig, PermissionConfig } from '../src/core/config.ts';
+} from '../src/shared/permission.ts';
+import { applyPayloadGuard } from '../src/api/guard.ts';
+import type { AppConfig, PermissionConfig } from '../src/workspace/config.ts';
 import {
     evaluatePointerPath,
     isTerminalFilterCompatiblePointerPath,
@@ -18,7 +18,7 @@ import {
     isHighRisk,
     type EndpointSchema,
     type PermissionEngineLike
-} from '../src/core/schema.ts';
+} from '../src/shared/schema.ts';
 
 function makeConfig(permission?: PermissionConfig): AppConfig {
     return {

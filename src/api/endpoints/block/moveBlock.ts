@@ -3,10 +3,10 @@
  * Copyright (c) 2026 by frostime. All Rights Reserved.
  * @Date         : 2026-04-17 22:13:50
  * @Description  :
- * @FilePath     : /src/apis/block/moveBlock.ts
+ * @FilePath     : /src/api/endpoints/block/moveBlock.ts
  * @LastEditTime : 2026-04-17 22:15:54
  */
-import type { EndpointSchema } from '../../core/schema.js';
+import type { EndpointSchema } from '../../../shared/schema.js';
 
 export const schema: EndpointSchema = {
     endpoint: '/api/block/moveBlock',

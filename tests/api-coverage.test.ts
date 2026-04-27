@@ -1,58 +1,58 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { EndpointRegistry } from '../src/core/registry.ts';
-import { deriveEndpointId } from '../src/core/schema.ts';
-import { applyResponseGuard, executeEndpoint } from '../src/core/guard.ts';
+import { EndpointRegistry } from '../src/api/registry.ts';
+import { deriveEndpointId } from '../src/shared/schema.ts';
+import { applyResponseGuard, executeEndpoint } from '../src/api/guard.ts';
 import {
     PermissionEngine,
     ContentAccessDeniedError
-} from '../src/core/permission.ts';
-import type { AppConfig, PermissionConfig } from '../src/core/config.ts';
+} from '../src/shared/permission.ts';
+import type { AppConfig, PermissionConfig } from '../src/workspace/config.ts';
 
-import { schema as assetUpload } from '../src/apis/asset/upload.ts';
-import { schema as convertPandoc } from '../src/apis/convert/pandoc.ts';
-import { schema as exportMdContent } from '../src/apis/export/exportMdContent.ts';
-import { schema as exportResources } from '../src/apis/export/exportResources.ts';
-import { schema as searchFullTextSearchBlock } from '../src/apis/search/fullTextSearchBlock.ts';
-import { schema as templateRender } from '../src/apis/template/render.ts';
-import { schema as templateRenderSprig } from '../src/apis/template/renderSprig.ts';
+import { schema as assetUpload } from '../src/api/endpoints/asset/upload.ts';
+import { schema as convertPandoc } from '../src/api/endpoints/convert/pandoc.ts';
+import { schema as exportMdContent } from '../src/api/endpoints/export/exportMdContent.ts';
+import { schema as exportResources } from '../src/api/endpoints/export/exportResources.ts';
+import { schema as searchFullTextSearchBlock } from '../src/api/endpoints/search/fullTextSearchBlock.ts';
+import { schema as templateRender } from '../src/api/endpoints/template/render.ts';
+import { schema as templateRenderSprig } from '../src/api/endpoints/template/renderSprig.ts';
 
-import { schema as fileReadDir } from '../src/apis/file/readDir.ts';
-import { schema as fileRemoveFile } from '../src/apis/file/removeFile.ts';
-import { schema as fileRenameFile } from '../src/apis/file/renameFile.ts';
-import { schema as notebookCloseNotebook } from '../src/apis/notebook/closeNotebook.ts';
-import { schema as notebookCreateNotebook } from '../src/apis/notebook/createNotebook.ts';
-import { schema as notebookGetNotebookConf } from '../src/apis/notebook/getNotebookConf.ts';
-import { schema as notebookLsNotebooks } from '../src/apis/notebook/lsNotebooks.ts';
-import { schema as notebookOpenNotebook } from '../src/apis/notebook/openNotebook.ts';
-import { schema as notebookRemoveNotebook } from '../src/apis/notebook/removeNotebook.ts';
-import { schema as notebookRenameNotebook } from '../src/apis/notebook/renameNotebook.ts';
-import { schema as notebookSetNotebookConf } from '../src/apis/notebook/setNotebookConf.ts';
+import { schema as fileReadDir } from '../src/api/endpoints/file/readDir.ts';
+import { schema as fileRemoveFile } from '../src/api/endpoints/file/removeFile.ts';
+import { schema as fileRenameFile } from '../src/api/endpoints/file/renameFile.ts';
+import { schema as notebookCloseNotebook } from '../src/api/endpoints/notebook/closeNotebook.ts';
+import { schema as notebookCreateNotebook } from '../src/api/endpoints/notebook/createNotebook.ts';
+import { schema as notebookGetNotebookConf } from '../src/api/endpoints/notebook/getNotebookConf.ts';
+import { schema as notebookLsNotebooks } from '../src/api/endpoints/notebook/lsNotebooks.ts';
+import { schema as notebookOpenNotebook } from '../src/api/endpoints/notebook/openNotebook.ts';
+import { schema as notebookRemoveNotebook } from '../src/api/endpoints/notebook/removeNotebook.ts';
+import { schema as notebookRenameNotebook } from '../src/api/endpoints/notebook/renameNotebook.ts';
+import { schema as notebookSetNotebookConf } from '../src/api/endpoints/notebook/setNotebookConf.ts';
 
-import { schema as filetreeCreateDailyNote } from '../src/apis/filetree/createDailyNote.ts';
-import { schema as filetreeCreateDocWithMd } from '../src/apis/filetree/createDocWithMd.ts';
-import { schema as filetreeGetHPathByID } from '../src/apis/filetree/getHPathByID.ts';
-import { schema as filetreeGetHPathByPath } from '../src/apis/filetree/getHPathByPath.ts';
-import { schema as filetreeGetIDsByHPath } from '../src/apis/filetree/getIDsByHPath.ts';
-import { schema as filetreeGetPathByID } from '../src/apis/filetree/getPathByID.ts';
-import { schema as filetreeListDocsByPath } from '../src/apis/filetree/listDocsByPath.ts';
-import { schema as filetreeMoveDocs } from '../src/apis/filetree/moveDocs.ts';
-import { schema as filetreeMoveDocsByID } from '../src/apis/filetree/moveDocsByID.ts';
-import { schema as filetreeRemoveDoc } from '../src/apis/filetree/removeDoc.ts';
-import { schema as filetreeRemoveDocByID } from '../src/apis/filetree/removeDocByID.ts';
-import { schema as filetreeRenameDoc } from '../src/apis/filetree/renameDoc.ts';
-import { schema as filetreeRenameDocByID } from '../src/apis/filetree/renameDocByID.ts';
-import { schema as filetreeSearchDocs } from '../src/apis/filetree/searchDocs.ts';
+import { schema as filetreeCreateDailyNote } from '../src/api/endpoints/filetree/createDailyNote.ts';
+import { schema as filetreeCreateDocWithMd } from '../src/api/endpoints/filetree/createDocWithMd.ts';
+import { schema as filetreeGetHPathByID } from '../src/api/endpoints/filetree/getHPathByID.ts';
+import { schema as filetreeGetHPathByPath } from '../src/api/endpoints/filetree/getHPathByPath.ts';
+import { schema as filetreeGetIDsByHPath } from '../src/api/endpoints/filetree/getIDsByHPath.ts';
+import { schema as filetreeGetPathByID } from '../src/api/endpoints/filetree/getPathByID.ts';
+import { schema as filetreeListDocsByPath } from '../src/api/endpoints/filetree/listDocsByPath.ts';
+import { schema as filetreeMoveDocs } from '../src/api/endpoints/filetree/moveDocs.ts';
+import { schema as filetreeMoveDocsByID } from '../src/api/endpoints/filetree/moveDocsByID.ts';
+import { schema as filetreeRemoveDoc } from '../src/api/endpoints/filetree/removeDoc.ts';
+import { schema as filetreeRemoveDocByID } from '../src/api/endpoints/filetree/removeDocByID.ts';
+import { schema as filetreeRenameDoc } from '../src/api/endpoints/filetree/renameDoc.ts';
+import { schema as filetreeRenameDocByID } from '../src/api/endpoints/filetree/renameDocByID.ts';
+import { schema as filetreeSearchDocs } from '../src/api/endpoints/filetree/searchDocs.ts';
 
-import { schema as notificationPushErrMsg } from '../src/apis/notification/pushErrMsg.ts';
-import { schema as networkForwardProxy } from '../src/apis/network/forwardProxy.ts';
-import { schema as sqliteFlushTransaction } from '../src/apis/sqlite/flushTransaction.ts';
-import { schema as systemBootProgress } from '../src/apis/system/bootProgress.ts';
-import { schema as systemCurrentTime } from '../src/apis/system/currentTime.ts';
-import { schema as systemGetConf } from '../src/apis/system/getConf.ts';
-import { schema as systemLogoutAuth } from '../src/apis/system/logoutAuth.ts';
-import { schema as systemVersion } from '../src/apis/system/version.ts';
+import { schema as notificationPushErrMsg } from '../src/api/endpoints/notification/pushErrMsg.ts';
+import { schema as networkForwardProxy } from '../src/api/endpoints/network/forwardProxy.ts';
+import { schema as sqliteFlushTransaction } from '../src/api/endpoints/sqlite/flushTransaction.ts';
+import { schema as systemBootProgress } from '../src/api/endpoints/system/bootProgress.ts';
+import { schema as systemCurrentTime } from '../src/api/endpoints/system/currentTime.ts';
+import { schema as systemGetConf } from '../src/api/endpoints/system/getConf.ts';
+import { schema as systemLogoutAuth } from '../src/api/endpoints/system/logoutAuth.ts';
+import { schema as systemVersion } from '../src/api/endpoints/system/version.ts';
 
 function makeConfig(permission?: PermissionConfig): AppConfig {
     return {

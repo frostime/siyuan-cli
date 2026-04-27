@@ -13,7 +13,7 @@ import {
     writeFileSync
 } from 'node:fs';
 import { join } from 'pathe';
-import { getConfigDir } from '../utils/paths.js';
+import { getConfigDir } from '../workspace/paths.js';
 
 // ── Directory paths ──────────────────────────────────────────────────────────
 

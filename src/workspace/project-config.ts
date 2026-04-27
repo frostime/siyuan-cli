@@ -20,9 +20,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'pathe';
 import { parse } from 'yaml';
-import { CliError, ExitCode } from './errors.js';
-import type { AppConfig } from '../core/config.js';
-import { validateBehaviorRaw, type BehaviorConfig, type PermissionConfig } from '../core/schema.js';
+import { CliError, ExitCode } from '../shared/errors.js';
+import type { AppConfig } from './config.js';
+import { validateBehaviorRaw, type BehaviorConfig, type PermissionConfig } from '../shared/schema.js';
 
 export const PROJECT_CONFIG_FILENAME = '.siyuan-cli.yaml';
 export const PROJECT_SCHEMA_VERSION = 1;

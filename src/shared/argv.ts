@@ -8,7 +8,7 @@ import { resolve } from 'pathe';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import type { EndpointSchema, JSONSchema, InputSource } from './schema.js';
-import { CliError, ExitCode } from '../utils/errors.js';
+import { CliError, ExitCode } from './errors.js';
 
 // ─── AJV setup ────────────────────────────────────────────────────────────────
 

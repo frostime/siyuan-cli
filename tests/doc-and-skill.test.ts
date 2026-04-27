@@ -7,7 +7,7 @@ import {
     readBuiltinDoc,
     resolveBuiltinDoc,
     resolveDocsRoot
-} from '../src/core/docs.ts';
+} from '../src/doc/runtime.ts';
 import {
     installSkill,
     normalizeSkillTargetName,
@@ -15,7 +15,7 @@ import {
     resolveBuiltinSkillsDir,
     resolveSkillTargetDir,
     uninstallSkill
-} from '../src/core/skills.ts';
+} from '../src/skill/runtime.ts';
 
 const originalCwd = process.cwd();
 

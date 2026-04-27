@@ -14,19 +14,19 @@ import {
 import { execSync } from 'node:child_process';
 import { dirname, join } from 'pathe';
 import { parse, stringify } from 'yaml';
-import { getConfigPath } from '../utils/paths.js';
+import { getConfigPath } from './paths.js';
 import {
     findProjectConfig,
     loadProjectConfig
-} from '../utils/project-config.js';
-import { CliError, ExitCode } from '../utils/errors.js';
+} from './project-config.js';
+import { CliError, ExitCode } from '../shared/errors.js';
 import {
     resolvePermissionEffect,
     validateBehaviorRaw,
     type BehaviorConfig,
     type PermissionConfig,
     type ResolvedBehaviorConfig
-} from './schema.js';
+} from '../shared/schema.js';
 export type { BehaviorConfig, PermissionConfig, ResolvedBehaviorConfig };
 
 // ─── Types ───────────────────────────────────────────────────────────────────

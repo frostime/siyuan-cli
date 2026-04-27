@@ -3,7 +3,7 @@
  * All kernel APIs are POST /api/<endpoint> + JSON body.
  * See design.md §2 for interface contract.
  */
-import { CliError, ExitCode } from '../utils/errors.js';
+import { CliError, ExitCode } from './errors.js';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

@@ -4,7 +4,7 @@
  * CLI command implementations live in command.ts.
  */
 import { createHash } from 'node:crypto';
-import { deriveEndpointId, evaluatePointerPath, type RegisteredEndpoint } from '../core/schema.js';
+import { deriveEndpointId, evaluatePointerPath, type RegisteredEndpoint } from '../shared/schema.js';
 import {
     ApprovalBrokerUnavailableError,
     ApprovalCancelledError,

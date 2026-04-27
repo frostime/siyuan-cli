@@ -39,7 +39,7 @@ Used for tags and filtering; not part of risk derivation.
 
 ## Risk derivation (automatic)
 
-`src/core/registry.ts::deriveRisk` computes `RiskLabel` from `(mode, surface, scope)`:
+`src/api/registry.ts::deriveRisk` computes `RiskLabel` from `(mode, surface, scope)`:
 
 ```text
 read  + meta                     → safe
@@ -69,7 +69,7 @@ classification: {
 },
 ```
 
-Real examples from `src/apis/`:
+Real examples from `src/api/endpoints/`:
 
 | Endpoint | Default risk | Override | Reason |
 |---|---|---|---|

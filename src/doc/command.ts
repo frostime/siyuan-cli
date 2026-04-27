@@ -1,11 +1,11 @@
 import { defineCommand } from 'citty';
-import { CliError, ExitCode, fatalError, toCliError } from '../utils/errors.js';
+import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
 import {
     formatDocsHint,
     getDocsRoot,
     listBuiltinDocs,
     readBuiltinDoc
-} from '../core/docs.js';
+} from './runtime.js';
 
 function formatDocList(): string {
     const docs = listBuiltinDocs();

@@ -2,18 +2,18 @@
  * `siyuan api` command — direct kernel API calls.
  */
 import { defineCommand } from 'citty';
-import { registry } from '../core/registry.js';
-import { loadConfig, resolveEffectiveWorkspace } from '../core/config.js';
-import { SiyuanClient } from '../core/client.js';
-import { createPermissionEngine } from '../core/permission.js';
-import { executeEndpoint } from '../core/guard.js';
-import { parsePayload } from '../core/argv.js';
-import { normalizePayloadPaths } from '../core/msys-path.js';
-import { preparePrintedOutput } from '../core/output.js';
-import { fatalError, toCliError } from '../utils/errors.js';
-import type { GlobalArgs, RegisteredEndpoint } from '../core/schema.js';
+import { registry } from './registry.js';
+import { loadConfig, resolveEffectiveWorkspace } from '../workspace/config.js';
+import { SiyuanClient } from '../shared/client.js';
+import { createPermissionEngine } from '../shared/permission.js';
+import { executeEndpoint } from './guard.js';
+import { parsePayload } from '../shared/argv.js';
+import { normalizePayloadPaths } from './msys-path.js';
+import { preparePrintedOutput } from '../shared/output.js';
+import { fatalError, toCliError } from '../shared/errors.js';
+import type { GlobalArgs, RegisteredEndpoint } from '../shared/schema.js';
 
-import '../apis/index.js';
+import './endpoints/index.js';
 
 function out(data: unknown): void {
     process.stdout.write(JSON.stringify(data, null, 2) + '\n');

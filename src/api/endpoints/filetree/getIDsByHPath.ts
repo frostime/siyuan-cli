@@ -1,4 +1,4 @@
-import type { EndpointSchema } from '../../core/schema.js';
+import type { EndpointSchema } from '../../../shared/schema.js';
 
 // Phase 6 correction: local draft schema used `paths: string[]`, but upstream SDK accepts a single `path: string` hpath input.
 export const schema: EndpointSchema = {

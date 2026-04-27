@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
-import { installSkill, readSkill, uninstallSkill } from '../core/skills.js';
-import { fatalError, toCliError } from '../utils/errors.js';
+import { installSkill, readSkill, uninstallSkill } from './runtime.js';
+import { fatalError, toCliError } from '../shared/errors.js';
 
 const readCommand = defineCommand({
     meta: { name: 'read', description: 'Read the bundled skill file.' },

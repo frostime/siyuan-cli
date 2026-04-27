@@ -1,23 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isHighRisk } from '../src/core/schema.ts';
+import { isHighRisk } from '../src/shared/schema.ts';
 
-import { EndpointRegistry } from '../src/core/registry.ts';
-import { deriveEndpointId } from '../src/core/schema.ts';
+import { EndpointRegistry } from '../src/api/registry.ts';
+import { deriveEndpointId } from '../src/shared/schema.ts';
 import {
     PermissionEngine,
     ContentAccessDeniedError,
     WorkspaceAccessDeniedError
-} from '../src/core/permission.ts';
-import { executeEndpoint } from '../src/core/guard.ts';
-import type { AppConfig, PermissionConfig } from '../src/core/config.ts';
-import { schema as moveBlock } from '../src/apis/block/moveBlock.ts';
-import { schema as getBlockKramdown } from '../src/apis/block/getBlockKramdown.ts';
-import { schema as querySql } from '../src/apis/query/sql.ts';
-import { schema as fileGetFile } from '../src/apis/file/getFile.ts';
-import { schema as filePutFile } from '../src/apis/file/putFile.ts';
-import { schema as systemExit } from '../src/apis/system/exit.ts';
-import { schema as notificationPushMsg } from '../src/apis/notification/pushMsg.ts';
+} from '../src/shared/permission.ts';
+import { executeEndpoint } from '../src/api/guard.ts';
+import type { AppConfig, PermissionConfig } from '../src/workspace/config.ts';
+import { schema as moveBlock } from '../src/api/endpoints/block/moveBlock.ts';
+import { schema as getBlockKramdown } from '../src/api/endpoints/block/getBlockKramdown.ts';
+import { schema as querySql } from '../src/api/endpoints/query/sql.ts';
+import { schema as fileGetFile } from '../src/api/endpoints/file/getFile.ts';
+import { schema as filePutFile } from '../src/api/endpoints/file/putFile.ts';
+import { schema as systemExit } from '../src/api/endpoints/system/exit.ts';
+import { schema as notificationPushMsg } from '../src/api/endpoints/notification/pushMsg.ts';
 
 function makeConfig(permission?: PermissionConfig): AppConfig {
     return {

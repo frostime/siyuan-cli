@@ -8,7 +8,7 @@ import {
 import { basename, dirname, join, resolve } from 'pathe';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
-import { CliError, ExitCode } from '../utils/errors.js';
+import { CliError, ExitCode } from '../shared/errors.js';
 
 const BUILTIN_SKILL_NAME = 'siyuan-cli';
 
@@ -27,9 +27,22 @@ export function resolveBuiltinSkillsDir(
         resolve(fromDir, '../../skills'),
         resolve(fromDir, '../../../skills')
     ];
+
+    // Prefer the first directory that contains the bundled skill payload.
+    for (const candidate of candidates) {
+        if (
+            exists(candidate) &&
+            exists(join(candidate, BUILTIN_SKILL_NAME, 'SKILL.md'))
+        ) {
+            return candidate;
+        }
+    }
+
+    // Fallback for tests/packaging probes that only mock directory existence.
     for (const candidate of candidates) {
         if (exists(candidate)) return candidate;
     }
+
     return candidates[0]!;
 }
 
