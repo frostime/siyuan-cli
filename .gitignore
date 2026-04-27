@@ -1,6 +1,8 @@
 # Dependencies
 node_modules/
 *.tgz
+nul
+NUL
 
 # Build output
 dist/
