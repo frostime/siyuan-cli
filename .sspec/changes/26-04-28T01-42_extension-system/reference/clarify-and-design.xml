@@ -1,0 +1,751 @@
+<ChatThread>
+<Meta cwd="H:\SrcCode\playground\siyuan-cli" sessionFile=".pi\sessions\2026-04-27T17-28-13-822Z_019dcffc-06fe-72cd-90d9-9bf1ae26d99d.jsonl" exportedAt="2026-04-28T07:39:19.232Z" entryCount="86" chunkCount="36" />
+<Role-user data-chunk-idx="0">
+参看 .sspec\requests\26-04-28T01-27_extension-system.md ，和我讨论这个 sspec request
+</Role-user>
+
+<Role-toolCall-Logs data-chunk-idx="1">
+# These tool call logs are compressed
+read('.sspec/requests/26-04-28T01-27_extension-system.md')
+read('.sspec/project.md')
+bash('cd H:/SrcCode/playground/siyuan-cli &amp;&amp; sspec tool view-tree --depth 2 src/')
+bash('cd H:/SrcCode/playground/siyuan-cli &amp;&amp; cat src/shared/schema.ts | head -80')
+bash('cd H:/SrcCode/playground/siyuan-cli &amp;&amp; cat src/tool/registry.ts | head -100')
+bash('cd H:/SrcCode/playground/siyuan-cli &amp;&amp; cat src/workspace/paths.ts')
+read('src/tool/builtins/index.ts')
+read('src/api/endpoints/index.ts')
+bash('cd H:/SrcCode/playground/siyuan-cli &amp;&amp; cat tsconfig.json')
+bash('cd H:/SrcCode/playground/siyuan-cli &amp;&amp; cat package.json | head -30')
+bash('cd H:/SrcCode/playground/siyuan-cli &amp;&amp; cat tsdown.config.ts')
+</Role-toolCall-Logs>
+
+<Role-assistant data-chunk-idx="2">
+好的，已经充分了解了项目结构。来讨论这个 request。
+
+---
+
+## 📋 Context Summary
+
+**你的意图**：让 siyuan-cli 支持用户级扩展（类似 pi coding agent 的 `~/.pi/agent/` 模式），用户可以在全局配置目录下放入自定义 API endpoints 和 tools。
+
+**现有架构关键点**：
+
+| 维度 | 现状 |
+|------|------|
+| **Endpoint 注册** | 静态 import → `registry.register()`, 编译时固定 |
+| **Tool 注册** | 同上，`toolRegistry.register()` |
+| **Schema 类型** | `EndpointSchema` / `ToolSchema` — 定义在 `shared/schema.ts` |
+| **全局配置目录** | `~/.config/siyuan-cli/` (通过 `paths.ts`) |
+| **构建** | tsdown, `dts: true` 已开启（但 `tsconfig.json` 中 `declaration: false`） |
+| **运行时** | ESM-only, Node ≥ 20 |
+
+**你提到的几个子问题**，我逐个展开：
+
+---
+
+### 1. 用户扩展目录 (`apis/` + `tools/`)
+
+最自然的位置：`~/.config/siyuan-cli/extensions/apis/` 和 `~/.config/siyuan-cli/extensions/tools/`。CLI 启动时动态扫描并 `import()` 这些文件，调用 `registry.register()` / `toolRegistry.register()`。
+
+**需要澄清**：
+- 要支持 project-local 扩展吗？（类似 `.siyuan-cli.yaml` 的项目级配置，扩展也可以放在项目目录下）
+- endpoint 扩展和 tool 扩展的优先级——用户扩展和内置同 id 冲突时，覆盖？报错？
+
+### 2. Script 文件格式
+
+**两个选项**：
+
+| 方案 | 优点 | 代价 |
+|------|------|------|
+| **纯 `.mjs`** | 零依赖，`import()` 直接用 | 用户没有类型提示，写起来痛苦 |
+| **`.ts` + 动态编译** | 用户体验好，可以直接 import 项目类型 | 需要运行时编译（`tsx`/`jiti`/`esbuild`） |
+
+Node 20+ 生态中，[`jiti`](https://github.com/unjs/jiti) 是轻量方案——支持 ESM `.ts` 动态 import，nuxt 团队维护，无需 loader flag。实际就一行：
+
+```ts
+const jiti = createJiti(import.meta.url);
+const mod = await jiti.import('./user-tool.ts');
+```
+
+项目已经用了 citty（unjs 生态），jiti 是亲兄弟，适配度很高。
+
+### 3. 类型导出 (dts)
+
+tsdown 配置里 `dts: true` 已经开了，但 tsconfig 里 `declaration: false`。tsdown 用自己的 dts 生成器，不依赖 tsc 的 declaration 选项，所以 **build 时应该已经在生成 `.d.ts`**。
+
+需要确认的是 `package.json` 的 `exports` / `types` 字段有没有正确指向 dts 文件。用户扩展要用类型的话，需要：
+- `package.json` 导出类型入口
+- 用户目录下放一个 `tsconfig.json`，`compilerOptions.paths` 指向安装好的 `@frostime/siyuan-cli` 包
+
+### 4. 扩展的契约 (Convention)
+
+每个扩展文件需要遵循的最小契约：
+
+```ts
+// tools/my-tool.ts
+import type { ToolSchema } from '@frostime/siyuan-cli';
+export const tool: ToolSchema = { /* ... */ };
+
+// apis/my-endpoint.ts
+import type { EndpointSchema } from '@frostime/siyuan-cli';
+export const schema: EndpointSchema = { /* ... */ };
+```
+
+---
+
+## 需要和你确认的问题
+</Role-assistant>
+
+<Role-toolCall-Logs data-chunk-idx="3">
+# These tool call logs are compressed
+questionnaire()
+</Role-toolCall-Logs>
+
+<Role-assistant data-chunk-idx="4">
+清楚了。确认一下汇总的需求：
+
+## ✅ Requirements Checklist
+
+| # | 条件 | 确认 |
+|---|------|------|
+| 1 | 全局扩展目录 `~/.config/siyuan-cli/extensions/{apis,tools}/` | ✅ |
+| 2 | 代码中为项目级扩展留结构槽位，本次不实现 | ✅ |
+| 3 | 支持 `.ts`（jiti 动态编译）和 `.mjs`（原生 import） | ✅ |
+| 4 | ID 冲突时：warn + skip（不注册用户扩展），CLI 正常继续 | ✅ |
+| 5 | 修复 `package.json` 类型导出，使用户扩展可 `import type` 核心类型 | ✅ |
+| 6 | 扩展文件契约：`export const tool: ToolSchema` / `export const schema: EndpointSchema` | ✅ |
+
+**还有两个细节**想确认：
+</Role-assistant>
+
+<Role-toolCall-Logs data-chunk-idx="5">
+# These tool call logs are compressed
+questionnaire()
+</Role-toolCall-Logs>
+
+<Role-assistant data-chunk-idx="6">
+好问题。来分析一下两条路线的实际权衡：
+
+| 方案 | 启动延迟 | 用户体验 | 依赖 |
+|------|---------|---------|------|
+| **jiti 运行时编译** | 首次 ~100-200ms/文件，后续有缓存 | 写完即用，零步骤 | +jiti (~200KB) |
+| **ts 编写 → build → mjs 运行** | 零（只加载原生 .mjs） | 需要额外 build 步骤 | 可复用已有 esbuild |
+
+**我的建议**：走"compile to mjs"路线。原因：
+
+1. **CLI 对启动速度敏感**——每次调用都是冷启动，jiti 的缓存在 CI/agent 场景下常失效
+2. **`siyuan extension build`** 可以用项目已有的 esbuild（tsdown 的底层），不增加新依赖
+3. **用户工作流清晰**：写 `.ts` → `siyuan extension build` → CLI 加载 `.mjs`
+4. 同时原生支持用户直接放 `.mjs`（跳过 build 步骤）
+5. `siyuan extension init` 生成 tsconfig.json + 示例文件，`extension build` 编译——两步完成
+
+本质上就是 **开发时 TypeScript，运行时 JavaScript**，和项目自身的构建模式一致。
+</Role-assistant>
+
+<Role-toolCall-Logs data-chunk-idx="7">
+# These tool call logs are compressed
+questionnaire()
+</Role-toolCall-Logs>
+
+<Role-assistant data-chunk-idx="8">
+好，方向完全明确了。更新最终的需求清单：
+
+## ✅ Final Requirements Checklist
+
+| # | 条件 |
+|---|------|
+| 1 | 全局扩展目录 `~/.config/siyuan-cli/extensions/{apis,tools}/` |
+| 2 | 仅加载 `.mjs` 文件，运行时零编译依赖 |
+| 3 | 用户可用 `.ts` 编写扩展，通过 `siyuan extension build` 编译为 `.mjs` |
+| 4 | `siyuan extension init` 生成 tsconfig.json + 示例扩展文件 |
+| 5 | 扩展按需加载：仅 `api` / `tool` 子命令时触发 |
+| 6 | ID 冲突：warn + skip，CLI 正常继续 |
+| 7 | 修复 `package.json` 类型导出（`exports` + `types` 字段） |
+| 8 | 为项目级扩展留结构槽位（本次不实现） |
+| 9 | 扩展契约：`export const tool: ToolSchema` / `export const schema: EndpointSchema` |
+
+需求已收敛，可以进入 Design 阶段了。是否继续？
+</Role-assistant>
+
+<Role-user data-chunk-idx="9">
+还有一个问题，如果是 compile 的话：1） mjs 放在那？2）谁来 invoke compile? 3) 如何处理 ts 更新但是忘了 compile mjs 的情况？
+</Role-user>
+
+<Role-assistant data-chunk-idx="10">
+这三个问题其实在挑战"compile 方案"的实际可行性。逐一分析：
+
+### 1) mjs 放哪？
+
+两个选择：
+
+| 方案 | 结构 | 优劣 |
+|------|------|------|
+| **Side-by-side** | `tools/my-tool.ts` → `tools/my-tool.mjs` | 简单直接，但目录变杂 |
+| **隐藏输出目录** | `tools/my-tool.ts` → `extensions/.compiled/tools/my-tool.mjs` | 干净，CLI 加载 `.compiled/`，源码和产物分离 |
+
+### 2) 谁来 invoke compile？
+
+`siyuan extension build` — 但这需要一个编译器。**问题来了**：esbuild 是 tsdown 的底层依赖，属于 devDependency。用户 `npm install -g @frostime/siyuan-cli` 之后并没有 esbuild。
+
+要解决这个，要么：
+- 把 esbuild 提升为 runtime dependency（+9MB platform binary）
+- 用更轻的 `sucrase`（~2MB, 纯 JS, 仅做 TS→JS 类型剥离）
+- 要求用户自己全局安装 esbuild
+
+### 3) ts 更新忘了 compile？
+
+- 加载时检查 mtime：`.ts` 比 `.mjs` 新 → warn
+- 或者干脆 **自动重编译**（mtime 不一致就编译）
+
+---
+
+### 但这里有个矛盾
+
+如果走到"自动检测 mtime + 自动重编译"，本质上就是在重新实现 jiti 的行为——只是换了个实现方式。而且还多了"编译器怎么打包"的问题。
+
+**重新审视两条路**：
+
+| 维度 | compile 方案 | jiti 方案 |
+|------|-------------|----------|
+| 运行时延迟 | 零（已编译） | 首次 ~100-200ms/文件，有 fs 缓存 |
+| 忘记编译 | 需要 mtime 检测 + 处理 | 无此问题 |
+| 额外依赖 | esbuild/sucrase 需要打入 runtime | jiti (~200KB) |
+| 用户步骤 | 编辑 → build → 使用 | 编辑 → 使用 |
+| 实现复杂度 | 较高（编译命令 + mtime + 产物管理） | 低（一行 `jiti.import()`） |
+
+用户扩展文件通常是 1-5 个小文件。jiti 对这个量级的编译开销可以忽略，而且有文件系统缓存（`node_modules/.cache/jiti`），二次加载接近零开销。
+
+**我现在倾向于回到 jiti 方案**：复杂度低得多，用户体验更好，依赖也更轻。你觉得呢？还是你对"写完直接用"的延迟有硬性要求？
+</Role-assistant>
+
+<Role-user data-chunk-idx="11">
+你看这样的思路是否可行：就原生支持 ts，但是在真正 invoke tool , api 的时候顺便在side by side 生成一个 schema.json 文件，把那些静态的比如声明等需要被 --help 使用的信息提取出来，这样只有真正需要执行的时候才需要 jiti? 此外，如果在 siyuan-cli config 中会出现 node_modules ，建议自动生成一份 gitignore
+</Role-user>
+
+<Role-assistant data-chunk-idx="12">
+这个思路很巧妙。本质上是**把"发现/展示"和"执行"两条路径分离**：
+
+```
+siyuan tool list / --help
+  → 读 schema.json（纯 JSON，零开销）
+  → 没有 schema.json？跳过或标记 [not cached]
+
+siyuan tool run &lt;id&gt;
+  → jiti import .ts → 执行 run()
+  → 顺便写出 schema.json（缓存静态元数据）
+```
+
+**可行，而且优势明显**：
+
+| 操作 | 频率 | 开销 |
+|------|------|------|
+| `list` / `--help` / permission check | 高 | 零（读 JSON） |
+| 实际执行 tool/api | 低 | jiti 编译（仅首次，后续有 fs 缓存） |
+
+### 几个细节补充
+
+**schema.json 内容**：id, description, args, tags, classification, endpoint path — 所有 `ToolSchema` / `EndpointSchema` 里除了 `run()` / `format()` 之外的字段。
+
+**staleness 检测**：加载 schema.json 前比较 mtime。`.ts` 比 `.schema.json` 新 → 标记 stale，下次执行时自动重新生成。`list` 时可以显示 `[stale]` 标记。
+
+**首次使用体验**：用户刚放入 `.ts` 文件，还没执行过 → 没有 schema.json → `list` 看不到。解决方案：
+
+- `siyuan extension list` 同时扫描 `.ts` 文件，有 schema.json 的走快路径，没有的显示 `[not cached — run once to register]`
+- 或者提供 `siyuan extension cache` 命令批量生成所有 schema.json
+
+**.gitignore**：同意。`siyuan extension init` 时自动在扩展目录生成 `.gitignore`，内容包含 `node_modules/` 和 `*.schema.json`（生成产物不需要版本控制）。
+
+---
+
+这样最终方案变成：
+
+| 组件 | 方案 |
+|------|------|
+| 运行时 TS 支持 | jiti（仅执行时触发） |
+| 元数据缓存 | side-by-side `*.schema.json` |
+| 发现/帮助 | 读 schema.json，零开销 |
+| 编译产物管理 | mtime 检测，自动重生成 |
+| 类型支持 | `extension init` 生成 tsconfig + `.gitignore` |
+
+要基于这个方案进入 Design 阶段吗？
+</Role-assistant>
+
+<Role-user data-chunk-idx="13">
+好的，请进入下一个阶段
+</Role-user>
+
+<Role-toolCall-Logs data-chunk-idx="14">
+# These tool call logs are compressed
+read('H:\\SrcCode\\playground\\siyuan-cli\\.agents\\skills\\sspec-design\\SKILL.md')
+bash('cd H:/SrcCode/playground/siyuan-cli &amp;&amp; sspec change new extension-system --from ".sspec/requests/26-04-28T01-27_extensio...[truncated]')
+read('.sspec/changes/26-04-28T01-42_extension-system/spec.md')
+read('.sspec/changes/26-04-28T01-42_extension-system/design.md')
+</Role-toolCall-Logs>
+
+<Role-assistant data-chunk-idx="15">
+Now let me do more research on the codebase to inform the design — specifically the schema types, registry interfaces, and how the build currently handles exports.
+</Role-assistant>
+
+<Role-toolCall-Logs data-chunk-idx="16">
+# These tool call logs are compressed
+bash('cd H:/SrcCode/playground/siyuan-cli &amp;&amp; sspec tool mdtoc src/shared/schema.ts')
+bash('cd H:/SrcCode/playground/siyuan-cli &amp;&amp; cat package.json | python -c "import sys,json; d=json.load(sys.stdin); print(json...[truncated]')
+read('src/shared/schema.ts')
+read('src/shared/schema.ts')
+read('src/shared/schema.ts')
+</Role-toolCall-Logs>
+
+<Role-assistant data-chunk-idx="17">
+Now let me check the existing CLI command structure to understand how to add the `extension` subcommand:
+</Role-assistant>
+
+<Role-toolCall-Logs data-chunk-idx="18">
+# These tool call logs are compressed
+read('src/cli.ts')
+read('src/api/registry.ts')
+</Role-toolCall-Logs>
+
+<Role-assistant data-chunk-idx="19">
+Now I have enough context. Let me also check an example tool and endpoint to understand the full schema shape for the schema.json cache design:
+</Role-assistant>
+
+<Role-toolCall-Logs data-chunk-idx="20">
+# These tool call logs are compressed
+read('src/tool/builtins/resolve-path.ts')
+read('src/api/endpoints/system/version.ts')
+</Role-toolCall-Logs>
+
+<Role-assistant data-chunk-idx="21">
+Good. Now I have a thorough understanding of the codebase. Let me write the spec.md and design.md.
+</Role-assistant>
+
+<Role-toolCall-Logs data-chunk-idx="22">
+# These tool call logs are compressed
+write('.sspec/changes/26-04-28T01-42_extension-system/spec.md')
+write('.sspec/changes/26-04-28T01-42_extension-system/design.md')
+</Role-toolCall-Logs>
+
+<Role-assistant data-chunk-idx="23">
+---
+
+## @align (gate) — Design Review
+
+**问题**：用户扩展系统，让 siyuan-cli 支持 `~/.config/siyuan-cli/extensions/` 下的自定义 endpoint 和 tool。
+
+**核心决策**：
+
+| 决策 | 选择 |
+|------|------|
+| 运行时 TS | jiti（仅执行时触发） |
+| 快路径 (list/help) | schema.json 缓存，零 jiti 开销 |
+| 缓存刷新 | mtime 检测 + 执行后自动写入 |
+| 冲突处理 | warn + skip |
+| 类型导出 | `@frostime/siyuan-cli/schema` subpath export |
+| 加载时机 | lazy — 仅 api/tool 子命令触发 |
+
+**新增文件（4个）**：
+- `src/extension/loader.ts` — 核心加载逻辑
+- `src/extension/cache.ts` — schema.json 序列化
+- `src/extension/command.ts` — `siyuan extension` 子命令
+- `src/extension/init.ts` — 脚手架生成
+
+**修改文件（7个）**：
+- `src/api/registry.ts` + `src/tool/registry.ts` — registerExtension()
+- `src/api/command.ts` + `src/tool/command.ts` — lazy load hook
+- `src/cli.ts` — 注册 extension 子命令
+- `src/workspace/paths.ts` — getExtensionDir()
+- `package.json` — exports/types/jiti dep
+
+**风险点**：
+- jiti 在 Windows 上 fs cache 路径需要验证（但 unjs 生态对 Windows 支持良好）
+- tsdown `dts: true` + `unbundle: true` 生成的 `.d.mts` 路径需要确认实际输出
+
+请 review design.md 中的接口设计和数据结构，确认后进入 Plan 阶段。
+</Role-assistant>
+
+<Role-user data-chunk-idx="24">
+我有几个想法；请你把我下面的话当作启发式的源头，抛砖引玉，而非当作基准锚定
+
+- Question: schema 问题 | 需要讨论思考
+
+  如果要导出 json，是不是最好也放上 schema version 之类的？
+
+  我担心后面可能会有数据迁移的需求。（虽然现在没有）
+- Idea: 我们担心的无非是一对矛盾： cache 失效 vs 每次 lanuch 无 cache 带来的性能浪费
+
+  如果引入一个后台 cache 的机制呢？
+
+  例如：Agent 调用某个 CLI 的时候，发现有必要 cache，就开一个独立的 defer 进程去处理 cache 问题；对上层透明？
+
+  个人疑虑：不清楚这么做代价如何；由于是一个比较激进的想法，可能需要事前验尸的讨论；这是一个可以被否决的提案？
+
+  我背后的想法：引入了 cache，还是有一个问题就是谁来调用 cache；以及如果不 cache ，造成的后果代价是否可控？并且这个问题，如果放开某种约束松弛是否后更完美的解法？
+- tsconfig 问题
+
+  - tsconfig 最重要的功能就是用户编辑器打开 extension 的时候，能正确识别类型
+  - 比如类似 ~\.pi\agent\tsconfig.json
+
+    ```json
+    "paths": {
+      16 │       "@mariozechner/pi-coding-agent": [
+      17 │         "C:/Users/EEG/AppData/Roaming/npm/node_modules/@mariozechner/pi-coding-agent",
+      18 │       ],
+      19 │       "@mariozechner/pi-coding-agent/*": [
+      20 │         "C:/Users/EEG/AppData/Roaming/npm/node_modules/@mariozechner/pi-coding-agent/*",
+    ```
+  - 这可能需要生成的时候读取当前 siyuan 安装目录？不过建议可以在 path 中增加注释，用户根据需要自己选择去掉注释。
+</Role-user>
+
+<Role-assistant data-chunk-idx="25">
+三个点都很好，逐一展开讨论。
+
+---
+
+### 1. Schema Cache Version
+
+完全同意加 `_version`。成本几乎为零，但给未来留了迁移通道。
+
+```jsonc
+{
+    "_version": 1,       // cache schema version, bump on structural changes
+    "_meta": { ... },
+    "id": "my-tool",
+    // ...
+}
+```
+
+如果未来 cache 结构变了（比如新增字段、重命名），loader 看到 `_version &lt; CURRENT` 直接视为 stale，触发重新 import + 重写。比"猜测旧 cache 是否兼容"干净得多。
+
+纳入设计，无争议。
+
+---
+
+### 2. 后台 Cache 机制 — Pre-mortem
+
+先拆解核心矛盾：
+
+```
+cache miss 的代价是什么？
+├── siyuan tool list / --help
+│   → 显示 [uncached]，没有 summary/description
+│   → 体验降级，功能可用
+│
+├── siyuan tool &lt;id&gt; (执行)
+│   → 必须 jiti import（无论有没有 cache）
+│   → cache miss 不影响执行，只是不能顺便更新 help 缓存
+│
+└── siyuan api &lt;id&gt;
+    → 同上
+```
+
+**结论**：cache miss 的后果是 **discovery 降级**（list/help 信息缺失），执行路径完全不受影响。
+
+现在看后台 cache 方案的 pre-mortem：
+
+| 风险 | 严重程度 | 说明 |
+|------|---------|------|
+| 跨平台 detached process | 中 | Windows `child_process.spawn` detached 语义和 Unix 不同，需要 `stdio: 'ignore'` + `unref()` |
+| 竞态 | 低-中 | 两个 CLI 同时触发 → 两个后台进程同时写同一个 schema.json |
+| 调试困难 | 中 | 后台进程 silent fail，用户看到 cache 状态不对但不知道为什么 |
+| 收益 | 低 | 解决的场景仅限"首次 list 时看不到新扩展描述" |
+
+**更简单的替代方案**：`list` 命令检测到 uncached 条目时，**inline 同步 cache**。
+
+```
+siyuan tool list
+  → scan extensions/tools/
+  → 3 files found, 1 uncached
+  → jiti.import(uncached.ts)    // ~100-200ms one-time
+  → write schema.json
+  → display full list
+```
+
+用户体验：首次 `list` 多等 200ms，之后全部走 cache。没有后台进程的复杂度。
+
+**我的建议**：否决后台进程方案。用 **list-time inline cache** 替代——复杂度可控，收益等价。
+
+你觉得这个松弛方向 OK 吗？还是你对"任何场景都不能有 jiti 延迟"有硬约束？
+
+---
+
+### 3. tsconfig paths 指向安装目录
+
+pi 的做法很实用。`siyuan extension init` 可以通过 `import.meta.url` 反推自身安装路径，然后生成 paths：
+
+```jsonc
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "strict": true,
+        "noEmit": true,
+        "paths": {
+            // Auto-detected from siyuan-cli install location.
+            // Alternative: run `npm install --save-dev @frostime/siyuan-cli` in this directory.
+            "@frostime/siyuan-cli": [
+                "C:/Users/EEG/AppData/Roaming/npm/node_modules/@frostime/siyuan-cli"
+            ],
+            "@frostime/siyuan-cli/*": [
+                "C:/Users/EEG/AppData/Roaming/npm/node_modules/@frostime/siyuan-cli/*"
+            ]
+        }
+    }
+}
+```
+
+实现思路：
+
+```ts
+// src/extension/init.ts
+import { fileURLToPath } from 'node:url';
+import { dirname, join, resolve } from 'pathe';
+
+function detectPackageRoot(): string {
+    // import.meta.url → file:///C:/Users/.../dist/extension/init.mjs
+    // package root → ../../
+    const thisFile = fileURLToPath(import.meta.url);
+    return resolve(dirname(thisFile), '..');
+}
+```
+
+**注释策略**：生成时两种方式都写上，用注释标注：
+
+```jsonc
+"paths": {
+    // [auto-detected] Points to global install. Works without npm install.
+    "@frostime/siyuan-cli": ["&lt;detected-path&gt;"],
+    "@frostime/siyuan-cli/*": ["&lt;detected-path&gt;/*"]
+    // [alternative] If you prefer local node_modules:
+    //   npm install --save-dev @frostime/siyuan-cli
+    //   Then remove the paths above.
+}
+```
+
+---
+
+### 总结待确认
+
+| 点 | 建议 | 状态 |
+|---|------|------|
+| schema.json `_version` | 加入，初始值 `1` | ✅ 纳入 |
+| 后台 cache | 否决，改用 list-time inline cache | ❓ 待确认 |
+| tsconfig paths | 自动检测安装路径 + 注释备选方案 | ✅ 纳入 |
+</Role-assistant>
+
+<Role-user data-chunk-idx="26">
+cache 值得进一步讨论推理
+
+- 不仅仅是 Tool, 还有 API 也需要考虑
+- 什么时候做 implicit cache 需要更加明确
+
+  - 不仅仅是 list
+  - 最直接的：调用 Tool 本身执行的时候，就是一个自然而然检查是否需要更新 cache 的时候？
+  - 还有其他的吗？
+- 反向思考： 跳出当前锚定的思维，反过来想有什么理由回去驳斥引入隐式 cache 机制的？
+
+  - 因为 implicit cache 必然引入代码层面的复杂性——因为要考虑多个 entry 做 cache
+  - 我们需要把正题和反题同时考虑，最后给出一个合题
+</Role-user>
+
+<Role-assistant data-chunk-idx="27">
+好，系统性地推理这个问题。
+
+## 全景：所有触及扩展的 Entry Points
+
+先把所有路径穷举出来，再逐一判断 cache 行为：
+
+| Entry Point | 需要什么 | jiti 是否已发生 |
+|-------------|---------|----------------|
+| `siyuan tool &lt;id&gt; [args]` | 完整模块（含 `run()`） | ✅ 必须 import |
+| `siyuan api &lt;id&gt; [args]` | 完整模块（含 `format()`） | ✅ 必须 import |
+| `siyuan tool &lt;id&gt; --help` | 仅元数据 | ❌ 可用 cache |
+| `siyuan api &lt;id&gt; --help` | 仅元数据 | ❌ 可用 cache |
+| `siyuan tool list` | 所有扩展元数据 | ❌ 可用 cache |
+| `siyuan api list` | 所有扩展元数据 | ❌ 可用 cache |
+| `siyuan extension list` | 扩展状态 + 元数据 | ❌ 可用 cache |
+| `siyuan extension cache` | 显式缓存 | ✅ 主动 import |
+
+第一个观察：**执行路径已经付了 jiti 成本**，写 schema.json 只是 `JSON.stringify + writeFile` ≈ 1ms，相当于免费的顺风车。
+
+---
+
+## 正题：引入 implicit cache 的理由
+
+**1. 执行路径 piggyback（成本≈0）**
+
+`siyuan tool my-tool --query x` 已经做了 jiti import，顺手写 cache 是纯收益。
+
+**2. 自愈性**
+
+cache 损坏/删除 → 下次执行自动修复。用户无需知道 `siyuan extension cache` 命令的存在。
+
+**3. 符合自然使用流**
+
+用户写完扩展 → 先测试执行 → 然后才关心 list。执行顺带缓存 → list 自然命中。
+
+---
+
+## 反题：反对 implicit cache 的理由
+
+**1. 读路径引入写副作用**
+
+如果 `list` 也做 implicit cache（发现 uncached → jiti import → 写 cache），`list` 从纯读操作变成了有副作用的操作。
+
+后果：
+- 扩展目录只读？`list` 报错
+- 磁盘满？`list` 报错
+- 需要给"读命令"加写失败的错误处理
+
+**2. 多 entry 的写入点 = 代码复杂度**
+
+如果 `tool run`、`api run`、`tool list`、`api list`、`extension list` 全部可以触发 cache 写入 → **5 个写入点**，每个都要处理：
+
+- cache hit / miss / stale 三态
+- 写失败容错
+- 并发写竞态（两个 CLI 实例同时 list）
+
+测试矩阵：5 entry × 3 cache state = 15 个组合。
+
+**3. 隐式行为的可预测性**
+
+用户运行 `siyuan tool list`，磁盘上多了几个 `.schema.json` 文件。这是隐式的。当出问题时，用户需要逆向推理"哪个命令在什么时候写了这个 cache"。
+
+**4. 边际收益递减**
+
+| 场景 | 没有 implicit cache 的后果 |
+|------|--------------------------|
+| `list` 看到 [uncached] | 体验降级，可用 |
+| `--help` 无缓存 | 显示 "run once to cache" 提示 |
+| 执行 tool/api | **完全不受影响** |
+
+核心功能（执行）不受损。受损的是辅助功能（发现），且有显式 fallback（`siyuan extension cache`）。
+
+---
+
+## 合题
+
+将 implicit cache 的范围收窄到 **成本为零且无争议的位置**，其余用显式命令覆盖：
+
+| 层级 | 触发位置 | 行为 | 复杂度 |
+|------|---------|------|--------|
+| **Piggyback（隐式）** | `tool run` / `api run` 执行后 | jiti 已完成 → 顺写 schema.json | 极低（1 个写入点） |
+| **Explicit（显式）** | `siyuan extension cache` | 批量 import + 写入 | 低（独立命令） |
+| **Graceful degradation** | `list` / `--help` | 读 cache → 有就用 → 没有显示 [uncached] | 零（纯读） |
+
+**关键设计选择**：`list` 和 `--help` **只读不写**。
+
+**理由**：
+
+- 写入点收敛到 **唯一一处**（执行路径的 post-hook），代码复杂度最低
+- 发现路径保持纯读，不需要写失败容错
+- 自然使用流（写 → 测试 → list）保证了 cache 在 list 之前已存在
+- 非自然流（写 → 直接 list）降级为 [uncached]，用户运行 `siyuan extension cache` 修复
+
+**唯一的代价**：用户写完扩展直接 `list` 看不到描述信息。这个代价可控——`list` 输出底部加一行提示：
+
+```
+[!] 2 uncached extensions. Run `siyuan extension cache` to populate metadata.
+```
+
+---
+
+### 执行路径的 cache 写入位置（精确到代码）
+
+```
+siyuan tool &lt;id&gt; [args]
+  → loadToolExtensions(mode: 'full')      // jiti import
+  → toolRegistry.registerExtension(tool)
+  → tool.run(ctx, input)
+  → writeSchemaCache(source, tool)         // ← HERE, post-execution
+```
+
+```
+siyuan api &lt;id&gt; [args]
+  → loadEndpointExtensions(mode: 'full')  // jiti import
+  → registry.registerExtension(schema)
+  → executeEndpoint(...)
+  → writeSchemaCache(source, schema)       // ← HERE, post-execution
+```
+
+写入失败 → `console.warn` → 不影响执行结果。
+
+---
+
+这个合题你认为平衡点合理吗？还是你觉得 `list` 路径的 [uncached] 降级不可接受？
+</Role-assistant>
+
+<Role-user data-chunk-idx="28">
+可以，这个平衡点我能接受，增加提示信息可以抑制让人不安的‘隐形错误’；现在请综合梳理之后，再次更新 design/spec
+</Role-user>
+
+<Role-toolCall-Logs data-chunk-idx="29">
+# These tool call logs are compressed
+write('.sspec/changes/26-04-28T01-42_extension-system/spec.md')
+write('.sspec/changes/26-04-28T01-42_extension-system/design.md')
+</Role-toolCall-Logs>
+
+<Role-assistant data-chunk-idx="30">
+spec.md + design.md 已更新。本轮变更汇总：
+
+| 新增/修订 | 内容 |
+|-----------|------|
+| **Cache 策略** | 三层模型：piggyback（执行写）+ explicit（命令写）+ discovery（只读降级） |
+| **Cache 版本** | `_version: 1`，未来结构变更 bump 版本，旧版本视为 stale |
+| **Cache envelope** | `SchemaCacheEnvelope&lt;T&gt;` 统一包装 `_version` + `_meta` + `data` |
+| **Discovery 降级** | `[uncached]` 条目 + stderr 提示 `Run siyuan extension cache` |
+| **tsconfig paths** | `siyuan extension init` 自动检测安装路径，注释中提供 npm install 备选方案 |
+| **.gitignore** | 自动生成，排除 `node_modules/` + `*.schema.json` |
+
+确认 design 后进入 Plan 阶段。
+</Role-assistant>
+
+<Role-user data-chunk-idx="31">
+好的，进入 Plan ，不过现别执行，我打算找别的 Code Writer Agent 执行，弄完之后我会回来找你审查的
+</Role-user>
+
+<Role-toolCall-Logs data-chunk-idx="32">
+# These tool call logs are compressed
+read('H:\\SrcCode\\playground\\siyuan-cli\\.agents\\skills\\sspec-plan\\SKILL.md')
+read('H:\\SrcCode\\playground\\siyuan-cli\\.agents\\skills\\sspec-plan\\examples.md')
+read('.sspec/changes/26-04-28T01-42_extension-system/tasks.md')
+write('.sspec/changes/26-04-28T01-42_extension-system/tasks.md')
+</Role-toolCall-Logs>
+
+<Role-assistant data-chunk-idx="33">
+Now update memory.md for session continuity:
+</Role-assistant>
+
+<Role-toolCall-Logs data-chunk-idx="34">
+# These tool call logs are compressed
+bash('cd H:/SrcCode/playground/siyuan-cli &amp;&amp; sspec tool now')
+write('.sspec/changes/26-04-28T01-42_extension-system/memory.md')
+</Role-toolCall-Logs>
+
+<Role-assistant data-chunk-idx="35">
+---
+
+## @align report — Plan
+
+**6 phases, 18 tasks**：
+
+| Phase | 任务数 | 核心交付 |
+|-------|--------|---------|
+| 1. Foundation | 4 | `paths.ts` + `cache.ts` + `loader.ts` + validation |
+| 2. Registry | 2 | `registerExtension()` 冲突处理 |
+| 3. Lazy loading | 3 | api/tool 命令集成 + jiti + cache piggyback |
+| 4. Extension cmd | 3 | `siyuan extension init/list/cache` |
+| 5. Type exports | 3 | `package.json` exports + dts 验证 |
+| 6. E2E validation | 4 | 端到端 + 错误路径验证 |
+
+**依赖顺序**：Phase 1 → 2 → 3 → 4（线性依赖链），Phase 5 可与 1-4 并行，Phase 6 在全部完成后。
+
+**给 Code Writer Agent 的关键提示**：
+- 所有设计细节在 `design.md`，tasks 只引用不重复
+- `design.md §N` 标注了每个 task 对应的设计章节
+- Phase 3 最复杂（两个命令文件的改动 + jiti 集成 + cache 写入时机）
+
+文件已就绪，交给你安排实现。回来找我做 Review。
+</Role-assistant>
+
+</ChatThread>
