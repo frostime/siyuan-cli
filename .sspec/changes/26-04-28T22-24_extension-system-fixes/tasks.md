@@ -34,10 +34,22 @@ updated: "2026-04-28T22:24+08:00"
 - [x] **T9** `skills/siyuan-cli/SKILL.md` — add extension capability bullets and example command
   - Verify: file contains `extension` references
 
-## Phase 4 — Integration
+### Feedback Tasks (→ [001-raw-api-and-source-bootstrapping](./revisions/001-raw-api-and-source-bootstrapping.md))
 
-- [x] **T10** Build and regression check
+- [x] **T11** `src/shared/schema.ts` — update `ToolContext.callEndpointRaw` signature to `(endpoint: string, payload: unknown) => Promise<T>`
+  - Verify: `pnpm run typecheck` passes
+- [x] **T12** `src/tool/registry.ts` — update `callEndpointRaw` implementation to call `client.call(endpoint, payload)` directly (no registry lookup)
+  - Verify: `pnpm run typecheck` passes
+- [x] **T13** `src/docs/extension.md` — add "Calling kernel APIs from a Tool" section with `callEndpoint` / `callEndpointRaw` / `client` examples
+  - Verify: `pnpm run siyuan doc read extension.md` contains the new section
+- [x] **T14** `src/docs/extension.md` — add "Source reference" section listing key source files (`schema.ts`, `client.ts`, `api/registry.ts`, `tool/registry.ts`)
+  - Verify: `pnpm run siyuan doc read extension.md` contains source reference
+- [x] **T15** `skills/siyuan-cli/SKILL.md` — add source bootstrapping capability note
+  - Verify: file contains source reference
+
+- [x] **T16** Build and regression check
   - Verify: `pnpm run build` succeeds
   - Verify: `pnpm run typecheck` passes
   - Verify: `pnpm run siyuan api list` and `pnpm run siyuan tool list` output valid JSON with `source` field
   - Verify: `pnpm run siyuan api -h` and `pnpm run siyuan tool -h` show grouped sections (no flat COMMANDS table)
+  - Verify: `pnpm run siyuan tool list` still works

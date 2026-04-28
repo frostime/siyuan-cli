@@ -338,7 +338,7 @@ export interface ToolContext {
     registry: unknown;
     permission: PermissionEngineLike;
     callEndpoint: <T = unknown>(id: string, payload: unknown) => Promise<T>;
-    callEndpointRaw: <T = unknown>(id: string, payload: unknown) => Promise<T>;
+    callEndpointRaw: <T = unknown>(endpoint: string, payload: unknown) => Promise<T>;
     logger: unknown;
     args: GlobalArgs;
 }

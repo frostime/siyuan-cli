@@ -7,6 +7,9 @@ reference:
 - source: .sspec/changes/26-04-28T01-42_extension-system
   type: parent-change
   note: Fixes and docs for the extension-system change
+- source: .sspec/changes/26-04-28T22-24_extension-system-fixes/revisions/001-raw-api-and-source-bootstrapping.md
+  type: revision
+  note: Raw API access for tools + package-local source bootstrapping guidance
 ---
 
 # extension-system-fixes

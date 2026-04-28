@@ -90,12 +90,10 @@ export async function createToolContext(
     };
 
     const callEndpointRaw: ToolContext['callEndpointRaw'] = async <T = unknown>(
-        id: string,
+        endpoint: string,
         payload: unknown
     ): Promise<T> => {
-        const entry = endpointRegistry.get(id);
-        if (!entry) throw new Error(`Endpoint "${id}" not found.`);
-        return client.call(entry.schema.endpoint, payload) as Promise<T>;
+        return client.call(endpoint, payload) as Promise<T>;
     };
 
     return {

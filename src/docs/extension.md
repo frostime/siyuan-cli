@@ -122,6 +122,50 @@ npm install --save-dev @frostime/siyuan-cli
 # then remove the paths entries from tsconfig.json
 ```
 
+## Calling kernel APIs from a Tool
+
+Your Tool's `run` function receives a `ToolContext` (`ctx`) with these helpers:
+
+- `ctx.callEndpoint(id, payload)` — call a registered endpoint (with permission checks, guard logic, and response filtering).
+- `ctx.callEndpointRaw(endpoint, payload)` — call any `/api/...` path directly, bypassing registry and guards.
+- `ctx.client` — the raw `SiyuanClient` instance for full control.
+
+Use `callEndpoint` when the endpoint is already wrapped by siyuan-cli (built-in or via an API extension):
+
+```ts
+async run(ctx, input) {
+  const docs = await ctx.callEndpoint('filetree.searchDocs', { keyword: input.query });
+  return { content: `Found ${docs.length} documents` };
+}
+```
+
+Use `callEndpointRaw` when SiYuan's kernel has an API that siyuan-cli doesn't wrap yet:
+
+```ts
+async run(ctx, input) {
+  const result = await ctx.callEndpointRaw('/api/asset/getUnusedAssets', {});
+  return { content: `Found ${result.data.length} unused assets` };
+}
+```
+
+For the full list of kernel APIs, inspect the upstream source:
+https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go
+
+## Package-local reference
+
+`extension.md` is shipped inside the same installed package as the runtime code. Use `siyuan doc list` / `siyuan doc read extension.md` to locate the docs root, then inspect the sibling `dist/` directory in that package when documentation is incomplete.
+
+| File | What it contains |
+|------|-----------------|
+| `dist/shared/schema.d.mts` | `EndpointSchema`, `ToolSchema`, `ToolContext`, `GlobalArgs` type declarations |
+| `dist/shared/client.mjs` | `SiyuanClient` — HTTP client with `call(endpoint, payload)` |
+| `dist/api/registry.mjs` | `EndpointRegistry` — endpoint registration and lookup |
+| `dist/tool/registry.mjs` | `ToolRegistry`, `createToolContext` — assembles `ToolContext` at runtime |
+
+GitHub fallback (if you need upstream or unminified source context):
+- siyuan-cli: https://github.com/frostime/siyuan-cli
+- SiYuan kernel router: https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go
+
 ## Troubleshooting
 
 | Symptom | Cause | Fix |

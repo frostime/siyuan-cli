@@ -37,3 +37,4 @@ Types: Decision, Constraint, Gotcha, Rejected
 - 2026-04-28T22:24+08:00 Change created
 - 2026-04-28T22:24+08:00 Design finalized (Fix A: init.ts only; Fix B: custom grouped help; Fix C: docs)
 - 2026-04-28T22:45+08:00 T1–T10 implementation complete — build, typecheck, and all verifications pass
+- 2026-04-28T23:10+08:00 Revision 001 implemented: callEndpointRaw signature changed to path-driven; extension.md + SKILL.md updated with source bootstrapping guidance; T11–T16 complete
