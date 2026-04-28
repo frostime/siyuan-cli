@@ -39,6 +39,10 @@ export class ToolRegistry {
         return this.map.get(id);
     }
 
+    isExtension(id: string): boolean {
+        return this.extensionIds.has(id);
+    }
+
     list(filter?: { tag?: string }): ToolSchema[] {
         let items = [...this.map.values()];
         if (filter?.tag) {

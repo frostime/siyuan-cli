@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'pathe';
 import { workspaceCommand } from './workspace/command.js';
-import { apiCommand, getEndpointHelpEntry } from './api/command.js';
-import { toolCommand, getToolHelpText } from './tool/command.js';
+import { apiCommand, getEndpointHelpEntry, renderGroupedApiHelp } from './api/command.js';
+import { toolCommand, getToolHelpText, renderGroupedToolHelp } from './tool/command.js';
 import { skillCommand } from './skill/command.js';
 import { docCommand, formatDocsHint } from './doc/command.js';
 import { approvalCommand } from './approval/command.js';
@@ -49,6 +49,18 @@ async function customShowUsage<T extends Record<string, unknown>>(
             ? await parent.meta()
             : await parent.meta
         : undefined;
+
+    // Detect bare `siyuan api -h`
+    if (meta?.name === 'api' && parentMeta?.name === 'siyuan') {
+        process.stdout.write(renderGroupedApiHelp(parentMeta?.version) + '\n');
+        return;
+    }
+
+    // Detect bare `siyuan tool -h`
+    if (meta?.name === 'tool' && parentMeta?.name === 'siyuan') {
+        process.stdout.write(renderGroupedToolHelp(parentMeta?.version) + '\n');
+        return;
+    }
 
     // Detect `siyuan api <endpoint-id> --help`
     if (parentMeta?.name === 'api' && meta?.name) {

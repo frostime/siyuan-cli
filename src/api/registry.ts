@@ -140,6 +140,10 @@ export class EndpointRegistry {
         return this.map.get(id);
     }
 
+    isExtension(id: string): boolean {
+        return this.extensionIds.has(id);
+    }
+
     list(filter?: { group?: string; tag?: string }): RegisteredEndpoint[] {
         let entries = [...this.map.values()];
         if (filter?.group) {

@@ -2,6 +2,7 @@
  * `siyuan api` command — direct kernel API calls.
  */
 import { defineCommand } from 'citty';
+import { colors } from 'consola/utils';
 import { join } from 'pathe';
 import { registry } from './registry.js';
 import { loadConfig, materializeWorkspace, resolveEffectiveWorkspace } from '../workspace/config.js';
@@ -140,7 +141,8 @@ export function listEndpoints(args: Record<string, unknown>): void {
             id: item.source.replace(/^.*[\\/]/, '').replace(/\.(ts|mjs)$/i, ''),
             endpoint: item.source.replace(/^.*[\\/]/, '').replace(/\.(ts|mjs)$/i, ''),
             summary: '[uncached]',
-            cacheStatus: 'uncached' as const
+            cacheStatus: 'uncached' as const,
+            source: 'extension' as const
         }))
         .filter((item) => !listedIds.has(item.id));
 
@@ -152,6 +154,7 @@ export function listEndpoints(args: Record<string, unknown>): void {
             tags: e.meta.tags,
             classification: e.meta.classification,
             risk: e.meta.risk,
+            source: registry.isExtension(e.id) ? 'extension' : 'builtin',
             ...(staleIds.has(e.id) ? { cacheStatus: 'stale' as const } : {})
         })),
         ...uncachedEndpoints
@@ -383,6 +386,44 @@ const describeCommand = defineCommand({
     },
     run: ({ args }) => describeEndpoint(args.id)
 });
+
+// ————— Grouped help renderer —————
+
+export function renderGroupedApiHelp(version?: string): string {
+    ensureEndpointDiscovery();
+    const lines: string[] = [];
+    const title = `Call SiYuan kernel API endpoints directly. (siyuan api${version ? ` v${version}` : ''})`;
+    lines.push(colors.gray(title));
+    lines.push('');
+    lines.push(`${colors.underline(colors.bold('USAGE'))} ${colors.cyan('siyuan api [OPTIONS] <command>')}`);
+    lines.push('');
+
+    const all = registry.list();
+    const builtins = all.filter((e) => !registry.isExtension(e.id));
+    const extensions = all.filter((e) => registry.isExtension(e.id));
+
+    function printGroup(name: string, items: { id: string; description: string }[]) {
+        if (items.length === 0) return;
+        lines.push(colors.underline(colors.bold(name)));
+        lines.push('');
+        const maxLen = Math.max(...items.map((i) => i.id.length), 0);
+        for (const item of items) {
+            lines.push(`  ${item.id.padEnd(maxLen + 2)}${colors.cyan(item.description)}`);
+        }
+        lines.push('');
+    }
+
+    printGroup('META', [
+        { id: 'list', description: 'List all registered API endpoints.' },
+        { id: 'describe', description: 'Show full EndpointSchema for an endpoint.' }
+    ]);
+    printGroup('BUILT-IN', builtins.map((e) => ({ id: e.id, description: e.schema.summary })));
+    printGroup('USER EXTENSIONS', extensions.map((e) => ({ id: e.id, description: e.schema.summary })));
+
+    lines.push(`Use ${colors.cyan('siyuan api <command> --help')} for more information about a command.`);
+
+    return lines.join('\n');
+}
 
 // ————— Command export —————
 

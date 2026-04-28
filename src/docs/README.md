@@ -17,6 +17,11 @@ siyuan workspace add main --url http://127.0.0.1:6806 --token <token>
 siyuan workspace verify main           # test connection
 
 siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
+
+# User extensions
+siyuan extension init               # scaffold ~/.config/siyuan-cli/extensions/
+siyuan extension list               # see discovered extensions
+siyuan extension cache              # batch-generate schema.json caches
 ```
 
 ## Workspace anchoring
@@ -76,6 +81,8 @@ siyuan api list                  # all available endpoints
 siyuan api <id> --help           # endpoint usage, parameters, examples
 siyuan tool list                 # all available tools
 siyuan tool <id> --help          # tool usage
+siyuan extension list              # discovered extensions + cache status
+siyuan extension --help            # extension management commands
 siyuan workspace which           # current workspace resolution details
 ```
 

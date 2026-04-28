@@ -1,4 +1,5 @@
 import { defineCommand } from 'citty';
+import { colors } from 'consola/utils';
 import { join } from 'pathe';
 import { parsePayload } from '../shared/argv.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
@@ -245,7 +246,8 @@ function listTools(args: Record<string, unknown>): void {
             id: item.source.replace(/^.*[\\/]/, '').replace(/\.(ts|mjs)$/i, ''),
             summary: '[uncached]',
             tags: [] as string[],
-            cacheStatus: 'uncached' as const
+            cacheStatus: 'uncached' as const,
+            source: 'extension' as const
         }));
 
     const staleIds = new Set(
@@ -256,6 +258,7 @@ function listTools(args: Record<string, unknown>): void {
 
     const list = cachedTools.map((t) => ({
         ...t,
+        source: toolRegistry.isExtension(t.id) ? 'extension' : 'builtin',
         ...(staleIds.has(t.id) ? { cacheStatus: 'stale' as const } : {})
     }));
 
@@ -283,6 +286,44 @@ const describeCommand = defineCommand({
     },
     run: ({ args }) => describeTool(args.id)
 });
+
+// ————— Grouped help renderer —————
+
+export function renderGroupedToolHelp(version?: string): string {
+    ensureToolDiscovery();
+    const lines: string[] = [];
+    const title = `Run built-in and user workflow tools. (siyuan tool${version ? ` v${version}` : ''})`;
+    lines.push(colors.gray(title));
+    lines.push('');
+    lines.push(`${colors.underline(colors.bold('USAGE'))} ${colors.cyan('siyuan tool [OPTIONS] <command>')}`);
+    lines.push('');
+
+    const all = toolRegistry.list();
+    const builtins = all.filter((t) => !toolRegistry.isExtension(t.id));
+    const extensions = all.filter((t) => toolRegistry.isExtension(t.id));
+
+    function printGroup(name: string, items: { id: string; description: string }[]) {
+        if (items.length === 0) return;
+        lines.push(colors.underline(colors.bold(name)));
+        lines.push('');
+        const maxLen = Math.max(...items.map((i) => i.id.length), 0);
+        for (const item of items) {
+            lines.push(`  ${item.id.padEnd(maxLen + 2)}${colors.cyan(item.description)}`);
+        }
+        lines.push('');
+    }
+
+    printGroup('META', [
+        { id: 'list', description: 'List registered tools.' },
+        { id: 'describe', description: 'Show full ToolSchema.' }
+    ]);
+    printGroup('BUILT-IN', builtins.map((t) => ({ id: t.id, description: t.summary })));
+    printGroup('USER EXTENSIONS', extensions.map((t) => ({ id: t.id, description: t.summary })));
+
+    lines.push(`Use ${colors.cyan('siyuan tool <command> --help')} for more information about a command.`);
+
+    return lines.join('\n');
+}
 
 // ————— Command export —————
 

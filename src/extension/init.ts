@@ -41,7 +41,9 @@ function buildTsconfig(packageRoot: string): string {
       // [auto-detected] Points to global siyuan-cli install.
       // Works without npm install.
       "@frostime/siyuan-cli": ["${portableRoot}"],
-      "@frostime/siyuan-cli/*": ["${portableRoot}/*"]
+      "@frostime/siyuan-cli/*": ["${portableRoot}/*"],
+      // Subpath export for schema types — TS paths cannot infer this from the wildcard above.
+      "@frostime/siyuan-cli/schema": ["${portableRoot}/shared/schema.d.mts"]
       // [alternative] If you prefer local node_modules:
       //   npm install --save-dev @frostime/siyuan-cli
       //   Then remove the paths above.

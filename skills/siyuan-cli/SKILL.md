@@ -61,6 +61,12 @@ siyuan tool append-content --targetId <id> --targetType document --markdown @fil
 # Document tree
 siyuan tool list-doc-tree --notebook <notebook-id>
 
+# Extensions
+siyuan extension init                # scaffold extension directory
+siyuan extension list                # discovered extensions + cache status
+siyuan extension cache               # batch-generate schema.json caches
+siyuan tool hello-ext --name Alice   # example: run a user-defined tool extension
+
 # Workspace
 siyuan workspace add <name> --workspace-dir <path> --token <t>  # auto-discover port by directory
 siyuan workspace which               # show current resolution
