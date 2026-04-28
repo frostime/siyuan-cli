@@ -62,7 +62,7 @@ async function importExtensionModule(source: string): Promise<unknown> {
     if (extension === '.mjs') {
         return import(absSource);
     }
-    return getJiti().import(absSource, { default: false });
+    return getJiti().import(absSource);
 }
 
 export function validateToolExport(mod: unknown, source: string): ToolSchema {

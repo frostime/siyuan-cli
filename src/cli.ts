@@ -49,23 +49,6 @@ async function customShowUsage<T extends Record<string, unknown>>(
             ? await parent.meta()
             : await parent.meta
         : undefined;
-    const rawArgs = process.argv.slice(2);
-
-    if (rawArgs[0] === 'api' && rawArgs[1] && rawArgs[1] !== 'list' && rawArgs[1] !== 'describe') {
-        const entry = getEndpointHelpEntry(rawArgs[1]);
-        if (entry) {
-            process.stdout.write(buildEndpointHelp(entry) + '\n');
-            return;
-        }
-    }
-
-    if (rawArgs[0] === 'tool' && rawArgs[1] && rawArgs[1] !== 'list' && rawArgs[1] !== 'describe') {
-        const help = getToolHelpText(rawArgs[1]);
-        if (help) {
-            process.stdout.write(help + '\n');
-            return;
-        }
-    }
 
     // Detect `siyuan api <endpoint-id> --help`
     if (parentMeta?.name === 'api' && meta?.name) {

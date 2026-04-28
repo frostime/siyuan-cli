@@ -62,5 +62,29 @@ updated: "2026-04-28"
 | Phase 5: Type exports | 100% | ✅ |
 | Phase 6: E2E validation | 100% | ✅ |
 
+### Feedback Tasks (→ [001-review-fix-subcommands](./revisions/001-review-fix-subcommands.md))
+- [x] Fix `src/extension/loader.ts` — remove `{ default: false }` from `jiti.import()` (type error)
+- [x] Restore `src/tool/command.ts` — revert positional dispatch to citty `subCommands` with lazy resolver
+- [x] Restore `src/api/command.ts` — same revert
+- [x] Restore `src/cli.ts` — remove `process.argv` manual parsing, keep `customShowUsage` structure
+**Verification**: `tsc --noEmit` ✅ | `pnpm build` ✅ | `pnpm test` 64/64 ✅ | `--help` enumerates all tools/endpoints including cached extensions
+
+---
+
+## Progress
+
+**Overall**: 100%
+
+| Phase | Progress | Status |
+|-------|----------|--------|
+| Phase 1: Foundation | 100% | ✅ |
+| Phase 2: Registry | 100% | ✅ |
+| Phase 3: Lazy loading | 100% | ✅ |
+| Phase 4: Extension cmd | 100% | ✅ |
+| Phase 5: Type exports | 100% | ✅ |
+| Phase 6: E2E validation | 100% | ✅ |
+| Feedback: revision 001 | 100% | ✅ |
+
 **Recent**:
 - 2026-04-28: Implemented extension loader/cache/command flow, package exports, tests, and manual E2E validation
+- 2026-04-28: Review fixes — restored subCommands pattern, fixed jiti type error (revision 001)

@@ -32,7 +32,22 @@ import {
 import './endpoints/index.js';
 
 const API_EXTENSION_DIR = join(getExtensionDir(), 'apis');
-const RESERVED_API_COMMANDS = new Set(['list', 'describe']);
+
+const RESERVED_CLI_ARGS = new Set([
+    'workspace',
+    'dry-run',
+    'yes',
+    'debug',
+    'print',
+    'json',
+    'file',
+    'primary',
+    'config',
+    'baseUrl',
+    'token'
+]);
+
+// ————— Extension discovery —————
 
 let discoveredEndpointsLoaded = false;
 let discoveredEndpointExtensions: DiscoveredExtension<EndpointSchemaCache>[] = [];
@@ -40,11 +55,6 @@ const discoveredEndpointSourcesById = new Map<string, string>();
 
 function out(data: unknown): void {
     process.stdout.write(JSON.stringify(data, null, 2) + '\n');
-}
-
-function warnExtensionFailure(source: string, err: unknown): void {
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn(`[ext] Failed to load API extension "${source}": ${message}`);
 }
 
 function ensureEndpointDiscovery(): void {
@@ -64,6 +74,10 @@ function ensureEndpointDiscovery(): void {
     }
 }
 
+/**
+ * Resolve an endpoint for execution. If it's a user extension,
+ * jiti-import the source to get real format()/filterResponse() functions.
+ */
 async function resolveEndpointForExecution(
     id: string
 ): Promise<{ entry: RegisteredEndpoint; source?: string } | undefined> {
@@ -71,14 +85,12 @@ async function resolveEndpointForExecution(
 
     const cachedSource = discoveredEndpointSourcesById.get(id);
     if (cachedSource) {
-        const loaded = await loadEndpointExtension(cachedSource);
-        const registered = registry.registerExtension(loaded.schema);
-        if (registered) {
+        try {
+            const loaded = await loadEndpointExtension(cachedSource);
+            registry.registerExtension(loaded.schema);
             return { entry: registry.get(id)!, source: cachedSource };
-        }
-        const builtin = registry.get(id);
-        if (builtin) {
-            return { entry: builtin };
+        } catch {
+            // fall through to builtin lookup
         }
     }
 
@@ -87,6 +99,7 @@ async function resolveEndpointForExecution(
         return { entry: builtin };
     }
 
+    // Try uncached extensions
     for (const item of discoveredEndpointExtensions) {
         if (item.cached) continue;
         try {
@@ -100,12 +113,15 @@ async function resolveEndpointForExecution(
                 }
             }
         } catch (err) {
-            warnExtensionFailure(item.source, err);
+            const message = err instanceof Error ? err.message : String(err);
+            console.warn(`[ext] Failed to load API extension "${item.source}": ${message}`);
         }
     }
 
     return undefined;
 }
+
+// ————— Core operations —————
 
 export function listEndpoints(args: Record<string, unknown>): void {
     ensureEndpointDiscovery();
@@ -245,120 +261,145 @@ async function callEndpoint(
     process.stdout.write(rendered.stdout + '\n');
 }
 
+// ————— SubCommand builders —————
+
+function buildEndpointSubCommand(entry: RegisteredEndpoint) {
+    const payloadFields = Object.keys(entry.schema.payload.properties);
+    // Skip collision check for multipart endpoints: their file fields are intentionally
+    // named after what they upload and --file (load JSON payload) doesn't apply to them anyway.
+    if (!entry.schema.multipart) {
+        const skipFields = new Set(entry.schema.cli?.skipFields ?? []);
+        const collision = payloadFields.filter(
+            (f) => RESERVED_CLI_ARGS.has(f) && !skipFields.has(f)
+        );
+        if (collision.length > 0) {
+            throw new Error(
+                `Endpoint "${entry.id}" payload fields conflict with reserved CLI args: ${collision.join(', ')}`
+            );
+        }
+    }
+    return defineCommand({
+        meta: { name: entry.id, description: entry.schema.summary },
+        args: {
+            workspace: {
+                type: 'string',
+                description: 'Workspace to use',
+                alias: 'w'
+            },
+            'dry-run': {
+                type: 'boolean',
+                description: 'Preview request without sending',
+                default: false
+            },
+            yes: {
+                type: 'boolean',
+                description: 'Confirm write operations',
+                default: false,
+                alias: 'y'
+            },
+            debug: {
+                type: 'boolean',
+                description: 'Show debug info (curl equivalent)',
+                default: false
+            },
+            print: {
+                type: 'string',
+                description: 'Print mode: compact | json',
+                default: 'compact'
+            },
+            json: {
+                type: 'string',
+                description: 'Pass JSON payload inline',
+                alias: 'j'
+            },
+            file: {
+                type: 'string',
+                description: 'Load JSON payload from file (- = stdin)',
+                alias: 'f'
+            },
+            primary: {
+                type: 'positional',
+                description: entry.schema.cli?.primary
+                    ? `Primary value for ${entry.schema.cli.primary}`
+                    : 'Primary value',
+                required: false
+            },
+            ...Object.fromEntries(
+                Object.entries(entry.schema.payload.properties)
+                    .filter(
+                        ([field]) =>
+                            !(entry.schema.cli?.skipFields ?? []).includes(
+                                field
+                            )
+                    )
+                    .map(([field, prop]) => [
+                        field,
+                        {
+                            type: 'string',
+                            description: prop.description ?? field
+                        }
+                    ])
+            )
+        },
+        run: async ({ args }) => {
+            const resolved = await resolveEndpointForExecution(entry.id);
+            const target = resolved ?? { entry };
+            await callEndpoint(
+                target.entry,
+                args as Record<string, unknown>,
+                args.primary as string | undefined,
+                target.source
+            ).catch((e) => fatalError(toCliError(e)));
+        }
+    });
+}
+
+const listCommand = defineCommand({
+    meta: { name: 'list', description: 'List all registered API endpoints.' },
+    args: {
+        group: {
+            type: 'string',
+            description: 'Filter by group (e.g. query, block)'
+        },
+        tag: {
+            type: 'string',
+            description: 'Filter by tag (mode:read, surface:content, ...)'
+        }
+    },
+    run: ({ args }) => listEndpoints(args as Record<string, unknown>)
+});
+
+const describeCommand = defineCommand({
+    meta: {
+        name: 'describe',
+        description: 'Show full EndpointSchema for an endpoint.'
+    },
+    args: {
+        id: {
+            type: 'positional',
+            description: 'Endpoint id (e.g. query.sql)',
+            required: true
+        }
+    },
+    run: ({ args }) => describeEndpoint(args.id)
+});
+
+// ————— Command export —————
+
 export const apiCommand = defineCommand({
     meta: {
         name: 'api',
         description: 'Call SiYuan kernel API endpoints directly.'
     },
-    args: {
-        target: {
-            type: 'positional',
-            description: 'Endpoint id, or one of: list, describe',
-            required: true
-        },
-        primary: {
-            type: 'positional',
-            description: 'Primary value or describe target',
-            required: false
-        },
-        workspace: {
-            type: 'string',
-            description: 'Workspace to use',
-            alias: 'w'
-        },
-        'dry-run': {
-            type: 'boolean',
-            description: 'Preview request without sending',
-            default: false
-        },
-        yes: {
-            type: 'boolean',
-            description: 'Confirm write operations',
-            default: false,
-            alias: 'y'
-        },
-        debug: {
-            type: 'boolean',
-            description: 'Show debug info (curl equivalent)',
-            default: false
-        },
-        print: {
-            type: 'string',
-            description: 'Print mode: compact | json',
-            default: 'compact'
-        },
-        json: {
-            type: 'string',
-            description: 'Pass JSON payload inline',
-            alias: 'j'
-        },
-        file: {
-            type: 'string',
-            description: 'Load JSON payload from file (- = stdin)',
-            alias: 'f'
-        },
-        group: {
-            type: 'string',
-            description: 'Filter by group (for list)'
-        },
-        tag: {
-            type: 'string',
-            description: 'Filter by tag (for list)'
-        },
-        config: {
-            type: 'string',
-            description: 'Path to config file'
-        },
-        baseUrl: {
-            type: 'string',
-            description: 'Ad-hoc baseUrl override'
-        },
-        token: {
-            type: 'string',
-            description: 'Ad-hoc token override'
-        }
-    },
-    run: async ({ args }) => {
-        await (async () => {
-            const target = String(args.target);
-            if (target === 'list') {
-                listEndpoints(args as Record<string, unknown>);
-                return;
-            }
-            if (target === 'describe') {
-                if (!args.primary) {
-                    throw new CliError(
-                        ExitCode.GENERAL,
-                        'ENDPOINT_ID_REQUIRED',
-                        'Missing endpoint id for `siyuan api describe`.'
-                    );
-                }
-                describeEndpoint(String(args.primary));
-                return;
-            }
-            if (RESERVED_API_COMMANDS.has(target)) {
-                throw new CliError(
-                    ExitCode.GENERAL,
-                    'ENDPOINT_ID_RESERVED',
-                    `Endpoint id "${target}" is reserved.`
-                );
-            }
-            const resolved = await resolveEndpointForExecution(target);
-            if (!resolved) {
-                throw new CliError(
-                    ExitCode.GENERAL,
-                    'ENDPOINT_NOT_FOUND',
-                    `Endpoint "${target}" not found.`,
-                    'Run `siyuan api list` to see all endpoints.'
-                );
-            }
-            await callEndpoint(
-                resolved.entry,
-                args as Record<string, unknown>,
-                args.primary as string | undefined,
-                resolved.source
-            );
-        })().catch((e) => fatalError(toCliError(e)));
+    subCommands: () => {
+        ensureEndpointDiscovery();
+        return {
+            list: listCommand,
+            describe: describeCommand,
+            ...Object.fromEntries(
+                registry.list().map((entry) => [entry.id, buildEndpointSubCommand(entry)])
+            )
+        };
     }
 });
 

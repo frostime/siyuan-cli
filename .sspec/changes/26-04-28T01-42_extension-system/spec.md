@@ -7,6 +7,9 @@ reference:
 - source: .sspec/requests/26-04-28T01-27_extension-system.md
   type: request
   note: Linked from request
+- source: .sspec/changes/26-04-28T01-42_extension-system/revisions/001-review-fix-subcommands.md
+  type: revision
+  note: "Review fix: restore subCommands pattern + jiti type error"
 ---
 
 # extension-system

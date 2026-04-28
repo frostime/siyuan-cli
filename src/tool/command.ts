@@ -24,16 +24,23 @@ import type { ToolSchemaCache } from '../extension/cache.js';
 import './builtins/index.js';
 
 const TOOL_EXTENSION_DIR = join(getExtensionDir(), 'tools');
-const RESERVED_TOOL_COMMANDS = new Set(['list', 'describe']);
+
+const RESERVED_CLI_ARGS = new Set([
+    'workspace',
+    'debug',
+    'dry-run',
+    'yes',
+    'print',
+    'json',
+    'file',
+    'primary'
+]);
+
+// ————— Extension discovery —————
 
 let discoveredToolsLoaded = false;
 let discoveredToolExtensions: DiscoveredExtension<ToolSchemaCache>[] = [];
 const discoveredToolSourcesById = new Map<string, string>();
-
-function warnExtensionFailure(source: string, err: unknown): void {
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn(`[ext] Failed to load tool extension "${source}": ${message}`);
-}
 
 function ensureToolDiscovery(): void {
     if (discoveredToolsLoaded) return;
@@ -50,21 +57,25 @@ function ensureToolDiscovery(): void {
     }
 }
 
+/**
+ * Resolve a tool for execution. If the tool is a user extension,
+ * jiti-import the source to get the real `run()` function,
+ * replacing the cache-only stub.
+ */
 async function resolveToolForExecution(
     id: string
 ): Promise<{ tool: ToolSchema; source?: string } | undefined> {
     ensureToolDiscovery();
 
+    // If it's a known extension, full-import it
     const cachedSource = discoveredToolSourcesById.get(id);
     if (cachedSource) {
-        const loaded = await loadToolExtension(cachedSource);
-        const registered = toolRegistry.registerExtension(loaded.schema);
-        if (registered) {
+        try {
+            const loaded = await loadToolExtension(cachedSource);
+            toolRegistry.registerExtension(loaded.schema);
             return { tool: loaded.schema, source: cachedSource };
-        }
-        const builtin = toolRegistry.get(id);
-        if (builtin) {
-            return { tool: builtin };
+        } catch {
+            // fall through to builtin lookup
         }
     }
 
@@ -73,6 +84,7 @@ async function resolveToolForExecution(
         return { tool: builtin };
     }
 
+    // Try uncached extensions (no schema.json yet)
     for (const item of discoveredToolExtensions) {
         if (item.cached) continue;
         try {
@@ -86,12 +98,15 @@ async function resolveToolForExecution(
                 }
             }
         } catch (err) {
-            warnExtensionFailure(item.source, err);
+            const message = err instanceof Error ? err.message : String(err);
+            console.warn(`[ext] Failed to load tool extension "${item.source}": ${message}`);
         }
     }
 
     return undefined;
 }
+
+// ————— Core operations —————
 
 function describeTool(id: string): void {
     ensureToolDiscovery();
@@ -140,9 +155,80 @@ async function runTool(
     renderToolResult(result, args as any);
 }
 
+// ————— SubCommand builders —————
+
+function buildToolSubCommand(tool: ToolSchema) {
+    const payloadFields = Object.keys(tool.input.properties);
+    const collision = payloadFields.filter((f) => RESERVED_CLI_ARGS.has(f));
+    if (collision.length > 0) {
+        throw new Error(
+            `Tool "${tool.id}" payload fields conflict with reserved CLI args: ${collision.join(', ')}`
+        );
+    }
+
+    return defineCommand({
+        meta: { name: tool.id, description: tool.summary },
+        args: {
+            workspace: {
+                type: 'string',
+                description: 'Workspace to use',
+                alias: 'w'
+            },
+            debug: {
+                type: 'boolean',
+                description: 'Debug output',
+                default: false
+            },
+            'dry-run': {
+                type: 'boolean',
+                description: 'Preview without sending write request',
+                default: false
+            },
+            yes: {
+                type: 'boolean',
+                description: 'Confirm write operations',
+                default: false,
+                alias: 'y'
+            },
+            print: {
+                type: 'string',
+                description: 'Print mode: compact | json',
+                default: 'compact'
+            },
+            json: {
+                type: 'string',
+                description: 'Pass JSON input inline',
+                alias: 'j'
+            },
+            file: {
+                type: 'string',
+                description: 'Load JSON input from file (- = stdin)',
+                alias: 'f'
+            },
+            primary: {
+                type: 'positional',
+                description: tool.cli?.primary ?? 'Primary value',
+                required: false
+            },
+            ...Object.fromEntries(
+                Object.entries(tool.input.properties).map(([field, prop]) => [
+                    field,
+                    { type: 'string', description: prop.description ?? field }
+                ])
+            )
+        },
+        run: async ({ args }) => {
+            await runTool(
+                tool.id,
+                args as Record<string, unknown>,
+                args.primary as string | undefined
+            ).catch((e) => fatalError(toCliError(e)));
+        }
+    });
+}
+
 function listTools(args: Record<string, unknown>): void {
     ensureToolDiscovery();
-
     const tag = args['tag'] as string | undefined;
     const cachedTools = toolRegistry
         .list({ tag })
@@ -184,6 +270,22 @@ function listTools(args: Record<string, unknown>): void {
     }
 }
 
+const listCommand = defineCommand({
+    meta: { name: 'list', description: 'List registered tools.' },
+    args: { tag: { type: 'string', description: 'Filter by tag' } },
+    run: ({ args }) => listTools(args as Record<string, unknown>)
+});
+
+const describeCommand = defineCommand({
+    meta: { name: 'describe', description: 'Show full ToolSchema.' },
+    args: {
+        id: { type: 'positional', description: 'Tool id', required: true }
+    },
+    run: ({ args }) => describeTool(args.id)
+});
+
+// ————— Command export —————
+
 export function getToolHelpText(id: string): string | undefined {
     ensureToolDiscovery();
     const tool = toolRegistry.get(id);
@@ -192,89 +294,15 @@ export function getToolHelpText(id: string): string | undefined {
 
 export const toolCommand = defineCommand({
     meta: { name: 'tool', description: 'Run built-in and user workflow tools.' },
-    args: {
-        target: {
-            type: 'positional',
-            description: 'Tool id, or one of: list, describe',
-            required: true
-        },
-        primary: {
-            type: 'positional',
-            description: 'Primary value or describe target',
-            required: false
-        },
-        workspace: {
-            type: 'string',
-            description: 'Workspace to use',
-            alias: 'w'
-        },
-        debug: {
-            type: 'boolean',
-            description: 'Debug output',
-            default: false
-        },
-        'dry-run': {
-            type: 'boolean',
-            description: 'Preview without sending write request',
-            default: false
-        },
-        yes: {
-            type: 'boolean',
-            description: 'Confirm write operations',
-            default: false,
-            alias: 'y'
-        },
-        print: {
-            type: 'string',
-            description: 'Print mode: compact | json',
-            default: 'compact'
-        },
-        json: {
-            type: 'string',
-            description: 'Pass JSON input inline',
-            alias: 'j'
-        },
-        file: {
-            type: 'string',
-            description: 'Load JSON input from file (- = stdin)',
-            alias: 'f'
-        },
-        tag: {
-            type: 'string',
-            description: 'Filter tools by tag (for list)'
-        }
-    },
-    run: async ({ args }) => {
-        await (async () => {
-            const target = String(args.target);
-            if (target === 'list') {
-                listTools(args as Record<string, unknown>);
-                return;
-            }
-            if (target === 'describe') {
-                if (!args.primary) {
-                    throw new CliError(
-                        ExitCode.GENERAL,
-                        'TOOL_ID_REQUIRED',
-                        'Missing tool id for `siyuan tool describe`.'
-                    );
-                }
-                describeTool(String(args.primary));
-                return;
-            }
-            if (RESERVED_TOOL_COMMANDS.has(target)) {
-                throw new CliError(
-                    ExitCode.GENERAL,
-                    'TOOL_ID_RESERVED',
-                    `Tool id "${target}" is reserved.`
-                );
-            }
-            await runTool(
-                target,
-                args as Record<string, unknown>,
-                args.primary as string | undefined
-            );
-        })().catch((e) => fatalError(toCliError(e)));
+    subCommands: () => {
+        ensureToolDiscovery();
+        return {
+            list: listCommand,
+            describe: describeCommand,
+            ...Object.fromEntries(
+                toolRegistry.list().map((tool) => [tool.id, buildToolSubCommand(tool)])
+            )
+        };
     }
 });
 
