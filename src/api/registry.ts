@@ -91,6 +91,7 @@ function validateSchema(
 
 export class EndpointRegistry {
     private readonly map = new Map<string, RegisteredEndpoint>();
+    private readonly extensionIds = new Set<string>();
 
     register(schema: EndpointSchema<any>): void {
         const { id, group, name } = deriveEndpointId(schema.endpoint);
@@ -109,6 +110,30 @@ export class EndpointRegistry {
         };
         validateSchema(schema, entry);
         this.map.set(id, entry);
+    }
+
+    registerExtension(schema: EndpointSchema<any>): boolean {
+        const { id, group, name } = deriveEndpointId(schema.endpoint);
+        const existing = this.map.get(id);
+        if (existing && !this.extensionIds.has(id)) {
+            console.warn(
+                `[ext] Skipping extension "${id}": conflicts with builtin`
+            );
+            return false;
+        }
+        if (!schema.classification) {
+            throw new Error(`Endpoint "${id}" must declare classification.`);
+        }
+        const entry: RegisteredEndpoint = {
+            schema,
+            id,
+            group,
+            name,
+            meta: deriveMeta(schema)
+        };
+        this.map.set(id, entry);
+        this.extensionIds.add(id);
+        return true;
     }
 
     get(id: string): RegisteredEndpoint | undefined {

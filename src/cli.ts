@@ -3,15 +3,13 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'pathe';
 import { workspaceCommand } from './workspace/command.js';
-import { apiCommand } from './api/command.js';
-import { toolCommand } from './tool/command.js';
+import { apiCommand, getEndpointHelpEntry } from './api/command.js';
+import { toolCommand, getToolHelpText } from './tool/command.js';
 import { skillCommand } from './skill/command.js';
 import { docCommand, formatDocsHint } from './doc/command.js';
 import { approvalCommand } from './approval/command.js';
+import { extensionCommand } from './extension/command.js';
 import { buildEndpointHelp } from './shared/argv.js';
-import { registry } from './api/registry.js';
-import { buildToolHelp, toolRegistry } from './tool/registry.js';
-import './tool/builtins/index.js';
 
 function getVersion(): string {
     try {
@@ -35,7 +33,8 @@ const main = defineCommand({
         tool: toolCommand,
         doc: docCommand,
         skill: skillCommand,
-        approval: approvalCommand
+        approval: approvalCommand,
+        extension: extensionCommand
     }
 });
 
@@ -50,10 +49,27 @@ async function customShowUsage<T extends Record<string, unknown>>(
             ? await parent.meta()
             : await parent.meta
         : undefined;
+    const rawArgs = process.argv.slice(2);
+
+    if (rawArgs[0] === 'api' && rawArgs[1] && rawArgs[1] !== 'list' && rawArgs[1] !== 'describe') {
+        const entry = getEndpointHelpEntry(rawArgs[1]);
+        if (entry) {
+            process.stdout.write(buildEndpointHelp(entry) + '\n');
+            return;
+        }
+    }
+
+    if (rawArgs[0] === 'tool' && rawArgs[1] && rawArgs[1] !== 'list' && rawArgs[1] !== 'describe') {
+        const help = getToolHelpText(rawArgs[1]);
+        if (help) {
+            process.stdout.write(help + '\n');
+            return;
+        }
+    }
 
     // Detect `siyuan api <endpoint-id> --help`
     if (parentMeta?.name === 'api' && meta?.name) {
-        const entry = registry.get(meta.name);
+        const entry = getEndpointHelpEntry(meta.name);
         if (entry) {
             process.stdout.write(buildEndpointHelp(entry) + '\n');
             return;
@@ -62,9 +78,9 @@ async function customShowUsage<T extends Record<string, unknown>>(
 
     // Detect `siyuan tool <tool-id> --help`
     if (parentMeta?.name === 'tool' && meta?.name) {
-        const tool = toolRegistry.get(meta.name);
-        if (tool) {
-            process.stdout.write(buildToolHelp(tool) + '\n');
+        const help = getToolHelpText(meta.name);
+        if (help) {
+            process.stdout.write(help + '\n');
             return;
         }
     }

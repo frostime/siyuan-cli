@@ -43,3 +43,7 @@ export function getConfigPath(configDir?: string): string {
     }
     return join(configDir ?? getConfigDir(), 'config.yaml');
 }
+
+export function getExtensionDir(configDir?: string): string {
+    return join(configDir ?? getConfigDir(), 'extensions');
+}

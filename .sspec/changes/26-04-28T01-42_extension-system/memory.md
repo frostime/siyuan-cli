@@ -5,7 +5,7 @@ updated: "2026-04-28T15:36+08:00"
 
 # Memory: extension-system
 
-**Updated**: <!-- ISO timestamp, minute precision -->
+**Updated**: 2026-04-28T20:18+08:00
 
 ## Git Baseline (Immutable)
 <!-- Captured during `sspec change new` before any change files are written.
@@ -24,13 +24,15 @@ This section records the change starting point in git and MUST NOT be edited or 
 ```
 
 ## State
-**Phase**: Plan (complete) → ready for Implement
-**Handoff**: User will delegate implementation to a separate Code Writer Agent, then return for Review.
+**Phase**: Implement complete → ready for Review
+**Handoff**: Code implementation finished; user can take this branch to Claude for review.
 
 ## Milestones
 - [2026-04-28 04:18:25]: Request analyzed, clarified requirements through dialogue
 - [2026-04-28 15:20:00]: Design completed — spec.md + design.md written and approved
 - [2026-04-28 15:35:18]: Plan completed — tasks.md with 6 phases, 18 tasks
+- [2026-04-28 19:19:00]: Implementation completed — extension modules, lazy loading, package exports, tests, and manual E2E verification finished
+- [2026-04-28 20:18:00]: Review-alignment fixes completed — tool conflict handling now truly skips conflicting extensions; discovery list output and cache write semantics aligned with design
 
 ## Knowledge
 - jiti chosen over pre-compile after analyzing staleness/complexity tradeoffs
@@ -39,6 +41,8 @@ This section records the change starting point in git and MUST NOT be edited or 
 - tsconfig paths auto-detected from `import.meta.url` — avoids requiring `npm install` in extensions dir
 - `.gitignore` auto-generated to exclude `node_modules/` and `*.schema.json`
 - `registerExtension()` uses warn+skip (not throw) for ID conflicts
-- tsdown already has `dts: true` — need to verify `dist/shared/schema.d.mts` is actually emitted with `unbundle: true`
-- Package currently has no `exports`/`types`/`main` fields — all need adding
+- `tsdown` needed an explicit `src/shared/schema.ts` entry to emit `dist/shared/schema.d.mts` for the `./schema` export
+- `citty` static subcommand resolution cannot natively expose dynamic extension help, so top-level CLI help interception uses raw argv to render `siyuan api|tool <id> --help`
+- Endpoint extensions are fully supported for discovery/registration/cache; live execution still depends on a real SiYuan kernel because endpoint schemas do not define an executable hook like tools do
+- Review alignment fixes: `tool` conflict path no longer executes skipped extensions; `tool list`/`api list` now surface uncached/stale discovery state; `writeSchemaCache()` now owns its non-fatal warn-and-continue behavior internally
 - Extensions load lazily (only in api/tool subcommands) — other commands unaffected

@@ -13,12 +13,26 @@ import type {
 
 export class ToolRegistry {
     private readonly map = new Map<string, ToolSchema>();
+    private readonly extensionIds = new Set<string>();
 
     register(tool: ToolSchema): void {
         if (this.map.has(tool.id)) {
             throw new Error(`Tool "${tool.id}" is already registered.`);
         }
         this.map.set(tool.id, tool);
+    }
+
+    registerExtension(tool: ToolSchema): boolean {
+        const existing = this.map.get(tool.id);
+        if (existing && !this.extensionIds.has(tool.id)) {
+            console.warn(
+                `[ext] Skipping extension "${tool.id}": conflicts with builtin`
+            );
+            return false;
+        }
+        this.map.set(tool.id, tool);
+        this.extensionIds.add(tool.id);
+        return true;
     }
 
     get(id: string): ToolSchema | undefined {
