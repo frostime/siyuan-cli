@@ -152,6 +152,49 @@ Prefer to show:
 - use `root_id`
 - do not rely on `hpath` alone
 
+### 7.5 CLI tool & API mapping
+
+#### Path resolution
+
+| Task | Command |
+|------|---------|
+| Resolve hpath → stable path/id | `siyuan tool resolve-path --hpath "/private/diary"` |
+| Resolve id → full path info | `siyuan tool resolve-path --id <id>` |
+| Get hpath by id | `siyuan api filetree.getHPathByID --id <id>` |
+| Get hpath by path | `siyuan api filetree.getHPathByPath --path "/..."` |
+| Get ids by hpath | `siyuan api filetree.getIDsByHPath --hpath "/private/diary"` |
+| Get storage path by id | `siyuan api filetree.getPathByID --id <id>` |
+
+#### Document tree navigation
+
+| Task | Command |
+|------|---------|
+| List doc tree under notebook | `siyuan tool list-doc-tree --notebook <id>` |
+| List doc tree under document | `siyuan tool list-doc-tree --doc <id>` |
+| List docs by path | `siyuan api filetree.listDocsByPath --path "/..."` |
+| Search documents | `siyuan api filetree.searchDocs --keyword "..."` |
+
+#### Notebook management
+
+| Task | Command |
+|------|---------|
+| List all notebooks | `siyuan api notebook.lsNotebooks` |
+| Create notebook | `siyuan api notebook.createNotebook --name "New"` |
+| Rename notebook | `siyuan api notebook.renameNotebook --notebook <id> --name "New"` |
+| Remove notebook | `siyuan api notebook.removeNotebook --notebook <id>` |
+
+#### Document CRUD
+
+| Task | Command |
+|------|---------|
+| Create document with markdown | `siyuan api filetree.createDocWithMd --notebook <id> --path "/foo/bar" --md "# Title"` |
+| Rename document by ID | `siyuan api filetree.renameDocByID --id <id> --title "New Title"` |
+| Rename by path | `siyuan api filetree.renameDoc --notebook <id> --path "/..." --title "..."` |
+| Move document by ID | `siyuan api filetree.moveDocsByID --fromIDs '["<id>"]' --toID <target-id>` |
+| Remove document by ID | `siyuan api filetree.removeDocByID --id <id>` |
+
+All commands support `--help` for full parameter details. Use `--dry-run` to preview destructive writes.
+
 ## 8. One-sentence summary
 
 - `parent_id` answers **parent-child block relationships**

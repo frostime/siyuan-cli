@@ -7,13 +7,40 @@ description: "Manage SiYuan Note with the `siyuan` CLI. Use this whenever the us
 
 Agent-first CLI for SiYuan Note.
 
-Start with:
+## Bootstrap (MUST follow this order on first use)
 
-```bash
-siyuan --help
-siyuan doc list
-siyuan doc read extension.md   # when the task involves custom extensions
-```
+1. **Verify CLI is installed.** If `siyuan` is not found:
+   `npm install -g @frostime/siyuan-cli`
+
+2. **Discover the docs root and command tree:**
+   ```bash
+   siyuan --help
+   ```
+   This prints the built-in docs root path and the full command tree.
+   The docs root is where all built-in reference docs live; you can `read` them directly.
+
+3. **List available docs:**
+   ```bash
+   siyuan doc list
+   ```
+   Each entry shows a relative path (resolve against the docs root) and a one-line summary.
+
+4. **Check workspace connectivity:**
+   ```bash
+   siyuan workspace list
+   siyuan workspace which
+   ```
+   If no workspace is configured, follow the `recipes/connect-workspace.md` recipe.
+
+5. **Load essential domain knowledge** (before any content operation):
+   - `siyuan-guide/siyuan-block.md` — the block-centric data model
+   - `siyuan-guide/document-tree-and-paths.md` — id / parent_id / root_id / path / hpath semantics
+
+6. **For specific tasks**, read the matching recipe:
+   - Connecting a new workspace → `recipes/connect-workspace.md`
+   - Locating a document/block → `recipes/find-target.md`
+   - Reading content → `recipes/read-content.md`
+   - Editing content → `recipes/edit-content.md`
 
 Use the real docs paths disclosed by help output when your runtime can read files directly. `siyuan doc` is convenience sugar for discovery and reading.
 

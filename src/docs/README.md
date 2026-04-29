@@ -90,12 +90,12 @@ siyuan workspace which           # current workspace resolution details
 
 Read these when you already know the job to do:
 
-| File | Covers |
-|------|--------|
-| `recipes/connect-workspace.md` | Configure, verify, and anchor a workspace |
-| `recipes/find-target.md` | Locate a document or block from id, path, hpath, notebook, or keyword |
-| `recipes/read-content.md` | Read document or block content, including paging and id-aware inspection |
-| `recipes/edit-content.md` | Update existing content with explicit inspection and verification |
+| File | Covers | Key commands |
+|------|--------|-------------|
+| `recipes/connect-workspace.md` | Configure, verify, and anchor a workspace | `siyuan workspace add/list/verify/which` |
+| `recipes/find-target.md` | Locate a document or block from id, path, hpath, notebook, or keyword | `siyuan tool resolve-path`, `siyuan tool list-doc-tree`, `siyuan api filetree.searchDocs`, `siyuan api notebook.lsNotebooks` |
+| `recipes/read-content.md` | Read document or block content, including paging and id-aware inspection | `siyuan tool get-block-content`, `siyuan tool get-block-info` |
+| `recipes/edit-content.md` | Update existing content with explicit inspection and verification | `siyuan api block.updateBlock`, `siyuan tool append-content` |
 
 ## Detailed reference
 
