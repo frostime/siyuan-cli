@@ -22,16 +22,15 @@ Keep ≤10 entries. Agent uses this to orient in the codebase. -->
 | Path | Purpose |
 |------|---------|
 | `src/shared/schema.ts` | 所有核心类型定义：EndpointSchema, ToolSchema, PermissionRule, RiskLabel, classification 等 |
+| `src/api/registry.ts` | Endpoint 注册表：收集 EndpointSchema，派生 risk/tags/meta，并做 registry-level schema 校验 |
+| `src/api/guard.ts` | 请求执行入口：payload 校验 → permission check → approval → kernel call → response filter |
+| `src/shared/permission.ts` | Permission engine：rule-list 模型，两阶段评估 (caller → resource) |
 | `src/workspace/config.ts` | 全局 config (~/.config/siyuan-cli/config.yaml) 加载；同步 resolveWorkspace/resolveEffectiveWorkspace |
 | `src/workspace/resolver.ts` | workspaceDir → runtime baseUrl 的本地解析器；materializeWorkspace 依赖它 |
-| `src/api/registry.ts` | Endpoint 注册表：收集 EndpointSchema，派生 risk/tags/meta |
-| `src/shared/permission.ts` | Permission engine：rule-list 模型，两阶段评估 (caller → resource) |
-| `src/api/guard.ts` | 请求执行入口：payload 校验 → permission check → approval → kernel call → response filter |
 | `src/tool/registry.ts` | ToolRegistry + tool 执行逻辑，tool 通过 ToolContext 调用 endpoint |
-| `src/api/endpoints/index.ts` | 所有 endpoint schema 的注册入口（import → registry.register） |
-| `src/tool/builtins/index.ts` | 所有 tool schema 的注册入口 |
-| `src/approval/` | Human-in-the-loop 审批：broker (HTTP server) + client + browser UI |
-| `src/{api,tool,workspace,doc,skill}/command.ts` | CLI 子命令实现：api/tool/workspace/doc/skill |
+| `src/extension/` | extension 系统：discover/load/cache/init/CLI；用户扩展入口 |
+| `src/api/endpoints/index.ts` | 所有 built-in endpoint schema 的注册入口（import → registry.register） |
+| `src/{api,tool,workspace,doc,skill,extension}/command.ts` | CLI 子命令实现：api/tool/workspace/doc/skill/extension |
 
 ## Architecture Cheat-Sheet
 
@@ -103,7 +102,7 @@ One-liners only. If a convention needs multi-paragraph explanation → write a s
 Agent reads this to know what architecture knowledge exists before starting work.
 Keep entries in sync with actual spec-doc files. Format: `- [name](spec-docs/<file>) — one-line description` -->
 
-(none yet — create spec-docs with `sspec doc new "<name>"`)
+- [EndpointSchema](spec-docs/endpoint-schema.md) — Authored contract for endpoint identity, classification/risk derivation, guard coupling, CLI semantics, output precedence, and cache boundaries
 
 ## Notes
 <!-- @RULE: Project-level memory. Append-only log of learnings, gotchas, preferences.
@@ -114,3 +113,4 @@ Prune entries that become outdated or graduate to Conventions/spec-docs. -->
 - 2026-04-26: src/docs/ 和 skills/ 目录存放的是 bundled 文档和 agent skill 模板，不是代码；通过 `siyuan doc` 和 `siyuan skill install` 暴露给用户
 - 2026-04-26: approval 模块是独立的 HTTP broker 进程，通过 localhost 端口与 CLI 主进程通信；browser UI 在 approval-center.html
 - 2026-04-26: src/api/msys-path.ts 处理 MSYS/Git Bash 环境下的路径转换问题
+- 2026-04-29: EndpointSchema 的跨字段约束已沉淀到 `.sspec/spec-docs/endpoint-schema.md`；built-in 与 API extension 都应遵守同一套 registry-level 校验
