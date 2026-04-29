@@ -118,3 +118,4 @@ Read these for full command reference and config file format.
 |------|--------|
 | `cli-usage/cli-overview.md` | Full command tree, global flags, input sources (`@file`/`@stdin`/`@env`), all error codes, debugging |
 | `cli-usage/config-and-permission.md` | `config.yaml` structure, token sources, permission rule syntax, evaluation order, project config, cascade |
+| `cli-usage/extension.md` | Write custom API endpoints and workflow tools; schema authoring, cold-start workflow, examples |

@@ -147,5 +147,5 @@ Recommended reading order:
 2. `recipes/*.md`
 3. `siyuan-guide/*.md`
 4. `cli-usage/*.md`
-5. `extension.md` — if you need to write custom extensions
+5. `cli-usage/extension.md` — if you need to write custom extensions
 
