@@ -238,6 +238,44 @@ If an agent needs to provide the user with a clickable source, prefer a block li
 
 This is more stable than returning only a title or a plain path.
 
+### 7.5 CLI tool & API mapping
+
+The following commands cover common block operations. Always inspect with a read command before writing.
+
+#### Read
+
+| Task | Command |
+|------|---------|
+| Read block markdown (full fidelity) | `siyuan tool get-block-content <id>` |
+| Read block markdown with id annotations | `siyuan tool get-block-content <id> --showId true` |
+| Inspect block metadata | `siyuan tool get-block-info <id>` |
+| Get raw block info from kernel | `siyuan api block.getBlockInfo --id <id>` |
+| Get Kramdown (kernel internal format) | `siyuan api block.getBlockKramdown --id <id>` |
+| Get block DOM | `siyuan api block.getBlockDOM --id <id>` |
+| Get breadcrumb path | `siyuan api block.getBlockBreadcrumb --id <id>` |
+| List child blocks | `siyuan api block.getChildBlocks --id <id>` |
+
+#### Write
+
+| Task | Command |
+|------|---------|
+| Update block content | `siyuan api block.updateBlock --id <id> --data "## New heading" --dataType markdown` |
+| Append child blocks | `siyuan api block.appendBlock --parentId <id> --data "paragraph" --dataType markdown` |
+| Prepend child blocks | `siyuan api block.prependBlock --parentId <id> --data "paragraph" --dataType markdown` |
+| Insert before/after/child | `siyuan api block.insertBlock --previousId <id> --data "..." --dataType markdown` |
+| Delete block | `siyuan api block.deleteBlock --id <id>` |
+| Move block | `siyuan api block.moveBlock --id <id> --previousId <target-id>` |
+| Transfer block ref | `siyuan api block.transferBlockRef --id <id> --fromID <source> --toID <target>` |
+
+#### Attributes
+
+| Task | Command |
+|------|---------|
+| Get block attributes | `siyuan api attr.getBlockAttrs --id <id>` |
+| Set block attributes | `siyuan api attr.setBlockAttrs --id <id> --attrs '{"custom-key":"value"}'` |
+
+All commands support `--help` for full parameter details. Use `--dry-run` to preview writes.
+
 ## 8. One-sentence summary
 
 For an agent, SiYuan should not be modeled as a Markdown filesystem. It should be modeled as a **block-centric database with Markdown as representation, SQL as query language, and path fields as location metadata**.

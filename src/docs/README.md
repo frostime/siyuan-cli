@@ -34,7 +34,7 @@ schemaVersion: 1
 workspace: main    # must exist in `siyuan workspace list`
 ```
 
-The global configuration is stored at `~/.config/siyuan-cli/config.yaml`. It set the workspace and permissions, see `cli-usage/config-and-permission.md` for details.
+The global configuration is stored at `~/.config/siyuan-cli/config.yaml`. It sets the workspace and behavior; see `cli-usage/workspace-config.md` for details. For permission rules, see `cli-usage/permission.md`.
 
 Inspect resolution: `siyuan workspace which`
 
@@ -90,12 +90,12 @@ siyuan workspace which           # current workspace resolution details
 
 Read these when you already know the job to do:
 
-| File | Covers |
-|------|--------|
-| `recipes/connect-workspace.md` | Configure, verify, and anchor a workspace |
-| `recipes/find-target.md` | Locate a document or block from id, path, hpath, notebook, or keyword |
-| `recipes/read-content.md` | Read document or block content, including paging and id-aware inspection |
-| `recipes/edit-content.md` | Update existing content with explicit inspection and verification |
+| File | Covers | Key commands |
+|------|--------|-------------|
+| `recipes/connect-workspace.md` | Configure, verify, and anchor a workspace | `siyuan workspace add/list/verify/which` |
+| `recipes/find-target.md` | Locate a document or block from id, path, hpath, notebook, or keyword | `siyuan tool resolve-path`, `siyuan tool list-doc-tree`, `siyuan api filetree.searchDocs`, `siyuan api notebook.lsNotebooks` |
+| `recipes/read-content.md` | Read document or block content, including paging and id-aware inspection | `siyuan tool get-block-content`, `siyuan tool get-block-info` |
+| `recipes/edit-content.md` | Update existing content with explicit inspection and verification | `siyuan api block.updateBlock`, `siyuan tool append-content` |
 
 ## Detailed reference
 
@@ -117,4 +117,6 @@ Read these for full command reference and config file format.
 | File | Covers |
 |------|--------|
 | `cli-usage/cli-overview.md` | Full command tree, global flags, input sources (`@file`/`@stdin`/`@env`), all error codes, debugging |
-| `cli-usage/config-and-permission.md` | `config.yaml` structure, token sources, permission rule syntax, evaluation order, project config, cascade |
+| `cli-usage/workspace-config.md` | Config file location, workspace connections, token sources, behavior, project anchoring |
+| `cli-usage/permission.md` | Permission rule syntax, evaluation order, risk-based auto-approval, two-phase checking, extension schema coupling, debugging |
+| `cli-usage/extension.md` | Write custom API endpoints and workflow tools; schema authoring, cold-start workflow, examples |

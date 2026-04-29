@@ -155,7 +155,7 @@ Permission rules are evaluated before any request reaches the kernel. A `deny` r
 
 Rules can target endpoints by id or glob, content by notebook id or ID-based `path` (not `hpath` — those change on rename), and operations by mode (`read`, `write`, `invoke`) or surface (`content`, `workspace`, `runtime`, `network`).
 
-See `.siyuan-cli.yaml.example` in this repo and `siyuan doc read config-and-permission` for the full rule schema.
+See `.siyuan-cli.yaml.example` in this repo and `siyuan doc read permission` for the full rule schema.
 
 ### Project-level config
 

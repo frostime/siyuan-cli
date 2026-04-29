@@ -187,6 +187,20 @@ exit 2/3/4      → environment issue; surface to user
 exit 5          → permission policy blocks this; check config rules
 ```
 
+### Debugging permissions
+
+See `permission.md` for the full reference. Quick diagnostic:
+
+```bash
+siyuan workspace which              # see resolved workspace + full rule list
+siyuan api <id> --debug             # see assembled payload
+```
+
+Common fixes:
+- `ENDPOINT_DENIED` → `siyuan workspace which` to see rules, add an allow rule
+- `CONTENT_DENIED` → rules may restrict writes to this notebook/path; inspect rule list
+- `APPROVAL_UNAVAILABLE` → broker not running; retry with `--yes` only when safe
+
 ## Built-in docs
 
 The CLI ships docs on disk and discloses the real docs root path in `siyuan --help` and `siyuan doc --help`.
