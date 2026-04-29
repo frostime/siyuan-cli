@@ -1,6 +1,6 @@
 ---
 name: extension-system-fixes
-status: REVIEW
+status: DONE
 change-type: single
 created: 2026-04-28 22:24:00
 reference:

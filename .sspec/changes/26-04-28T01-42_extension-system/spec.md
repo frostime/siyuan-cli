@@ -1,6 +1,6 @@
 ---
 name: extension-system
-status: PLANNING
+status: DONE
 change-type: single
 created: 2026-04-28 01:42:27
 reference:

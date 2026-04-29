@@ -1,6 +1,6 @@
 ---
 name: workspace-dir-port-resolution
-status: REVIEW
+status: DONE
 change-type: single
 created: 2026-04-27T21:41:37
 reference: null

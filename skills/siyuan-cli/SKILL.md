@@ -17,6 +17,12 @@ siyuan doc read extension.md   # when the task involves custom extensions
 
 Use the real docs paths disclosed by help output when your runtime can read files directly. `siyuan doc` is convenience sugar for discovery and reading.
 
+> [!Note]
+> This SKILL solely covers the usage of siyuan-cli.
+> Please treat siyuan-cli as foundational tool to interact with SiYuan, and this SKILL does not cover specific workflows built on it.
+> For specific needs, user/agent COULD create separate SKILLs tailored to actual work.
+
+
 ## Core concepts
 
 SiYuan is a block-centric database, not a Markdown filesystem.
