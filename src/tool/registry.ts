@@ -13,6 +13,7 @@ import type {
 
 export class ToolRegistry {
     private readonly map = new Map<string, ToolSchema>();
+    private readonly extensionIds = new Set<string>();
 
     register(tool: ToolSchema): void {
         if (this.map.has(tool.id)) {
@@ -21,8 +22,25 @@ export class ToolRegistry {
         this.map.set(tool.id, tool);
     }
 
+    registerExtension(tool: ToolSchema): boolean {
+        const existing = this.map.get(tool.id);
+        if (existing && !this.extensionIds.has(tool.id)) {
+            console.warn(
+                `[ext] Skipping extension "${tool.id}": conflicts with builtin`
+            );
+            return false;
+        }
+        this.map.set(tool.id, tool);
+        this.extensionIds.add(tool.id);
+        return true;
+    }
+
     get(id: string): ToolSchema | undefined {
         return this.map.get(id);
+    }
+
+    isExtension(id: string): boolean {
+        return this.extensionIds.has(id);
     }
 
     list(filter?: { tag?: string }): ToolSchema[] {
@@ -72,12 +90,10 @@ export async function createToolContext(
     };
 
     const callEndpointRaw: ToolContext['callEndpointRaw'] = async <T = unknown>(
-        id: string,
+        endpoint: string,
         payload: unknown
     ): Promise<T> => {
-        const entry = endpointRegistry.get(id);
-        if (!entry) throw new Error(`Endpoint "${id}" not found.`);
-        return client.call(entry.schema.endpoint, payload) as Promise<T>;
+        return client.call(endpoint, payload) as Promise<T>;
     };
 
     return {

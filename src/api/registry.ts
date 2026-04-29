@@ -91,6 +91,7 @@ function validateSchema(
 
 export class EndpointRegistry {
     private readonly map = new Map<string, RegisteredEndpoint>();
+    private readonly extensionIds = new Set<string>();
 
     register(schema: EndpointSchema<any>): void {
         const { id, group, name } = deriveEndpointId(schema.endpoint);
@@ -111,8 +112,52 @@ export class EndpointRegistry {
         this.map.set(id, entry);
     }
 
+    registerExtension(schema: EndpointSchema<any>): boolean {
+        const label =
+            typeof schema.endpoint === 'string' && schema.endpoint
+                ? schema.endpoint
+                : '(unknown endpoint)';
+        try {
+            const { id, group, name } = deriveEndpointId(schema.endpoint);
+            const existing = this.map.get(id);
+            if (existing && !this.extensionIds.has(id)) {
+                console.warn(
+                    `[ext] Skipping extension "${id}": conflicts with builtin`
+                );
+                return false;
+            }
+            if (!schema.classification) {
+                console.warn(
+                    `[ext] Skipping extension "${id}": must declare classification.`
+                );
+                return false;
+            }
+            const entry: RegisteredEndpoint = {
+                schema,
+                id,
+                group,
+                name,
+                meta: deriveMeta(schema)
+            };
+            validateSchema(schema, entry);
+            this.map.set(id, entry);
+            this.extensionIds.add(id);
+            return true;
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            console.warn(
+                `[ext] Skipping extension "${label}": ${message}`
+            );
+            return false;
+        }
+    }
+
     get(id: string): RegisteredEndpoint | undefined {
         return this.map.get(id);
+    }
+
+    isExtension(id: string): boolean {
+        return this.extensionIds.has(id);
     }
 
     list(filter?: { group?: string; tag?: string }): RegisteredEndpoint[] {

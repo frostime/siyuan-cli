@@ -1,7 +1,10 @@
 import { defineConfig } from 'tsdown';
 
 export default defineConfig({
-    entry: 'src/cli.ts',
+    entry: {
+        cli: 'src/cli.ts',
+        'shared/schema': 'src/shared/schema.ts'
+    },
     format: 'esm',
     outDir: 'dist',
     dts: true,

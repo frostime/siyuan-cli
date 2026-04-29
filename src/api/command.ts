@@ -2,6 +2,8 @@
  * `siyuan api` command — direct kernel API calls.
  */
 import { defineCommand } from 'citty';
+import { colors } from 'consola/utils';
+import { join } from 'pathe';
 import { registry } from './registry.js';
 import { loadConfig, materializeWorkspace, resolveEffectiveWorkspace } from '../workspace/config.js';
 import { SiyuanClient } from '../shared/client.js';
@@ -10,43 +12,171 @@ import { executeEndpoint } from './guard.js';
 import { parsePayload } from '../shared/argv.js';
 import { normalizePayloadPaths } from './msys-path.js';
 import { applyFormatStrategy, preparePrintedOutput } from '../shared/output.js';
-import { fatalError, toCliError } from '../shared/errors.js';
-import type { GlobalArgs, RegisteredEndpoint } from '../shared/schema.js';
+import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
+import { getExtensionDir } from '../workspace/paths.js';
+import {
+    buildEndpointSchemaFromCache,
+    writeSchemaCache,
+    type EndpointSchemaCache
+} from '../extension/cache.js';
+import {
+    discoverEndpointExtensions,
+    loadEndpointExtension,
+    type DiscoveredExtension
+} from '../extension/loader.js';
+import {
+    deriveEndpointId,
+    type GlobalArgs,
+    type RegisteredEndpoint
+} from '../shared/schema.js';
 
 import './endpoints/index.js';
+
+const API_EXTENSION_DIR = join(getExtensionDir(), 'apis');
+
+const RESERVED_CLI_ARGS = new Set([
+    'workspace',
+    'dry-run',
+    'yes',
+    'debug',
+    'print',
+    'json',
+    'file',
+    'primary',
+    'config',
+    'baseUrl',
+    'token'
+]);
+
+// ————— Extension discovery —————
+
+let discoveredEndpointsLoaded = false;
+let discoveredEndpointExtensions: DiscoveredExtension<EndpointSchemaCache>[] = [];
+const discoveredEndpointSourcesById = new Map<string, string>();
 
 function out(data: unknown): void {
     process.stdout.write(JSON.stringify(data, null, 2) + '\n');
 }
 
+function ensureEndpointDiscovery(): void {
+    if (discoveredEndpointsLoaded) return;
+    discoveredEndpointsLoaded = true;
+    discoveredEndpointExtensions = discoverEndpointExtensions(API_EXTENSION_DIR);
+    for (const item of discoveredEndpointExtensions) {
+        if (!item.cached) continue;
+        const cachedSchema = buildEndpointSchemaFromCache(item.cached);
+        const registered = registry.registerExtension(cachedSchema);
+        if (registered) {
+            discoveredEndpointSourcesById.set(
+                deriveEndpointId(item.cached.endpoint).id,
+                item.source
+            );
+        }
+    }
+}
+
+/**
+ * Resolve an endpoint for execution. If it's a user extension,
+ * jiti-import the source to get real format()/filterResponse() functions.
+ */
+async function resolveEndpointForExecution(
+    id: string
+): Promise<{ entry: RegisteredEndpoint; source?: string } | undefined> {
+    ensureEndpointDiscovery();
+
+    const cachedSource = discoveredEndpointSourcesById.get(id);
+    if (cachedSource) {
+        try {
+            const loaded = await loadEndpointExtension(cachedSource);
+            registry.registerExtension(loaded.schema);
+            return { entry: registry.get(id)!, source: cachedSource };
+        } catch {
+            // fall through to builtin lookup
+        }
+    }
+
+    const builtin = registry.get(id);
+    if (builtin) {
+        return { entry: builtin };
+    }
+
+    // Try uncached extensions
+    for (const item of discoveredEndpointExtensions) {
+        if (item.cached) continue;
+        try {
+            const loaded = await loadEndpointExtension(item.source);
+            const loadedId = deriveEndpointId(loaded.schema.endpoint).id;
+            const registered = registry.registerExtension(loaded.schema);
+            if (registered) {
+                discoveredEndpointSourcesById.set(loadedId, item.source);
+                if (loadedId === id) {
+                    return { entry: registry.get(id)!, source: item.source };
+                }
+            }
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            console.warn(`[ext] Failed to load API extension "${item.source}": ${message}`);
+        }
+    }
+
+    return undefined;
+}
+
+// ————— Core operations —————
+
 export function listEndpoints(args: Record<string, unknown>): void {
-    const endpoints = registry.list({
-        group: args['group'] as string | undefined,
-        tag: args['tag'] as string | undefined
-    });
-    out(
-        endpoints.map((e) => ({
+    ensureEndpointDiscovery();
+    const group = args['group'] as string | undefined;
+    const tag = args['tag'] as string | undefined;
+    const endpoints = registry.list({ group, tag });
+    const listedIds = new Set(endpoints.map((e) => e.id));
+    const staleIds = new Set(
+        discoveredEndpointExtensions
+            .filter((item) => item.cacheStatus === 'stale' && item.cached?.endpoint)
+            .map((item) => deriveEndpointId(item.cached!.endpoint).id)
+    );
+    const uncachedEndpoints = discoveredEndpointExtensions
+        .filter((item) => item.cacheStatus === 'uncached')
+        .map((item) => ({
+            id: item.source.replace(/^.*[\\/]/, '').replace(/\.(ts|mjs)$/i, ''),
+            endpoint: item.source.replace(/^.*[\\/]/, '').replace(/\.(ts|mjs)$/i, ''),
+            summary: '[uncached]',
+            cacheStatus: 'uncached' as const,
+            source: 'extension' as const
+        }))
+        .filter((item) => !listedIds.has(item.id));
+
+    out([
+        ...endpoints.map((e) => ({
             id: e.id,
             endpoint: e.schema.endpoint,
             summary: e.schema.summary,
             tags: e.meta.tags,
             classification: e.meta.classification,
-            risk: e.meta.risk
-        }))
-    );
+            risk: e.meta.risk,
+            source: registry.isExtension(e.id) ? 'extension' : 'builtin',
+            ...(staleIds.has(e.id) ? { cacheStatus: 'stale' as const } : {})
+        })),
+        ...uncachedEndpoints
+    ]);
+
+    if (uncachedEndpoints.length > 0) {
+        process.stderr.write(
+            `[!] ${uncachedEndpoints.length} uncached extension(s). Run \`siyuan extension cache\` to populate metadata.\n`
+        );
+    }
 }
 
 export function describeEndpoint(id: string): void {
+    ensureEndpointDiscovery();
     const entry = registry.get(id);
     if (!entry) {
-        process.stderr.write(
-            JSON.stringify({
-                error: 'ENDPOINT_NOT_FOUND',
-                id,
-                message: `Endpoint "${id}" not found. Run \`siyuan api list\` to see all endpoints.`
-            }) + '\n'
+        throw new CliError(
+            ExitCode.GENERAL,
+            'ENDPOINT_NOT_FOUND',
+            `Endpoint "${id}" not found.`,
+            'Run `siyuan api list` to see all endpoints.'
         );
-        process.exit(1);
     }
     const { schema } = entry;
     const serializable = {
@@ -64,10 +194,16 @@ export function describeEndpoint(id: string): void {
     out({ ...entry, schema: serializable });
 }
 
+export function getEndpointHelpEntry(id: string): RegisteredEndpoint | undefined {
+    ensureEndpointDiscovery();
+    return registry.get(id);
+}
+
 async function callEndpoint(
     entry: RegisteredEndpoint,
     rawArgs: Record<string, unknown>,
-    positional?: string
+    positional?: string,
+    source?: string
 ): Promise<void> {
     const payload = parsePayload({
         schema: entry.schema,
@@ -109,6 +245,9 @@ async function callEndpoint(
         yes: args.yes,
         debug: args.debug
     });
+    if (source) {
+        writeSchemaCache(source, entry.schema);
+    }
     const rendered = preparePrintedOutput({
         print: args.print,
         details: result,
@@ -125,19 +264,7 @@ async function callEndpoint(
     process.stdout.write(rendered.stdout + '\n');
 }
 
-const RESERVED_CLI_ARGS = new Set([
-    'workspace',
-    'dry-run',
-    'yes',
-    'debug',
-    'print',
-    'json',
-    'file',
-    'primary',
-    'config',
-    'baseUrl',
-    'token'
-]);
+// ————— SubCommand builders —————
 
 function buildEndpointSubCommand(entry: RegisteredEndpoint) {
     const payloadFields = Object.keys(entry.schema.payload.properties);
@@ -218,10 +345,13 @@ function buildEndpointSubCommand(entry: RegisteredEndpoint) {
             )
         },
         run: async ({ args }) => {
+            const resolved = await resolveEndpointForExecution(entry.id);
+            const target = resolved ?? { entry };
             await callEndpoint(
-                entry,
+                target.entry,
                 args as Record<string, unknown>,
-                args.primary as string | undefined
+                args.primary as string | undefined,
+                target.source
             ).catch((e) => fatalError(toCliError(e)));
         }
     });
@@ -257,18 +387,61 @@ const describeCommand = defineCommand({
     run: ({ args }) => describeEndpoint(args.id)
 });
 
-export const endpointSubCommands = Object.fromEntries(
-    registry.list().map((entry) => [entry.id, buildEndpointSubCommand(entry)])
-);
+// ————— Grouped help renderer —————
+
+export function renderGroupedApiHelp(version?: string): string {
+    ensureEndpointDiscovery();
+    const lines: string[] = [];
+    const title = `Call SiYuan kernel API endpoints directly. (siyuan api${version ? ` v${version}` : ''})`;
+    lines.push(colors.gray(title));
+    lines.push('');
+    lines.push(`${colors.underline(colors.bold('USAGE'))} ${colors.cyan('siyuan api [OPTIONS] <command>')}`);
+    lines.push('');
+
+    const all = registry.list();
+    const builtins = all.filter((e) => !registry.isExtension(e.id));
+    const extensions = all.filter((e) => registry.isExtension(e.id));
+
+    function printGroup(name: string, items: { id: string; description: string }[]) {
+        if (items.length === 0) return;
+        lines.push(colors.underline(colors.bold(name)));
+        lines.push('');
+        const maxLen = Math.max(...items.map((i) => i.id.length), 0);
+        for (const item of items) {
+            lines.push(`  ${item.id.padEnd(maxLen + 2)}${colors.cyan(item.description)}`);
+        }
+        lines.push('');
+    }
+
+    printGroup('META', [
+        { id: 'list', description: 'List all registered API endpoints.' },
+        { id: 'describe', description: 'Show full EndpointSchema for an endpoint.' }
+    ]);
+    printGroup('BUILT-IN', builtins.map((e) => ({ id: e.id, description: e.schema.summary })));
+    printGroup('USER EXTENSIONS', extensions.map((e) => ({ id: e.id, description: e.schema.summary })));
+
+    lines.push(`Use ${colors.cyan('siyuan api <command> --help')} for more information about a command.`);
+
+    return lines.join('\n');
+}
+
+// ————— Command export —————
 
 export const apiCommand = defineCommand({
     meta: {
         name: 'api',
         description: 'Call SiYuan kernel API endpoints directly.'
     },
-    subCommands: {
-        list: listCommand,
-        describe: describeCommand,
-        ...endpointSubCommands
+    subCommands: () => {
+        ensureEndpointDiscovery();
+        return {
+            list: listCommand,
+            describe: describeCommand,
+            ...Object.fromEntries(
+                registry.list().map((entry) => [entry.id, buildEndpointSubCommand(entry)])
+            )
+        };
     }
 });
+
+export { ensureEndpointDiscovery };
