@@ -34,7 +34,7 @@ schemaVersion: 1
 workspace: main    # must exist in `siyuan workspace list`
 ```
 
-The global configuration is stored at `~/.config/siyuan-cli/config.yaml`. It set the workspace and permissions, see `cli-usage/config-and-permission.md` for details.
+The global configuration is stored at `~/.config/siyuan-cli/config.yaml`. It sets the workspace and behavior; see `cli-usage/workspace-config.md` for details. For permission rules, see `cli-usage/permission.md`.
 
 Inspect resolution: `siyuan workspace which`
 
@@ -117,5 +117,6 @@ Read these for full command reference and config file format.
 | File | Covers |
 |------|--------|
 | `cli-usage/cli-overview.md` | Full command tree, global flags, input sources (`@file`/`@stdin`/`@env`), all error codes, debugging |
-| `cli-usage/config-and-permission.md` | `config.yaml` structure, token sources, permission rule syntax, evaluation order, project config, cascade |
+| `cli-usage/workspace-config.md` | Config file location, workspace connections, token sources, behavior, project anchoring |
+| `cli-usage/permission.md` | Permission rule syntax, evaluation order, risk-based auto-approval, two-phase checking, extension schema coupling, debugging |
 | `cli-usage/extension.md` | Write custom API endpoints and workflow tools; schema authoring, cold-start workflow, examples |

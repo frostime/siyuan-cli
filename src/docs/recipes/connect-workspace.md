@@ -63,4 +63,4 @@ siyuan workspace verify devspace
 
 - `README.md`
 - `cli-usage/cli-overview.md`
-- `cli-usage/config-and-permission.md`
+- `cli-usage/workspace-config.md`

@@ -189,7 +189,7 @@ exit 5          → permission policy blocks this; check config rules
 
 ### Debugging permissions
 
-See `config-and-permission.md` for the full reference. Quick diagnostic:
+See `permission.md` for the full reference. Quick diagnostic:
 
 ```bash
 siyuan workspace which              # see resolved workspace + full rule list

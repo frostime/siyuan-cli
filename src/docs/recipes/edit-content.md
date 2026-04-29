@@ -76,4 +76,4 @@ siyuan tool get-block-content <doc-or-block-id>
 - `recipes/find-target.md`
 - `recipes/read-content.md`
 - `siyuan-guide/siyuan-block.md`
-- `cli-usage/config-and-permission.md`
+- `cli-usage/workspace-config.md`
