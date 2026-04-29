@@ -13,6 +13,12 @@ reference:
 - source: .sspec/changes/26-04-28T22-24_extension-system-fixes/revisions/002-extension-guidance-cold-start.md
   type: revision
   note: Strengthen cold-start extension guidance in help and docs
+- source: .sspec/changes/26-04-28T22-24_extension-system-fixes/revisions/003-extension-validation-and-endpoint-spec.md
+  type: revision
+  note: Restore API extension schema-validation parity and add EndpointSchema spec-doc
+- source: .sspec/changes/26-04-28T22-24_extension-system-fixes/revisions/004-unknown-command-cache-hint.md
+  type: revision
+  note: Add cache guidance when uncached or stale extensions trigger unknown command errors
 ---
 
 # extension-system-fixes

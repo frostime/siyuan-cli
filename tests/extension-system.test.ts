@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import {
     existsSync,
     mkdirSync,
@@ -127,7 +128,7 @@ test('validateToolExport and validateEndpointExport reject malformed exports', (
     );
 });
 
-test('registerExtension warns and skips builtin conflicts, accepts unique ids', () => {
+test('registerExtension warns and skips builtin conflicts and invalid endpoint schemas, accepts unique ids', () => {
     const toolRegistry = new ToolRegistry();
     const endpointRegistry = new EndpointRegistry();
     const warnings: string[] = [];
@@ -193,6 +194,23 @@ test('registerExtension warns and skips builtin conflicts, accepts unique ids', 
             true
         );
         assert.equal(endpointRegistry.get('custom.run')?.schema.summary, 'Ext');
+
+        assert.equal(
+            endpointRegistry.registerExtension({
+                endpoint: '/api/custom/leaky',
+                summary: 'Leaky',
+                payload: { type: 'object', properties: {} },
+                classification: { mode: 'read', surface: 'content', scope: 'global' }
+            }),
+            false
+        );
+        assert.equal(endpointRegistry.get('custom.leaky'), undefined);
+        assert.equal(
+            warnings.some((msg) =>
+                msg.includes('global read and must declare guard.response or guard.filterResponse')
+            ),
+            true
+        );
     } finally {
         console.warn = originalWarn;
     }
@@ -214,6 +232,41 @@ test('build schema from cache recreates registry-friendly shapes', () => {
         classification: { mode: 'read', surface: 'meta', scope: 'single' }
     });
     assert.equal(endpoint.endpoint, '/api/custom/ping');
+});
+
+test('unknown extension command suggests running extension cache when pending metadata exists', () => {
+    const root = makeTempDir('unknown-command-hint');
+    const extRoot = join(root, 'extensions');
+    mkdirSync(join(extRoot, 'tools'), { recursive: true });
+    writeFileSync(
+        join(extRoot, 'tools', 'hello.ts'),
+        [
+            'export const tool = {',
+            "  id: 'hello-ext',",
+            "  summary: 'Hello extension',",
+            "  input: { type: 'object', properties: { name: { type: 'string' } } },",
+            "  async run(_ctx, input) { return { content: `Hello, ${input.name ?? 'world'}!` }; }",
+            '};',
+            ''
+        ].join('\n'),
+        'utf-8'
+    );
+
+    const result = spawnSync(
+        process.execPath,
+        ['--import', 'tsx', join(process.cwd(), 'src', 'cli.ts'), 'tool', 'hello-ext', '--name', 'Alice'],
+        {
+            cwd: process.cwd(),
+            encoding: 'utf-8',
+            env: { ...process.env, SIYUAN_CLI_CONFIG: root }
+        }
+    );
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Unknown command `hello-ext`/);
+    assert.match(result.stderr, /Run `siyuan extension cache` and retry\./);
+
+    rmSync(root, { recursive: true, force: true });
 });
 
 test('scaffoldExtensionDir creates tsconfig/gitignore/gitkeep with detected package path', () => {

@@ -19,7 +19,7 @@ This section records the change starting point in git and MUST NOT be edited or 
 
 ## State
 **Phase**: Review
-**Status**: Implementation complete. All 10 tasks done. Pending user review.
+**Status**: Revision 004 implemented. Pending user review.
 
 ## Key Files
 <!-- 对理解/继续这个 change 至关重要的文件
@@ -39,3 +39,7 @@ Types: Decision, Constraint, Gotcha, Rejected
 - 2026-04-28T22:45+08:00 T1–T10 implementation complete — build, typecheck, and all verifications pass
 - 2026-04-28T23:10+08:00 Revision 001 implemented: callEndpointRaw signature changed to path-driven; extension.md + SKILL.md updated with source bootstrapping guidance; T11–T16 complete
 - 2026-04-29T02:35+08:00 Revision 002 implemented: enhanced `siyuan extension -h`, added authoring contract + cold-start workflow, corrected package-local `dist/...` references; T17–T21 complete
+- 2026-04-29T14:18+08:00 Revision 003 accepted from review: restore API extension schema-validation parity and add EndpointSchema spec-doc
+- 2026-04-29T14:19+08:00 T22–T25 complete — `registerExtension()` now validates endpoint schemas, new spec-doc written, `pnpm test` and `pnpm run build` pass
+- 2026-04-29T15:41+08:00 Revision 004 accepted from review: add explicit cache guidance on unknown extension commands
+- 2026-04-29T15:50+08:00 T26–T29 complete — pending extension counter added, CLI unknown-command hint implemented, regression test added, `pnpm test` and `pnpm run build` pass

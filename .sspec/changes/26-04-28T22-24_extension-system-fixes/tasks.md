@@ -68,3 +68,27 @@ updated: "2026-04-28T22:24+08:00"
   - Verify: `pnpm run build` succeeds
   - Verify: `pnpm run typecheck` passes
   - Verify: `pnpm run siyuan extension -h` shows the new guidance
+
+### Feedback Tasks (→ [003-extension-validation-and-endpoint-spec](./revisions/003-extension-validation-and-endpoint-spec.md))
+
+- [x] **T22** `src/api/registry.ts` — validate API extensions with the same registry-level contract as built-in endpoints, but warn-and-skip instead of throwing
+  - Verify: invalid extension schema registration returns `false` and emits a warning
+- [x] **T23** `tests/extension-system.test.ts` — cover invalid API extension schema rejection during `registerExtension()`
+  - Verify: test asserts invalid global-read extension is skipped
+- [x] **T24** `.sspec/spec-docs/endpoint-schema.md` — define the stable EndpointSchema contract and field-coupling rules
+  - Verify: spec-doc covers identity, classification/risk, guard obligations, CLI coupling, output precedence, multipart semantics, and cache boundary
+- [x] **T25** Regression check
+  - Verify: `pnpm test` passes
+  - Verify: `pnpm run build` passes
+
+### Feedback Tasks (→ [004-unknown-command-cache-hint](./revisions/004-unknown-command-cache-hint.md))
+
+- [x] **T26** `src/extension/command.ts` — expose a helper that counts uncached/stale API or tool extensions
+  - Verify: helper distinguishes pending metadata by kind
+- [x] **T27** `src/cli.ts` — append `siyuan extension cache` guidance on `api/tool` unknown-command failures when pending extension metadata exists
+  - Verify: unknown uncached extension command shows the cache hint
+- [x] **T28** `tests/extension-system.test.ts` — cover the unknown-command cache hint regression
+  - Verify: test asserts the hint appears for an uncached extension command
+- [x] **T29** Regression check
+  - Verify: `pnpm test` passes
+  - Verify: `pnpm run build` passes

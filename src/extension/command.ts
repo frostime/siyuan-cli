@@ -84,6 +84,22 @@ function renderList(root: string): string {
     return lines.join('\n');
 }
 
+export type ExtensionKind = 'tool' | 'api';
+
+export function getPendingExtensionCount(
+    kind: ExtensionKind,
+    root = getExtensionDir()
+): number {
+    const items =
+        kind === 'tool'
+            ? discoverToolExtensions(join(root, 'tools'))
+            : discoverEndpointExtensions(join(root, 'apis'));
+    return items.filter(
+        (item) =>
+            item.cacheStatus === 'uncached' || item.cacheStatus === 'stale'
+    ).length;
+}
+
 const initCommand = defineCommand({
     meta: { name: 'init', description: 'Scaffold the extensions directory.' },
     run: () => {
