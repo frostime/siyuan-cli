@@ -12,6 +12,7 @@ Start with:
 ```bash
 siyuan --help
 siyuan doc list
+siyuan doc read extension.md   # when the task involves custom extensions
 ```
 
 Use the real docs paths disclosed by help output when your runtime can read files directly. `siyuan doc` is convenience sugar for discovery and reading.
@@ -62,9 +63,11 @@ siyuan tool append-content --targetId <id> --targetType document --markdown @fil
 siyuan tool list-doc-tree --notebook <notebook-id>
 
 # Extensions
+siyuan extension --help              # entry point: layout + workflow
 siyuan extension init                # scaffold extension directory
-siyuan extension list                # discovered extensions + cache status
 siyuan extension cache               # batch-generate schema.json caches
+siyuan extension list                # discovered extensions + cache status
+siyuan api|tool describe <id>        # confirm CLI recognized an extension contract
 siyuan tool hello-ext --name Alice   # example: run a user-defined tool extension
 
 # Workspace

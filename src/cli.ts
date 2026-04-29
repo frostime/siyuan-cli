@@ -8,7 +8,7 @@ import { toolCommand, getToolHelpText, renderGroupedToolHelp } from './tool/comm
 import { skillCommand } from './skill/command.js';
 import { docCommand, formatDocsHint } from './doc/command.js';
 import { approvalCommand } from './approval/command.js';
-import { extensionCommand } from './extension/command.js';
+import { extensionCommand, renderExtensionHelp } from './extension/command.js';
 import { buildEndpointHelp } from './shared/argv.js';
 
 function getVersion(): string {
@@ -59,6 +59,12 @@ async function customShowUsage<T extends Record<string, unknown>>(
     // Detect bare `siyuan tool -h`
     if (meta?.name === 'tool' && parentMeta?.name === 'siyuan') {
         process.stdout.write(renderGroupedToolHelp(parentMeta?.version) + '\n');
+        return;
+    }
+
+    // Detect bare `siyuan extension -h`
+    if (meta?.name === 'extension') {
+        process.stdout.write(renderExtensionHelp(parentMeta?.version) + '\n');
         return;
     }
 

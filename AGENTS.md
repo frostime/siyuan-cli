@@ -2,21 +2,35 @@
 
 ---
 
-CLI 内部文档、提示应当使用英文。
+## Project-local rules
 
-开发时，灵活使用 CLI 工具:
+- CLI 内部文档、提示使用英文。
+- 在本 repo 内运行 self CLI 时，使用 `pnpm run siyuan ...`。
+- 不要用全局 `siyuan` 代替本地开发版；全局安装可能不是最新代码。
 
-- `rg`/`grep` - Grep
-- `fd` - Find file
-- `sspec tool view-tree` - List file tree
-- `sspec tool mdtoc` - Inspect long md file
-- `slsp` - LSP CLI (see `slsp --help` for builtin doc)
+## Key paths
+
+- 项目代码：`src/`
+- CLI 内置文档：`src/docs/`（随 package 发布）
+- CLI 内置 SKILL：`skills/`（install 后落在全局 `~/.agents/skills/`）
+- 已安装 package 视角：运行时代码与类型声明看同 package 下的 `dist/`
+
+## 安装本项目的 Agent 使用者视角
+
+- 先看 `siyuan-cli` SKILL
+- 再运行 `pnpm run siyuan --help`
+- CLI 会继续引导 Agent 查看内置文档，以及同 package 下 `dist/` 中的运行时代码
+
+## Useful tools
+
+- `rg` / `grep` — Grep
+- `fd` — Find file
+- `sspec tool view-tree` — List file tree
+- `sspec tool mdtoc` — Inspect long md file
+- `slsp` — LSP CLI (`slsp --help`)
 - `sspec change [new|list|archive]`
----
 
-项目代码：src/
-CLI Bundle 自带文档: src/doc/
-CLI 自带 SKILL: skills/
+---
 
 <!-- SSPEC:START -->
 # .sspec Agent Protocol
@@ -35,7 +49,7 @@ SSPEC is a doc-driven workflow. Planning, tracking, and memory live in `.sspec/`
 
 ```
 .sspec/
-├── project.md     # Identity, conventions, notes
+├── project.md     # Identity, conventions
 ├── spec-docs/     # Formal specs (architecture, APIs)
 ├── changes/<n>/   # spec.md | tasks.md | memory.md [+ design.md | revisions/ | reference/]
 ├── requests/      # User intent records

@@ -37,9 +37,34 @@ siyuan extension list               # show discovered extensions + cache status
 siyuan extension cache              # batch-generate all schema.json files
 ```
 
+## Authoring Contract
+
+| Kind | Location | Export | Minimum shape |
+|------|----------|--------|---------------|
+| API extension | `apis/*.ts` or `apis/*.mjs` | `export const schema` | `endpoint`, `summary`, `payload`, `classification` |
+| Tool extension | `tools/*.ts` or `tools/*.mjs` | `export const tool` | `id`, `summary`, `input`, `run()` |
+
+Notes:
+- Built-in ID/endpoint conflicts are skipped with a warning.
+- Discovery reads `*.schema.json` cache files; execution loads the real module.
+- `siyuan extension cache` is the fastest way to refresh metadata after edits.
+
+## Cold-start Workflow
+
+```text
+1. siyuan extension init
+2. create apis/foo.ts or tools/bar.ts
+3. siyuan extension cache
+4. siyuan extension list
+5. siyuan api|tool describe <id>
+6. siyuan api|tool <id> ...
+```
+
+Use `describe` immediately after `cache` to confirm that the CLI recognized your extension contract before trying to execute it.
+
 ## Writing an API Extension
 
-Create `~/.config/siyuan-cli/extensions/apis/echo.ts`:
+Create `~/.config/siyuan-cli/extensions/apis/echo.ts`: 
 
 ```ts
 import type { EndpointSchema } from "@frostime/siyuan-cli/schema";

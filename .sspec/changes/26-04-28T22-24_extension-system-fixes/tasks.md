@@ -53,3 +53,18 @@ updated: "2026-04-28T22:24+08:00"
   - Verify: `pnpm run siyuan api list` and `pnpm run siyuan tool list` output valid JSON with `source` field
   - Verify: `pnpm run siyuan api -h` and `pnpm run siyuan tool -h` show grouped sections (no flat COMMANDS table)
   - Verify: `pnpm run siyuan tool list` still works
+
+### Feedback Tasks (→ [002-extension-guidance-cold-start](./revisions/002-extension-guidance-cold-start.md))
+
+- [x] **T17** `src/extension/command.ts` — add enhanced bare `siyuan extension -h` renderer (layout, export contract, cold-start workflow, docs hint)
+  - Verify: `pnpm run siyuan extension -h` shows extension root, `apis/` vs `tools/`, and a 1→6 workflow
+- [x] **T18** `src/cli.ts` — delegate bare extension help to the new renderer
+  - Verify: `pnpm run siyuan extension -h` uses the custom renderer rather than plain citty output
+- [x] **T19** `src/docs/extension.md` — add compact authoring contract and explicit cold-start workflow
+  - Verify: `pnpm run siyuan doc read extension.md` contains both sections
+- [x] **T20** `skills/siyuan-cli/SKILL.md` — tighten extension guidance as an operational index
+  - Verify: file points agents to `siyuan doc read extension.md` and package-local `dist/...` references
+- [x] **T21** Build and regression check
+  - Verify: `pnpm run build` succeeds
+  - Verify: `pnpm run typecheck` passes
+  - Verify: `pnpm run siyuan extension -h` shows the new guidance

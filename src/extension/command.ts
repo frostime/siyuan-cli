@@ -1,4 +1,5 @@
 import { defineCommand } from 'citty';
+import { colors } from 'consola/utils';
 import { mkdirSync } from 'node:fs';
 import { basename, join, relative } from 'pathe';
 import { registry } from '../api/registry.js';
@@ -136,6 +137,46 @@ const cacheCommand = defineCommand({
         process.stdout.write(lines.join('\n') + '\n');
     }
 });
+
+export function renderExtensionHelp(version?: string): string {
+    const root = getExtensionDir();
+    const lines: string[] = [];
+    const title = `Manage user extensions. (siyuan extension${version ? ` v${version}` : ''})`;
+    lines.push(colors.gray(title));
+    lines.push('');
+    lines.push(`${colors.underline(colors.bold('USAGE'))} ${colors.cyan('siyuan extension <command>')}`);
+    lines.push('');
+    lines.push(colors.underline(colors.bold('COMMANDS')));
+    lines.push('');
+    lines.push(`  ${'init'.padEnd(8)}${colors.cyan('Scaffold the extensions directory.')}`);
+    lines.push(`  ${'list'.padEnd(8)}${colors.cyan('List discovered extensions.')}`);
+    lines.push(`  ${'cache'.padEnd(8)}${colors.cyan('Load extensions and write schema cache files.')}`);
+    lines.push('');
+    lines.push(colors.underline(colors.bold('EXTENSION ROOT')));
+    lines.push('');
+    lines.push(`  ${root}`);
+    lines.push('');
+    lines.push(colors.underline(colors.bold('LAYOUT')));
+    lines.push('');
+    lines.push(`  ${join(root, 'apis').replace(/\\/g, '/')}`);
+    lines.push(`    export const schema  ${colors.gray('# EndpointSchema')}`);
+    lines.push(`  ${join(root, 'tools').replace(/\\/g, '/')}`);
+    lines.push(`    export const tool    ${colors.gray('# ToolSchema')}`);
+    lines.push('');
+    lines.push(colors.underline(colors.bold('COLD-START WORKFLOW')));
+    lines.push('');
+    lines.push(`  1. ${colors.cyan('siyuan extension init')}`);
+    lines.push(`  2. create ${colors.cyan('apis/foo.ts')} or ${colors.cyan('tools/bar.ts')}`);
+    lines.push(`  3. ${colors.cyan('siyuan extension cache')}`);
+    lines.push(`  4. ${colors.cyan('siyuan extension list')}`);
+    lines.push(`  5. ${colors.cyan('siyuan api|tool describe <id>')}`);
+    lines.push(`  6. ${colors.cyan('siyuan api|tool <id> ...')}`);
+    lines.push('');
+    lines.push(colors.underline(colors.bold('DOCS')));
+    lines.push('');
+    lines.push(`  ${colors.cyan('siyuan doc read extension.md')}`);
+    return lines.join('\n');
+}
 
 export const extensionCommand = defineCommand({
     meta: { name: 'extension', description: 'Manage user extensions.' },
