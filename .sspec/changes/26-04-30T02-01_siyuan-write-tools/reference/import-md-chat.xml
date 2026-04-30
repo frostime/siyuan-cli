@@ -1,0 +1,254 @@
+<ChatThread>
+<Meta cwd="H:\SrcCode\playground\siyuan-cli" sessionFile=".pi\sessions\2026-04-30T04-56-03-398Z_019ddcbe-7845-75fd-958f-70a1da802bd1.jsonl" exportedAt="2026-04-30T05:09:49.609Z" entryCount="103" chunkCount="7" />
+<Role-user data-chunk-idx="0">
+调研思源 repo，看 Kernel API 有没有直接支持导入 MD 文档为指定文件的功能？是否支持自动导入图片？
+</Role-user>
+
+<Role-toolCall-Logs data-chunk-idx="1">
+# These tool call logs are compressed
+bash('cd /workspace &amp;&amp; ls -la 2&gt;/dev/null || ls -la H:/SrcCode/ 2&gt;/dev/null || echo "No workspace found"')
+rg()
+bash('ls -la "H:/SrcCode/SiYuanDevelopment/" 2&gt;/dev/null || ls -la "H:/SrcCode/" 2&gt;/dev/null')
+bash('fd -d 3 -t d siyuan "H:/SrcCode/" --case-insensitive 2&gt;/dev/null || fd -d 3 -t d . "H:/SrcCode/" 2&gt;/dev/null | head -30')
+bash('ls "H:/SrcCode/开源项目/" | grep -i siyuan')
+bash('ls "H:/SrcCode/SiYuanDevelopment/" | grep -iv "syt\\|sy-\\|plugin\\|theme\\|test\\|template\\|link-icon\\|lute\\|arco"')
+bash('ls "H:/SrcCode/开源项目/siyuan/"')
+bash('ls "H:/SrcCode/SiYuanDevelopment/siyuan-developer-docs/"')
+read('H:\\SrcCode\\开源项目\\siyuan\\API.md')
+bash('ls "H:/SrcCode/开源项目/siyuan/kernel/"')
+bash('ls "H:/SrcCode/SiYuanDevelopment/siyuan-developer-docs/api/"')
+rg()
+rg()
+</Role-toolCall-Logs>
+
+<Role-user data-chunk-idx="2">
+你使用 gh 到 git repo 上看，在 siyuan-cli 的内置文档中有指明方向，这个 siyuan develper docs 已经很久没更新，不一定准确
+</Role-user>
+
+<Role-toolCall-Logs data-chunk-idx="3">
+# These tool call logs are compressed
+bash('ls "H:/SrcCode/playground/siyuan-cli/src/docs/" 2&gt;/dev/null')
+bash('ls "H:/SrcCode/playground/siyuan-cli/docs/" 2&gt;/dev/null')
+bash('ls "H:/SrcCode/playground/siyuan-cli/src/docs/siyuan-guide/"')
+bash('ls "H:/SrcCode/playground/siyuan-cli/src/docs/cli-usage/"')
+bash('gh repo view siyuan-note/siyuan --json name,updatedAt,description 2&gt;&amp;1 | head -5')
+bash('gh search code --owner=siyuan-note --repo=siyuan "importStdMd" --limit=10 2&gt;&amp;1 || echo "fallback to local"')
+bash('gh search code --owner=siyuan-note --repo=siyuan "import.*Markdown|importMarkdown" --limit=10 2&gt;&amp;1 || echo "fallback"')
+bash('gh api repos/siyuan-note/siyuan/contents/kernel/api 2&gt;&amp;1 | python3 -c "import sys,json; data=json.load(sys.stdin); [prin...[truncated]')
+bash('gh auth status 2&gt;&amp;1')
+bash('gh api repos/siyuan-note/siyuan/git/trees/master?recursive=1 --jq \'.tree[] | select(.path | contains("kernel/api/import"...[truncated]')
+bash('gh api repos/siyuan-note/siyuan/contents/kernel/api/import.go --jq \'.content\' 2&gt;&amp;1 | base64 -d | head -300')
+bash('gh api repos/siyuan-note/siyuan/contents/kernel/api/router.go --jq \'.content\' 2&gt;&amp;1 | base64 -d | rg -i "import" | head -...[truncated]')
+bash('gh api repos/siyuan-note/siyuan/contents/kernel/api/import.go --jq \'.content\' 2&gt;&amp;1 | base64 -d')
+bash('gh api repos/siyuan-note/siyuan/contents/kernel/model --jq \'.tree[] | select(.path | contains("import")) | .path\' 2&gt;&amp;1')
+bash('gh api repos/siyuan-note/siyuan/git/trees/master?recursive=1 --jq \'.tree[] | select(.path | contains("kernel/model") and...[truncated]')
+bash('gh api repos/siyuan-note/siyuan/contents/kernel/model/import.go --jq \'.content\' 2&gt;&amp;1 | base64 -d')
+bash('gh api repos/siyuan-note/siyuan/contents/kernel/api/filetree.go --jq \'.content\' 2&gt;&amp;1 | base64 -d | rg -A 30 "func create...[truncated]')
+bash('gh api repos/siyuan-note/siyuan/contents/kernel/model/import.go --jq \'.content\' 2&gt;&amp;1 | base64 -d | rg -A 10 "func getAss...[truncated]')
+bash('gh api repos/siyuan-note/siyuan/git/trees/master?recursive=1 --jq \'.tree[] | select(.path | contains("/model/")) | .path...[truncated]')
+bash('gh api repos/siyuan-note/siyuan/git/trees/master?recursive=1 --jq \'.tree[] | select(.path | endswith(".go")) | .path\' 2&gt;...[truncated]')
+bash('gh api repos/siyuan-note/siyuan/contents/kernel/model/assets.go --jq \'.content\' 2&gt;&amp;1 | base64 -d | rg -A 5 "func getAsse...[truncated]')
+bash('gh api repos/siyuan-note/siyuan/git/trees/HEAD?recursive=1 --jq \'.tree[] | select(.path | contains("getAssetsDir")) | .p...[truncated]')
+bash('gh api repos/siyuan-note/siyuan/git/trees/master?recursive=1 --jq \'.tree[] | select(.path | endswith(".go")) | .path\' 2&gt;...[truncated]')
+bash('gh search code --owner siyuan-note --repo siyuan "func getAssetsDir" 2&gt;&amp;1')
+bash('rg "getAssetsDir" "H:/SrcCode/开源项目/siyuan/kernel/" 2&gt;&amp;1 | head -5')
+bash('rg "func getAssetsDir" "H:/SrcCode/开源项目/siyuan/" 2&gt;&amp;1')
+bash('rg -A 10 "func getAssetsDir" "H:/SrcCode/开源项目/siyuan/kernel/" 2&gt;&amp;1')
+bash('find "H:/SrcCode/开源项目/siyuan/kernel/" -name "*.go" | head -20')
+bash('rg "func getAssetsDir" "H:/SrcCode/开源项目/siyuan/kernel/"')
+read('H:\\SrcCode\\开源项目\\siyuan\\kernel\\model\\import.go')
+bash('rg "func getAssetsDir" -n "H:/SrcCode/开源项目/siyuan/"')
+bash('cd "H:/SrcCode/开源项目/siyuan" &amp;&amp; rg -n "func getAssetsDir" -l')
+bash('cd "H:/SrcCode/开源项目/siyuan/kernel" &amp;&amp; rg -n "func getAssetsDir" -l')
+bash('grep -rn "func getAssetsDir" "H:/SrcCode/开源项目/siyuan/kernel/"')
+read('H:\\SrcCode\\开源项目\\siyuan\\kernel\\model\\upload.go')
+bash('diff &lt;(gh api repos/siyuan-note/siyuan/contents/kernel/model/import.go --jq \'.content\' 2&gt;&amp;1 | base64 -d) "H:/SrcCode/开源项...[truncated]')
+bash('cd /tmp &amp;&amp; gh api repos/siyuan-note/siyuan/contents/kernel/model/import.go --jq \'.content\' 2&gt;&amp;1 | base64 -d &gt; /tmp/gh_im...[truncated]')
+</Role-toolCall-Logs>
+
+<Role-assistant data-chunk-idx="4">
+以下是调研结果。
+
+---
+
+## API Route 注册清单（来自 `kernel/api/router.go`）
+
+| Route | 功能 |
+|---|---|
+| `POST /api/filetree/createDocWithMd` | 用 Markdown 内容创建文档 |
+| `POST /api/import/importStdMd` | 从**本地路径**导入 MD 文件/文件夹 |
+| `POST /api/import/importZipMd` | 从 **ZIP** 导入 MD 文件 |
+| `POST /api/import/importData` | 导入完整 data zip |
+| `POST /api/import/importSY` | 导入 `.sy.zip` |
+
+---
+
+## 1. 是否直接支持导入 MD 文档为指定文件？
+
+**✅ 是** — 有两个 API 可用：
+
+### a) `createDocWithMd`（旧 API，已文档化）
+
+`POST /api/filetree/createDocWithMd`
+
+```json
+{ "notebook": "box-id", "path": "/foo/bar", "markdown": "# Hello\n\nContent" }
+```
+
+- 传的是 **Markdown 字符串**，不是文件路径
+- **不处理图片**（原样 pass 给 lute 引擎）
+- 同一 `path` 重复调用不会覆盖
+
+### b) `importStdMd`（新 API，可能未在旧 API.md 里更新）
+
+`POST /api/import/importStdMd`
+
+```json
+{ "notebook": "box-id", "localPath": "/path/to/md/file-or-folder", "toPath": "/target/parent" }
+```
+
+- 传的是**本地文件路径**，遍历目录转换 `.md` → `.sy`
+- **支持目录递归导入** — 文件夹结构映射为文档树
+- `toPath` 指定目标父目录
+- 安全限制：`localPath` 不能是 SiYuan 工作目录的子路径，也不能是敏感路径
+
+### c) `importZipMd`（上传 ZIP）
+
+`POST /api/import/importZipMd`
+
+- Multipart 上传 ZIP
+- 解压后走与 `importStdMd` 相同的 `ImportFromLocalPath` 内部逻辑
+
+---
+
+## 2. 是否自动导入图片？
+
+**✅ 是** — `importStdMd` 和 `importZipMd` 底层调用 `model.ImportFromLocalPath`，自动处理以下图片场景：
+
+| 图片类型 | 自动处理 |
+|---|---|
+| `![](relative/path/image.png)` — 相对路径图片 | ✅ 复制到 `data/assets/`，重写链接为 `assets/image-id.png` |
+| `![alt](data:image/png;base64,...)` — Base64 嵌入图片 | ✅ 解码 → 保存为文件 → 重写链接 |
+| `&lt;img src="relative/path/img.png"&gt;` — HTML img 标签 | ✅ 转换为 Markdown 图片语法，复制到 assets |
+| `&lt;pre&gt;&lt;svg&gt;...&lt;/svg&gt;&lt;/pre&gt;` — SVG | ✅ 保存为 `image-id.svg` 文件 |
+| `assets/` 子目录下的所有非 MD 文件 | ✅ 复制到 `data/assets/` |
+| 外部 URL `![](https://example.com/img.png)` | ❌ 不处理，保留原链接 |
+| `.md` 文件间的超链接 | ✅ 转换为 SiYuan 的双链 `[[]]` 引用 |
+| YAML Front Matter 中的 `id`/`title`/`updated` | ✅ 解析并应用到文档属性 |
+
+**处理流程（`ImportFromLocalPath` 核心逻辑）：**
+
+1. 递归遍历目录
+2. `.md`/`.markdown` → 解析为 SiYuan tree
+3. 非 MD 文件（图片等）→ 复制到 assets，记录原名→目标名映射
+4. 遍历 tree 中所有 `NodeLinkDest` 和 `a` 标签的链接：
+   - 如果链接是 `data:image/...;base64,...` → `processBase64Img` 解码保存
+   - 如果链接是相对路径且文件存在 → 复制到 assets，重写路径
+   - 如果链接指向 `.md` 文件（且不在 `assets/` 下）→ 转为文档 wiki link
+5. 写入 `.sy` 文件并索引
+
+---
+
+## 结论
+
+- **`importStdMd` / `importZipMd`** 是你要的 API：直接导入本地 MD 文件为指定文档，且**自动处理图片**。
+- **`createDocWithMd`** 不做任何图片处理。
+- 旧版 `API.md` 可能没收录新 API；当前用 `gh` 读的 GitHub master 分支代码（1738 行 `import.go`）是最新实现。
+</Role-assistant>
+
+<Role-user data-chunk-idx="5">
+localPath 是什么路径？Hpath OR id path? 是否支持覆盖导入？localpath 在调用方是如何指定的？
+</Role-user>
+
+<Role-assistant data-chunk-idx="6">
+从源码（GitHub master）一路看下去：
+
+## 1. `localPath` 是什么路径？
+
+**本地文件系统绝对路径**，不是 SiYuan HPath 也不是 ID path。
+
+```go
+// kernel/api/import.go - importStdMd
+notebook := arg["notebook"].(string)
+localPath := arg["localPath"].(string)
+toPath := arg["toPath"].(string)
+
+// 安全限制：不能是工作目录的子路径
+if gulu.File.IsSubPath(util.WorkingDir, localPath) {
+    // reject
+}
+// 不能是敏感路径
+if util.IsSensitivePath(localPath) {
+    // reject
+}
+err := model.ImportFromLocalPath(notebook, localPath, toPath)
+```
+
+即：
+- `localPath` → **磁盘上的 MD 文件或目录路径**，如 `/home/user/docs/article.md` 或 `C:\Users\me\docs\`
+- `toPath` → SiYuan 内部路径（用作查找父目录 block），如 `/foo/bar` 或 `/20210914223645-oj2vnx2.sy`
+
+`toPath` 在 `ImportFromLocalPath` 中被解析为：
+
+```go
+block := treenode.GetBlockTreeRootByPath(boxID, toPath)
+baseHPath = block.HPath           // 人类可读路径
+baseTargetPath = strings.TrimSuffix(block.Path, ".sy")  // 内部路径作为挂载点
+```
+
+**限制**：`localPath` 不能是 SiYuan working directory 的子路径。所以不能直接导入 `data/` 里面的东西。
+
+---
+
+## 2. 调用方怎么指定 `localPath`？
+
+JSON body 直接传字符串：
+
+```json
+POST /api/import/importStdMd
+{
+    "notebook": "20210817205410-2kvfpfn",
+    "localPath": "/home/user/documents/my-article.md",
+    "toPath": "/目标文件夹"
+}
+```
+
+**调用方（比如 siyuan-cli）** 需要从客户端上传文件路径到服务端的场景 → 用 `importZipMd` 更合适（multipart 上传 ZIP），底层走相同的 `ImportFromLocalPath` 逻辑。
+
+---
+
+## 3. 是否支持覆盖导入？
+
+**❌ 不支持。永不覆盖。**
+
+关键代码：
+
+```go
+// ImportFromLocalPath - 单个文件分支
+id := ast.NewNodeID()       // 每次生成全新 ID
+targetPath := strings.TrimSuffix(toPath, ".sy")
+targetPath = path.Join(targetPath, id+".sy")  // 路径带新 ID，不会冲突
+```
+
+唯一例外：YAML Front Matter 指定了 `id`：
+
+```go
+tree, yfmRootID, yfmTitle, yfmUpdated := parseStdMd(data)
+if "" != yfmRootID {
+    id = yfmRootID           // 复用 YFM 中的 id
+}
+```
+
+但这只是**复用 ID**，仍然走创建流程，不会检测同路径是否已有文档并覆盖。
+
+`createDocWithMd` 也明确不覆盖（API.md 原文）：
+
+&gt; If you use the same `path` to call this interface repeatedly, the existing document will not be overwritten.
+
+**如果要"覆盖"导入**，需要调用方自行：
+1. 先用 `getIDsByHPath` 查目标路径是否存在文档
+2. 存在则先 `removeDocByID`
+3. 再调用 import
+</Role-assistant>
+
+</ChatThread>

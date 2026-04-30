@@ -83,6 +83,9 @@ import { schema as fileRemoveFile } from './file/removeFile.js';
 import { schema as fileRenameFile } from './file/renameFile.js';
 import { schema as fileReadDir } from './file/readDir.js';
 
+// Import APIs
+import { schema as importImportStdMd } from './import/importStdMd.js';
+
 // Convert APIs
 import { schema as convertPandoc } from './convert/pandoc.js';
 
@@ -164,9 +167,12 @@ const schemas: EndpointSchema<any>[] = [
     fileRenameFile,
     fileReadDir,
     // Convert
+    // Convert
     convertPandoc,
     // SQLite
     sqliteFlushTransaction,
+    // Import
+    importImportStdMd,
     // Network
     networkForwardProxy
 ];

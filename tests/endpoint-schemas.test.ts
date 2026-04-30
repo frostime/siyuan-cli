@@ -19,6 +19,7 @@ import { schema as fileGetFile } from '../src/api/endpoints/file/getFile.ts';
 import { schema as filePutFile } from '../src/api/endpoints/file/putFile.ts';
 import { schema as systemExit } from '../src/api/endpoints/system/exit.ts';
 import { schema as notificationPushMsg } from '../src/api/endpoints/notification/pushMsg.ts';
+import { schema as importImportStdMd } from '../src/api/endpoints/import/importStdMd.ts';
 
 function makeConfig(permission?: PermissionConfig): AppConfig {
     return {
@@ -307,4 +308,18 @@ test('file.putFile uses workspace.write and dry-run runs guard before preview', 
         wouldRequestApproval: true
     });
     assert.equal(uploadCalls, 0);
+});
+
+test('importStdMd is write/content/single/create with notebook payload target', () => {
+    const entry = registerOne(importImportStdMd);
+    assert.deepEqual(entry.meta.classification, {
+        mode: 'write',
+        surface: 'content',
+        scope: 'single',
+        operation: 'create'
+    });
+    assert.equal(entry.meta.risk, 'elevated');
+    assert.deepEqual(importImportStdMd.guard?.payloadTargets, [
+        { path: 'notebook', kind: 'notebook', access: 'write' }
+    ]);
 });
