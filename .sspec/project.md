@@ -98,14 +98,20 @@ One-liners only. If a convention needs multi-paragraph explanation → write a s
 - commit message 遵循 Conventional Commits + emoji prefix
 
 ## Spec-Docs Index
-<!-- @RULE: Quick reference to formal specs in `.sspec/spec-docs/`.
-Agent reads this to know what architecture knowledge exists before starting work.
-Keep entries in sync with actual spec-doc files. Format: `- [name](spec-docs/<file>) — one-line description` -->
+<!-- Quick reference to spec-docs in `.sspec/spec-docs/`.
+Spec-docs capture knowledge that code alone cannot adequately convey:
+  A) In code, but scattered or hard to reconstruct (cross-module architecture, UX requirements, design norms, trade-offs)
+  B) Outside code entirely (platform rules, API quirks, business constraints, deployment assumptions)
+NOT a restating of code behavior — if readable from code+comments, it doesn't belong here.
+MUST keep entries in sync with actual spec-doc files.
+Format: `- [name](spec-docs/<file>) — one-line summary`
+create spec-docs with `sspec doc new "<name>"`
+-->
 
 - [EndpointSchema](spec-docs/endpoint-schema.md) — Authored contract for endpoint identity, classification/risk derivation, guard coupling, CLI semantics, output precedence, and cache boundaries
 
 ## Notes
-<!-- @RULE: Project-level memory. Append-only log of learnings, gotchas, preferences.
+<!-- Project-level memory. Append-only log of learnings, gotchas, preferences.
 Agent appends here during @memory when a discovery is project-wide (not change-specific).
 Format each entry as: `- YYYY-MM-DD: <learning>`
 Prune entries that become outdated or graduate to Conventions/spec-docs. -->
