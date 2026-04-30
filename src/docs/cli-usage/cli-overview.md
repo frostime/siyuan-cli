@@ -250,7 +250,9 @@ Broker lifecycle:
 
 ```bash
 siyuan workspace which              # show resolution for current directory
-siyuan workspace verify <name>      # test connection + auth
+siyuan workspace verify             # verify effective workspace (cwd-aware)
+siyuan workspace verify <name>      # verify a specific workspace by name
+siyuan workspace verify --global-current  # verify global config.current only
 siyuan api <id> --debug             # print curl-equivalent to stderr
 siyuan api <id> ... --dry-run       # preview write operations
 ```

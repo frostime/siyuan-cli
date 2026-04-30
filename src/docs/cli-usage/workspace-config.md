@@ -169,9 +169,15 @@ Output includes `source`, active workspace, project config path (if found), and 
 
 ```bash
 siyuan workspace list                    # all configured workspaces
-siyuan workspace which                   # current resolution
-siyuan workspace verify <name>           # test connection + auth
+siyuan workspace which                   # current resolution (no network)
+siyuan workspace verify                  # verify effective workspace for current directory
+siyuan workspace verify <name>           # verify an explicit workspace by name
+siyuan workspace verify --global-current # verify global config.current only
 ```
+
+`workspace verify` (no args) follows effective resolution for the current directory:
+`$SIYUAN_CLI_WORKSPACE` env → `.siyuan-cli.yaml` → `config.current`.
+Its output includes `source` and `projectConfigPath` so you can see where the active target came from.
 
 ## Related docs
 

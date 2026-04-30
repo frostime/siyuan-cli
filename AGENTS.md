@@ -30,6 +30,11 @@
 - `slsp` — LSP CLI (`slsp --help`)
 - `sspec change [new|list|archive]`
 
+## Test CLI
+
+本项目应当使用 `dev` 的思源空间开发测试，避免访问用户主空间。
+测试过程中若 dev workspace 未启动，应当告知用户，要求他启动。
+
 ---
 
 <!-- SSPEC:START -->

@@ -265,12 +265,19 @@ const verifyCommand = defineCommand({
     args: {
         name: {
             type: 'positional',
-            description: 'Workspace name (defaults to current)',
+            description:
+                'Workspace name (defaults to effective workspace in current directory)',
             required: false
         },
         all: {
             type: 'boolean',
             description: 'Verify all workspaces',
+            default: false
+        },
+        'global-current': {
+            type: 'boolean',
+            description:
+                'Force verify against global config.current (ignore env/project-file resolution)',
             default: false
         }
     },
@@ -316,7 +323,36 @@ const verifyCommand = defineCommand({
                 return;
             }
 
-            const resolved = resolveWorkspace(config, { workspace: args.name });
+            if (args.name && args['global-current']) {
+                throw new CliError(
+                    ExitCode.CONFIG,
+                    'VERIFY_MODE_CONFLICT',
+                    'Use either <name> or --global-current, not both.'
+                );
+            }
+
+            const resolved = args.name
+                ? resolveWorkspace(config, { workspace: args.name })
+                : args['global-current']
+                  ? (() => {
+                        if (!config.current) {
+                            throw new CliError(
+                                ExitCode.CONFIG,
+                                'NO_WORKSPACE',
+                                'No active workspace. Run `siyuan workspace add <name> --url <url>` first.',
+                                'Or pass --workspace <name> to specify one explicitly.'
+                            );
+                        }
+                        const forced = resolveWorkspace(config, {
+                            workspace: config.current
+                        });
+                        return {
+                            ...forced,
+                            source: 'global-current' as const
+                        };
+                    })()
+                  : resolveEffectiveWorkspace(config, {}, process.cwd());
+
             const materialized = await materializeWorkspace(resolved);
             const t0 = Date.now();
             const client = new SiyuanClient(materialized);
@@ -327,6 +363,8 @@ const verifyCommand = defineCommand({
             const result = {
                 ok: ping.ok,
                 workspace: resolved.name,
+                source: resolved.source,
+                projectConfigPath: resolved.projectConfigPath ?? null,
                 baseUrl: materialized.baseUrl,
                 version: ping.version,
                 message: ping.message,

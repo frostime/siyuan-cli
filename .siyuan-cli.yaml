@@ -1,5 +1,5 @@
 schemaVersion: 1
-workspace: local
+workspace: dev
 permission:
   default: allow
   rules:
