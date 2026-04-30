@@ -33,7 +33,7 @@
         "node": ">=20"
     },
     "scripts": {
-        "build": "tsdown --config tsdown.config.ts && node -e \"import('node:fs').then(fs => { fs.mkdirSync('dist/approval', { recursive: true }); fs.copyFileSync('src/approval/approval-center.html', 'dist/approval/approval-center.html'); })\"",
+        "build": "tsdown --config tsdown.config.ts && node -e \"import('node:fs').then(fs => { fs.mkdirSync('dist/approval', { recursive: true }); fs.copyFileSync('src/approval/approval-center.html', 'dist/approval/approval-center.html'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf-8')); const md = fs.readFileSync('skills/siyuan-cli/SKILL.md', 'utf-8'); fs.mkdirSync('dist/skills/siyuan-cli', { recursive: true }); fs.writeFileSync('dist/skills/siyuan-cli/SKILL.md', md.replace(/{{VERSION}}/g, pkg.version)); })\"",
         "dev": "tsdown --config tsdown.config.ts --no-dts --sourcemap --watch",
         "siyuan": "node bin/siyuan.mjs",
         "typecheck": "tsc --noEmit",

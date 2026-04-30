@@ -1,6 +1,8 @@
 ---
 name: siyuan-cli
 description: "Manage SiYuan Note with the `siyuan` CLI. Use this whenever the user mentions SiYuan, notebooks, documents, blocks, or wants to query/update a SiYuan knowledge base."
+metadata:
+  version: "{{VERSION}}"
 ---
 
 # SiYuan CLI
