@@ -88,6 +88,8 @@ siyuan api query.sql "SELECT id, content FROM blocks WHERE type='h' AND root_id=
 
 # Resolve path
 siyuan tool resolve-path --hpath "/private/diary"
+# Git Bash / MSYS fallback
+siyuan tool resolve-path --hpath //private/diary
 
 # Append content
 siyuan tool append-content --targetId <id> --targetType document --markdown @file:./note.md
@@ -116,6 +118,7 @@ siyuan workspace show <name>         # show details + resolved baseUrl
 - Prefer `id` / `path` over `hpath` for stable addressing.
 - Always `LIMIT` SQL queries; narrow scope with `root_id`, `box`, `type` first.
 - Use `@file:` or `@stdin` for large text inputs (markdown, SQL, templates).
+- In Windows Git Bash / MSYS, leading `/` arguments may be shell-rewritten before the CLI receives them. Prefer `MSYS_NO_PATHCONV=1 pnpm run siyuan ...`; `//path` and `//` are Git Bash / MSYS-compatible fallbacks for SiYuan virtual paths.
 - Write operations support `--dry-run`; destructive actions require `--yes`.
 - Always `siyuan workspace which` before writes to confirm the target.
 - Errors go to stderr as JSON; stdout stays clean. Exit codes: 0=OK, 1=general, 2=config, 3=network, 4=auth, 5=permission.

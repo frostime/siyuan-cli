@@ -139,6 +139,25 @@ Constraints:
 - `@stdin` with no pipe attached throws `STDIN_IS_TTY`.
 - `@env:VAR` where VAR is unset throws `ENV_NOT_SET`.
 
+## Git Bash / MSYS path conversion
+
+On Windows Git Bash / MSYS shells, arguments starting with `/` may be rewritten into Windows paths before the CLI receives them. This affects SiYuan virtual paths such as `--hpath "/TestDoc"` or `--toPath "/inbox"`.
+
+Prefer disabling shell-side conversion for the command:
+
+```bash
+MSYS_NO_PATHCONV=1 pnpm run siyuan tool resolve-path --hpath "/TestDoc"
+MSYS_NO_PATHCONV=1 pnpm run siyuan tool push-md ./note.md --notebook <id> --toPath /inbox
+```
+
+A Git Bash / MSYS-specific escape also works: write the leading slash as `//` so the CLI receives `/...`.
+
+```bash
+pnpm run siyuan tool resolve-path --hpath //TestDoc
+pnpm run siyuan tool push-md ./note.md --notebook <id> --toPath //inbox
+pnpm run siyuan tool push-md ./note.md --notebook <id> --toPath //
+```
+
 ## Error handling
 
 Errors are written to stderr as single-line JSON, stdout remains clean:

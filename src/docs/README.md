@@ -45,6 +45,7 @@ Resolution priority: `--workspace` flag > `$SIYUAN_CLI_WORKSPACE` > `.siyuan-cli
 - **Stable addressing**: prefer `id` and `path` over `hpath`. `hpath` changes on rename; `id` never changes.
 - **SQL discipline**: always `LIMIT`; narrow scope with `root_id`, `box`, `type` before fuzzy `LIKE`.
 - **Large text input**: use `@file:./path` or `@stdin` for markdown, SQL, templates.
+- **Windows Git Bash / MSYS**: SiYuan virtual paths starting with `/` may be rewritten by the shell. Prefer `MSYS_NO_PATHCONV=1 pnpm run siyuan ...`; `//path` and `//` are compatible fallbacks.
 - **Write safety**: `--dry-run` to preview, `--yes` to bypass approval-gated operations when allowed. Set `behavior.allowYes: false` in config to enforce the approval flow.
 - **Pre-flight**: `siyuan workspace which` before writes to confirm target.
 - **Error handling**: errors go to stderr as JSON, stdout stays clean. Exit codes: 0=OK, 1=general, 2=config, 3=network, 4=auth, 5=permission.
@@ -60,6 +61,8 @@ siyuan api block.getBlockKramdown --id <block-id>
 
 # Resolve human-readable path
 siyuan tool resolve-path --hpath "/private/diary"
+# Git Bash / MSYS fallback
+siyuan tool resolve-path --hpath //private/diary
 
 # Append to document or daily note
 siyuan tool append-content --targetId <id> --targetType document --markdown @file:./note.md

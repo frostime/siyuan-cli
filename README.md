@@ -103,6 +103,8 @@ All `api` and `tool` invocations share these flags:
 
 Some string fields accept `@file:./path`, `@stdin`, or `@env:VAR` as input sources — check `<endpoint> --help` for which fields support them.
 
+On Windows Git Bash / MSYS, arguments starting with `/` may be rewritten into Windows paths before the CLI receives them. For SiYuan virtual paths, prefer `MSYS_NO_PATHCONV=1 siyuan ...` or use the Git Bash / MSYS fallback form `//path` (`//` for root).
+
 ### Available tools
 
 | Tool | Description |
