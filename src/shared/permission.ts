@@ -280,7 +280,7 @@ export class PermissionEngine implements PermissionEngineLike {
             access: 'read' | 'write';
         },
         caller?: CallerContext
-    ): Promise<void> {
+    ): Promise<PermissionEffect> {
         const ctx: PermissionContext = {
             ...caller,
             action: ref.access
@@ -310,7 +310,10 @@ export class PermissionEngine implements PermissionEngineLike {
                 `${ref.kind} "${ref.value}" (access: ${ref.access}) ${reason}`
             );
         }
-        // allow or approval → pass (approval handled in executeEndpoint)
+        // Return the effect so callers can act on 'approval' hits.
+        // Response filtering ignores 'approval' (kernel already executed);
+        // only the pre-execution payload guard surfaces it to the approval gate.
+        return effect;
     }
 
     // ── ID resolution ──────────────────────────────────────────────────────

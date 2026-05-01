@@ -1,7 +1,7 @@
 ---
 name: resource-level-approval-not-triggered
 created: 2026-05-01T20:07:23
-status: OPEN
+status: DONE
 attach-change: null
 tldr: "Resource-level `approval` rules (with notebook/path conditions) are silently ignored — the approval flow is never triggered."
 ---

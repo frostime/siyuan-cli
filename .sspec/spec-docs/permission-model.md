@@ -94,22 +94,28 @@ Called from `applyPayloadGuard` in `guard.ts`, once per `payloadTarget` declared
 
 ### Approval gate (post-Phase-2, in `guard.ts`)
 
-After both phases pass, `executeEndpoint` evaluates the approval gate:
+After both phases pass, `executeEndpoint` evaluates the approval gate. Three sources can trigger approval:
+
+1. **Pure-caller `approval` rule**: `engine.evaluate({ endpoint, tool?, action })` returns `approval`.
+2. **Resource-level `approval` rule**: Phase 2 (`applyPayloadGuard`) returns `{ needsApproval: true }` when any `checkContentRef` call encounters an `approval` effect.
+3. **Risk-auto**: `evaluate()` returns `allow` but the endpoint's derived risk is `destructive` or `critical`.
 
 ```ts
 const ruleEffect = engine.evaluate({ endpoint, tool?, action });
+const { needsApproval: phase2NeedsApproval } = await applyPayloadGuard(...);
 const wouldRequestApproval =
     ruleEffect === 'approval' ||
+    phase2NeedsApproval ||
     (ruleEffect === 'allow' && isHighRisk(entry.meta.risk));
 ```
 
-This call uses **caller-only context** (no `notebook`/`path`). Consequences:
+`deny` is never overridden by risk-auto approval.
 
-- Pure-caller `approval` rules → correctly trigger approval.
-- High-risk endpoints (`destructive` or `critical`) with `allow` → automatically trigger approval.
-- `deny` is never overridden by risk-auto approval.
+### `approval` effect asymmetry: payload vs response
 
-> **#TODO** — Resource-level `approval` rules (rules with `notebook`/`path` conditions and `effect: approval`) do **not** trigger the approval gate. The `evaluate()` call here has no resource context, so resource-qualified rules are skipped and the engine falls through to default. Fix: change `applyPayloadGuard` to return `{ needsApproval: boolean }` and surface Phase 2 `approval` hits back to the gate. Tracked in `.sspec/requests/26-05-01T20-07_resource-level-approval-not-triggered.md`.
+`approval` is a **pre-execution gate**. It applies to payload checks (Phase 1 and Phase 2) and triggers before the kernel call.
+
+For **response filtering** (`guard.response` / `filterItems` on the response), only `deny` is meaningful. Items matched by an `approval` rule in the response are kept (treated as `allow`). By the time the response arrives, the kernel has already executed the operation — there is nothing left to confirm.
 
 ---
 

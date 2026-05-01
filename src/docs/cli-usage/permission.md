@@ -165,6 +165,8 @@ guard: {
 }
 ```
 
+**`approval` does not apply to response filtering.** The response guard only acts on `deny` — items matched by an `approval` rule are kept, not held for confirmation. This is intentional: by the time the response arrives, the kernel has already executed the operation. Approval is a pre-execution gate; it has no meaningful role after the fact.
+
 ### For extension authors
 
 When writing a custom endpoint or tool, consider:
@@ -193,6 +195,12 @@ Permission checks happen in two stages:
 2. **Phase 2** (content check): full context `{endpoint, tool, action, notebook, path}` is available after resolving block ids. First full-match rule wins.
 
 This means a rule with both `tool: "X"` and `notebook: "Y"` only fires in Phase 2, after the target notebook is resolved from the payload.
+
+### Effect asymmetry: `approval` applies to payload only
+
+All three effects (`allow`, `deny`, `approval`) work in both phases for **payload checks** — a resource-qualified `approval` rule correctly triggers the Approval Center before the kernel call.
+
+For **response filtering**, only `deny` is meaningful. Items matched by an `approval` rule in the response are kept (treated as `allow`). Approval is a pre-execution gate; once the kernel has responded, the operation is complete and there is nothing left to confirm.
 
 ## Full config example
 

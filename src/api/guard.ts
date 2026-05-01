@@ -51,8 +51,9 @@ export async function applyPayloadGuard(
     engine: PermissionEngineLike,
     access: 'read' | 'write',
     caller?: CallerContext
-): Promise<void> {
+): Promise<{ needsApproval: boolean }> {
     const targets = schema.guard?.payloadTargets;
+    let needsApproval = false;
     if (targets?.length) {
         for (const target of targets) {
             let values: unknown[];
@@ -67,13 +68,15 @@ export async function applyPayloadGuard(
                         `payload path "${target.path}" must resolve to string values`
                     );
                 }
-                await engine.checkContentRef(
+                const effect = await engine.checkContentRef(
                     { kind: target.kind, value, access: target.access },
                     caller
                 );
+                if (effect === 'approval') needsApproval = true;
             }
         }
     }
+    return { needsApproval };
 }
 
 /**
@@ -190,15 +193,19 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
     engine.checkEndpoint(id);
 
     // Phase 2: resource-level gate (payload targets)
-    await applyPayloadGuard(schema, payload, engine, action, caller);
+    const { needsApproval: phase2NeedsApproval } = await applyPayloadGuard(schema, payload, engine, action, caller);
 
     if (debug) debugPreview(schema, payload);
 
-    // Approval gate: rule-based + high-risk post-processing.
+    // Approval gate: three sources can trigger approval:
+    //   1. Pure-caller rule returns 'approval' (engine.evaluate with caller-only context)
+    //   2. Resource-level rule returns 'approval' in Phase 2 (phase2NeedsApproval)
+    //   3. Risk-auto: rule returns 'allow' but endpoint is destructive/critical
     // High risk only upgrades `allow`; explicit `deny` and `approval` are honored.
     const ruleEffect = engine.evaluate({ ...caller, action });
     const wouldRequestApproval =
         ruleEffect === 'approval' ||
+        phase2NeedsApproval ||
         (ruleEffect === 'allow' && isHighRisk(entry.meta.risk));
 
     if (dryRun && isWriteLike(entry)) {
