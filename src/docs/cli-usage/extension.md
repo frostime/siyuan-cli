@@ -64,7 +64,7 @@ Use `describe` immediately after `cache` to confirm that the CLI recognized your
 
 ## Writing an API Extension
 
-Create `~/.config/siyuan-cli/extensions/apis/echo.ts`: 
+Create `~/.config/siyuan-cli/extensions/apis/echo.ts`:
 
 ```ts
 import type { EndpointSchema } from "@frostime/siyuan-cli/schema";
@@ -89,6 +89,23 @@ Run it:
 ```bash
 siyuan api custom.echo --text "hello"
 ```
+
+### Where is the definition of SiYuan Kernel API
+
+The agent can visit the website (if it is capable), and generate the extension file.
+
+**Reference**
+
+1. [Source Code](https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go)
+   1. All SiYuan API is located under `/kernel/api/*.go`
+   2. Most reliable, but needs agent analyse code by it self
+   3. Recommend to use `gh` CLI to analyse github code
+
+2. Document provided by community, could be out-dated (missing new endpoint)
+
+   - `https://leolee9086.github.io/siyuan-kernelApi-docs/`, provided by leolee9086
+   - `https://leolee9086.github.io/siyuan-kernelApi-docs/index.html`, provided by leolee9086
+   - `https://github.com/siyuan-community/siyuan-sdk/tree/main/schemas/kernel/api`, provided by Zuoqiu-Yingyi
 
 ## Writing a Tool Extension
 
@@ -187,9 +204,6 @@ https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go
 | `dist/api/registry.mjs` | `EndpointRegistry` — endpoint registration and lookup |
 | `dist/tool/registry.mjs` | `ToolRegistry`, `createToolContext` — assembles `ToolContext` at runtime |
 
-GitHub fallback (if you need upstream or unminified source context):
-- siyuan-cli: https://github.com/frostime/siyuan-cli
-- SiYuan kernel router: https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go
 
 ## Troubleshooting
 

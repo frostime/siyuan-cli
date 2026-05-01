@@ -411,7 +411,9 @@ Tip: install `skill-creator`, then ask your agent:
 
 ## User Extensions
 
-You can add custom API endpoints and workflow tools without modifying the source code. Extensions live in `~/.config/siyuan-cli/extensions/` and are written in TypeScript, loaded via `jiti` at execution time:
+`siyuan-cli` only wraps a subset of SiYuan's kernel API — the most commonly needed endpoints. The kernel exposes [many more](https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go), and you may also want to compose multiple API calls into reusable workflows. Extensions let you add both without touching the source code.
+
+Extensions live in `~/.config/siyuan-cli/extensions/` and are written in TypeScript, loaded via `jiti` at execution time:
 
 ```bash
 siyuan extension init          # scaffold the directory with tsconfig.json and examples
@@ -419,29 +421,56 @@ siyuan extension list          # show discovered extensions + cache status
 siyuan extension cache         # batch-generate schema.json caches
 ```
 
+> **Tip**: You can tell your agent:
+> "I want to extend the siyuan-cli API. Please read the siyuan-cli docs and help me write an extension for `<endpoint>`."
+> The agent can read `siyuan doc read cli-usage/extension`, visit the website (if it is capable), and generate the extension file for you.
+>
+> **Reference**
+>
+> 1. [Source Code](https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go) — Most reliable, but needs agent analyse code by it self
+> 2. Document provided by community, could be out-dated
+>   - `https://leolee9086.github.io/siyuan-kernelApi-docs/`, provided by leolee9086
+>   - `https://leolee9086.github.io/siyuan-kernelApi-docs/index.html`, provided by leolee9086
+>   - `https://github.com/siyuan-community/siyuan-sdk/tree/main/schemas/kernel/api`, provided by Zuoqiu-Yingyi
+
+
 ### API extension example
 
-Create `~/.config/siyuan-cli/extensions/apis/echo.ts`:
+The kernel has a `/api/lute/copyStdMarkdown` endpoint that exports a block's content as standard Markdown — useful when you need clean Markdown instead of SiYuan's internal Kramdown. This endpoint is not built into the CLI, but you can add it in three steps.
+
+**Step 1** — Create `~/.config/siyuan-cli/extensions/apis/copyStdMarkdown.ts`:
 
 ```ts
 import type { EndpointSchema } from "@frostime/siyuan-cli/schema";
 
 export const schema: EndpointSchema = {
-  endpoint: "/api/custom/echo",
-  summary: "Echo payload back",
+  endpoint: "/api/lute/copyStdMarkdown",
+  summary: "Get standard Markdown content of a block",
   payload: {
     type: "object",
-    properties: { text: { type: "string", description: "Text to echo" } },
-    required: ["text"]
+    properties: {
+      id: { type: "string", description: "Block ID" },
+    },
+    required: ["id"],
   },
-  classification: { mode: "read", surface: "meta", scope: "single" }
+  classification: { mode: "read", surface: "content", scope: "single" },
 };
 ```
 
+**Step 2** — Cache and verify:
+
 ```bash
 siyuan extension cache
-siyuan api custom.echo --text "hello"
+siyuan api lute.copyStdMarkdown --help
 ```
+
+**Step 3** — Use it:
+
+```bash
+siyuan api lute.copyStdMarkdown --id 20240401175210-c2iabsn
+```
+
+The extension gets the same CLI surface as built-ins: `--help`, `--dry-run`, `--print json`, parameter validation, and permission checks.
 
 ### Custom tool example
 
@@ -469,7 +498,7 @@ siyuan extension cache
 siyuan tool hello-ext --name Alice
 ```
 
-Extensions get the same CLI surface as built-ins: parameter validation, `--help`, `--dry-run`, permission checks, and output formatting. Tool extensions receive a `ToolContext` with `callEndpoint()` for calling registered endpoints (with full permission and guard logic) and `callEndpointRaw()` for calling arbitrary kernel paths directly.
+Tool extensions receive a `ToolContext` with `callEndpoint()` for calling registered endpoints (with full permission and guard logic) and `callEndpointRaw()` for calling arbitrary kernel paths directly.
 
 For the full authoring guide: `siyuan doc read cli-usage/extension`.
 
