@@ -139,6 +139,30 @@ Constraints:
 - `@stdin` with no pipe attached throws `STDIN_IS_TTY`.
 - `@env:VAR` where VAR is unset throws `ENV_NOT_SET`.
 
+Usage examples:
+
+```bash
+# pipe
+echo "SELECT id FROM blocks LIMIT 5" | siyuan api query.sql --stmt @stdin
+
+# shell heredoc — no temp file needed, preferred for multiline input
+siyuan api query.sql --stmt @stdin <<'EOF'
+SELECT id, content
+FROM blocks
+WHERE type = 'd' AND content LIKE '%keyword%'
+LIMIT 10
+EOF
+
+siyuan tool append-content --targetId <id> --targetType document --markdown @stdin <<'EOF'
+## New section
+
+Paragraph content here.
+EOF
+
+# multiple long inputs in one command — use @file: for each
+siyuan api block.updateBlock --id <id> --data @file:./content.md --dataType markdown
+```
+
 ## Git Bash / MSYS path conversion
 
 On Windows Git Bash / MSYS shells, arguments starting with `/` may be rewritten into Windows paths before the CLI receives them. This affects SiYuan virtual paths such as `--hpath "/TestDoc"` or `--toPath "/inbox"`.

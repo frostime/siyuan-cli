@@ -119,7 +119,13 @@ siyuan workspace show <name>         # show details + resolved baseUrl
 
 - Prefer `id` / `path` over `hpath` for stable addressing.
 - Always `LIMIT` SQL queries; narrow scope with `root_id`, `box`, `type` first.
-- Use `@file:` or `@stdin` for large text inputs (markdown, SQL, templates).
+- Use `@file:` or `@stdin` for large text inputs (markdown, SQL, templates). Shell heredoc feeds stdin inline without a temp file:
+  ```bash
+  siyuan api query.sql --stmt @stdin <<'EOF'
+  SELECT id, content FROM blocks WHERE ...
+  EOF
+  ```
+  `@stdin` is single-use per invocation; use `@file:` when multiple fields need long input.
 - In Windows Git Bash / MSYS, leading `/` arguments may be shell-rewritten before the CLI receives them. Prefer `MSYS_NO_PATHCONV=1 pnpm run siyuan ...`; `//path` and `//` are Git Bash / MSYS-compatible fallbacks for SiYuan virtual paths.
 - Write operations support `--dry-run`; destructive actions require `--yes`.
 - Always `siyuan workspace which` before writes to confirm the target.

@@ -44,7 +44,7 @@ Resolution priority: `--workspace` flag > `$SIYUAN_CLI_WORKSPACE` > `.siyuan-cli
 
 - **Stable addressing**: prefer `id` and `path` over `hpath`. `hpath` changes on rename; `id` never changes.
 - **SQL discipline**: always `LIMIT`; narrow scope with `root_id`, `box`, `type` before fuzzy `LIKE`.
-- **Large text input**: use `@file:./path` or `@stdin` for markdown, SQL, templates.
+- **Large text input**: use `@file:./path`, `@stdin`, or shell heredoc (`<<'EOF'`) for markdown, SQL, templates.
 - **Windows Git Bash / MSYS**: SiYuan virtual paths starting with `/` may be rewritten by the shell. Prefer `MSYS_NO_PATHCONV=1 pnpm run siyuan ...`; `//path` and `//` are compatible fallbacks.
 - **Write safety**: `--dry-run` to preview, `--yes` to bypass approval-gated operations when allowed. Set `behavior.allowYes: false` in config to enforce the approval flow.
 - **Pre-flight**: `siyuan workspace which` before writes to confirm target.

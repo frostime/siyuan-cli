@@ -34,7 +34,15 @@ Use this when the user wants to update an existing document or block instead of 
 siyuan workspace which
 siyuan tool get-block-info <block-id>
 siyuan tool get-block-content <block-id> --showId true
+
+# inline via heredoc (no temp file)
+siyuan api block.updateBlock --id <block-id> --dataType markdown --data @stdin <<'EOF'
+Replacement markdown content here.
+EOF
+
+# or from file when content is long / reusable
 siyuan api block.updateBlock --id <block-id> --data @file:./content.md --dataType markdown
+
 siyuan tool get-block-content <block-id>
 ```
 
