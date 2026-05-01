@@ -93,7 +93,9 @@ classification: {
 Derived semantics:
 - Registry tags are derived from `classification`.
 - Risk is derived from `classification` unless `riskOverride` is set.
-- Approval behavior uses the derived risk at runtime.
+- Approval behavior uses the derived risk at runtime: if the permission engine returns `allow` (including from the default) but the endpoint risk is `destructive` or `critical`, the guard **upgrades the verdict to `approval`** automatically. This means a `default: allow` config is not sufficient to let high-risk operations through without human sign-off — `--yes` or an explicit `approval` → bypass via `behavior.allowYes` is still required. Explicit `deny` is never overridden by risk.
+
+  Guard logic (guard.ts): `wouldRequestApproval = ruleEffect === 'approval' || (ruleEffect === 'allow' && isHighRisk(risk))`
 
 Risk matrix:
 

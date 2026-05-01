@@ -1,48 +1,45 @@
 # siyuan-cli
 
-A command-line interface that lets external agents (Claude Code, Codex, OpenCode, etc.) operate [SiYuan Note](https://b3log.org/siyuan/) safely and effectively.
+A command-line interface that allows external agents (Claude Code, Codex, OpenCode, etc.) to operate [SiYuan Note](https://b3log.org/siyuan/) safely and effectively.
 
-SiYuan already exposes an HTTP kernel API — but raw HTTP calls lack connection management, access control, and self-documentation that agentic workflows demand.
+`siyuan-cli` is essentially a wrapper that calls the SiYuan HTTP kernel API for local agents. It complements what those raw HTTP calls lack: connection management, access control, and self-documentation required by agentic workflows.
+It is designed for agents such as OpenCode, Claude Code, Codex, and Pi Coding Agent, which can run shell commands, inspect stdout/stderr, and read files.
 
-`siyuan-cli` fills those gaps: named workspace connections, declarative permission rules with request interception and response filtering, a structured command surface with full introspection, composable high-level tools, a user extension system, and a complete built-in doc set that agents can discover on their own.
-
-> **Alpha** · v0.11 · Node.js ≥ 20 · [GPL-3.0](LICENSE)
-
----
-
-## What It Does
-
-- **Workspace management** — Register named connections to SiYuan kernels; persist across sessions. Pin each project to a specific workspace via `.siyuan-cli.yaml` so multiple projects never interfere.
-
-- **Structured API surface** — All 60+ public SiYuan kernel endpoints become typed subcommands with parameter validation, `--help`, `--dry-run` preview, and compact output formatting.
-
-- **High-level tools** — Composite operations (document tree traversal, daily note append, block content read with pagination, path resolution) that would otherwise require multi-step API orchestration.
-
-- **Permission & guard system** — Declarative rules intercept dangerous requests before they reach the kernel, filter sensitive items out of global query results, and route destructive operations through a browser-based Approval Center for human sign-off.
-
-- **User extensions** — Write custom API endpoints and workflow tools in TypeScript under `~/.config/siyuan-cli/extensions/`, loaded at runtime with the same CLI surface as built-ins.
-
-- **Built-in docs & agent skill** — A full reference doc set ships with the package; agents discover and read it through the CLI itself. A SKILL file can be installed into agent config directories for automatic discovery.
+> **Beta** · v0.11 · Node.js ≥ 20 · [GPL-3.0](LICENSE)
 
 ---
 
 ## Quick Start
 
+### 1. Install
+
 ```bash
+# npm
 npm install -g @frostime/siyuan-cli
-siyuan skill install
+
+# pnpm
+pnpm add -g @frostime/siyuan-cli
 ```
 
----
+Requires **Node.js ≥ 20**.
+
+### 2. Connect a SiYuan workspace
 
 ```bash
-# 1. Register a workspace pointing at your local SiYuan kernel
-siyuan workspace add local --url http://127.0.0.1:6806 --token <your-token>
-
-# 2. Verify the connection
+siyuan workspace add local --url http://127.0.0.1:6806 --token <your-token>  # Settings → About in SiYuan
 siyuan workspace verify local
+siyuan workspace which
+```
 
-# 3. Run a query
+If you don't know the port, use workspace directory auto-discovery (local only):
+
+```bash
+siyuan workspace add devspace --workspace-dir /path/to/SiYuanDevSpace --token <token>
+```
+
+### 3. Test the connection
+
+```bash
 siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
 ```
 
@@ -56,13 +53,25 @@ Output (compact format, default):
 ...
 ```
 
-If you don't know the port, use workspace directory auto-discovery (local only):
+### 4. Install the agent SKILL
 
 ```bash
-siyuan workspace add devspace --workspace-dir /path/to/SiYuanDevSpace --token <token>
+siyuan skill install
 ```
 
-Or more simple, launch an local agent, and say: "Help me to use siyuan-cli, read the SKILL and its builtin documents".
+By default, it installs the built-in SKILL to `~/.agents/skills/`.
+
+Use `--target` to specify a different location, for example: `siyuan skill install --target claude`.
+
+If you update `siyuan-cli`, run the command again to update the skill.
+
+### 5. Use it in your agent
+
+Launch an agent that is able to: 1) Visit SKILL; 2) Read file; 3) Run bash, like OpenCode, Codex, Claude Code etc.
+
+Say to your agent:
+
+> "Help me to use siyuan-cli, read the SKILL and its builtin documents."
 
 ---
 
@@ -146,8 +155,6 @@ siyuan api block.updateBlock --id <id> --data "new text" --debug
 ```
 
 Dry-run output includes a `wouldRequestApproval` field, telling you whether the current permission config would trigger the Approval Center for this operation.
-
-Errors always go to stderr as single-line JSON; stdout stays clean for piping. Exit codes are semantic: 0 = success, 1 = general error, 2 = config, 3 = network, 4 = auth, 5 = permission denied.
 
 ---
 
@@ -246,122 +253,159 @@ Use `siyuan workspace which` at any time to inspect how the current directory re
 
 ## Permission & Guard System
 
-Letting an agent freely operate on your personal notes is risky. SiYuan's kernel API includes endpoints that delete documents, close notebooks, or even shut down the kernel (`system.exit`). The CLI enforces access control at two levels: **request interception** (blocking or gating operations before they reach the kernel) and **response filtering** (stripping disallowed items from query results after the kernel responds).
+Letting an agent freely operate on your personal notes is risky. SiYuan's kernel API includes endpoints that delete documents, close notebooks, or even shut down the kernel. The CLI enforces access control at two levels: **request interception** before requests reach the kernel, and **response filtering** that strips restricted items from query results.
 
 ### Permission rules
 
 Rules are declared per workspace (or per project in `.siyuan-cli.yaml`) and evaluated top-to-bottom — first match wins:
 
 ```yaml
-workspaces:
-  prod:
-    baseUrl: http://192.168.1.100:6806
-    tokenSource: { type: env, value: SIYUAN_TOKEN }
-    permission:
-      default: allow
-      rules:
-        # Hard-block kernel shutdown
-        - endpoint: "system.exit"
-          effect: deny
+permission:
+  default: allow
+  rules:
+    # Hard-block kernel shutdown
+    - endpoint: "system.exit"
+      effect: deny
 
-        # All other system.* endpoints require human approval
-        - endpoint: "system.*"
-          effect: approval
+    # Destructive system operations require human approval
+    - endpoint: "system.*"
+      effect: approval
 
-        # Block writes to a specific document subtree
-        - path: "/20260107143325-zbrtqup/**"
-          action: write
-          effect: deny
+    # Deny all access to a private notebook
+    - notebook: "20220305173526-4yjl33h"
+      effect: deny
 
-        # Deny all access to a specific notebook
-        - notebook: "20220305173526-4yjl33h"
-          effect: deny
+    # Block writes to a specific document subtree
+    - path: "/20260107143325-zbrtqup/**"
+      action: write
+      effect: deny
 ```
 
-Rules can combine any of these filter dimensions:
+Rules match on `endpoint`/`tool`/`action` (evaluated immediately from the request) and on `notebook`/`path` (resolved from block ids in the payload). Three effects: **deny** (hard block, exit code 5), **allow** (pass through), **approval** (pause for human sign-off).
 
-| Field | Match method | Example |
-|-------|-------------|---------|
-| `endpoint` | glob | `system.*`, `block.get*` |
-| `tool` | glob | `append-content` |
-| `action` | exact | `read`, `write`, `invoke` |
-| `notebook` | exact (kernel id) | `20220305173526-4yjl33h` |
-| `path` | glob (id-based path) | `/20260107143325-zbrtqup/**` |
+### What it looks like in practice
 
-Three effects: `deny` = hard block (exit code 5), `allow` = pass, `approval` = pause and wait for human sign-off via the Approval Center.
+**Blocked endpoint** — `system.exit` is hard-denied:
 
-Order is the only priority mechanism — there is no implicit "deny beats allow". Put more specific rules before broader ones.
+```
+$ siyuan api system.exit
 
-### Two-phase evaluation
-
-Permission checks happen in two stages:
-
-1. **Phase 1 (caller check)** — Only `endpoint`, `tool`, and `action` are known. Rules using only these fields produce immediate verdicts.
-2. **Phase 2 (content check)** — After payload parsing, block ids in the request are resolved to their owning document's notebook and id-based path. Rules using `notebook` or `path` conditions fire here.
-
-This allows fine-grained policies like "allow the `append-content` tool to write to notebook A, but deny all other writes to notebook A":
-
-```yaml
-rules:
-  - tool: "append-content"
-    notebook: "20260101215354-aaa"
-    effect: allow            # ① specific exception, checked first
-  - notebook: "20260101215354-aaa"
-    action: write
-    effect: deny             # ② broad catch-all for the rest
+{"error":"ENDPOINT_DENIED","message":"endpoint \"system.exit\" denied: denied by rule #0"}
+exit code: 5
 ```
 
-### Response filtering
+**Accessing a doc in a denied notebook** — the CLI resolves the block's owning notebook before sending the request:
 
-Request interception covers targeted operations (read a specific block, update a specific document). But global read endpoints — `query.sql`, `notebook.lsNotebooks`, etc. — return results across all notebooks. When permission rules restrict access to specific notebooks or paths, the CLI **automatically filters the response**: items from disallowed notebooks/paths are stripped before reaching stdout.
+```
+$ siyuan api block.getBlockKramdown --id 20240416110608-8pr45e1
 
-This is not ad-hoc post-processing. Each endpoint schema declares a `guard.response` specification that tells the CLI which fields in the response array map to notebook ids and document paths. The permission engine uses this mapping to evaluate every result item against the same rule chain, removing anything the caller shouldn't see.
+{"error":"CONTENT_DENIED","message":"id \"20240416110608-8pr45e1\" (access: read) denied by rule #3"}
+exit code: 5
+```
 
-In practice: if you deny access to notebook B, a `query.sql` that would normally return rows from notebooks A and B will only show rows from A. The agent never sees restricted data.
+**Response filtering** — query results from denied notebooks are automatically stripped. Here, one notebook is denied; `lsNotebooks` drops it and reports what was removed:
 
-### Risk-based auto-approval
+```
+$ siyuan api notebook.lsNotebooks
 
-Independent of user-configured rules, every endpoint carries a `classification` (mode, surface, scope) that derives a risk label. Destructive or critical operations — batch content deletes, system-level writes, runtime invocations — **automatically require human approval**, even if permission rules say `allow`. This is a built-in safety net.
+{"warning":"CONTENT_FILTERED","removed":1,"reasons":"1x: rule #3"}
+10 notebooks [id, name, ...]
+1: 20231217193559-sesjqwa | Inbox | ...
+2: 20220306104547-c7ilt3x | Academic Learn | ...
+...
+```
 
-| Classification | Derived risk |
-|---|---|
-| `read + meta` | safe |
-| `read + content/asset` | sensitive |
-| `write + content + single` | elevated |
-| `write + content + batch` | destructive (auto-approval) |
-| `write + workspace` | critical (auto-approval) |
-| `invoke + runtime` | destructive (auto-approval) |
+The same applies to SQL queries — rows from restricted notebooks are filtered before reaching stdout:
 
-Pass `--yes` to bypass auto-approval (for pure automation). Set `behavior.allowYes: false` in config to disable `--yes` entirely and enforce the Approval Center for all gated operations.
+```
+$ siyuan api query.sql "SELECT id, hpath, box FROM blocks WHERE type='d' LIMIT 10"
 
-### Approval Center
+{"warning":"CONTENT_FILTERED","removed":5,"reasons":"5x: rule #3"}
+5 rows [box, hpath, id]
+1: 20231217193559-sesjqwa | /daily note | ...
+...
+```
 
-When an operation triggers approval, the CLI starts a local broker, opens a WebUI in the browser, and waits inline for human sign-off:
+**Approval flow** — when a rule sets `approval` (or the operation is auto-classified as destructive), the CLI starts a local broker and opens a WebUI for human sign-off:
 
-<!-- TODO: screenshot — Approval Center WebUI showing a pending approval request -->
+```
+$ siyuan api system.getConf
+
+{"event":"APPROVAL_PENDING","requestId":"apr_f0f32b2a8bbd492d","url":"http://127.0.0.1:1548/approval?token=...","summary":"Approve: system.getConf"}
+```
+
 ![Approval Center](asset/approval-center.png)
 
-You can also manage approvals from the terminal:
-
 ```bash
-siyuan approval status           # broker status
 siyuan approval list             # pending and recent requests
 siyuan approval approve <id>     # approve from terminal
 siyuan approval reject <id>      # reject from terminal
-siyuan approval open             # open the WebUI manually
 ```
 
-The broker starts lazily on the first gated write, stays alive while requests are pending, and shuts down after an idle timeout.
+Independent of user-configured rules, endpoints classified as `destructive` or `critical` risk — batch deletes, system-level writes, runtime invocations — **automatically require approval even if your rules say `allow`**. This is a built-in safety net that cannot be bypassed by permission rules alone; only `--yes` (or `behavior.allowYes: false` to disable `--yes` entirely) controls it.
 
-### Debugging permissions
+Use `siyuan workspace which` to inspect the resolved rule list, or `--dry-run` on any command to preview whether it would be blocked or gated. For the complete rule reference: `siyuan doc read permission`.
+
+---
+
+## Context Control & Built-in Docs
+
+`siyuan-cli` does not push a large tool catalog or document corpus into the agent context upfront.
+
+Agents discover capabilities incrementally:
+
+- `siyuan --help` for the command tree;
+- `siyuan api list` for endpoints;
+- `siyuan api <id> --help` for one endpoint;
+- `siyuan doc list` and `siyuan doc read <topic>` for deeper docs;
+- `siyuan tool list` for higher-level workflows.
+
+This keeps context disclosure **explicit, local, and task-driven**.
+
+These docs are designed for agent consumption — agents read them at runtime via CLI commands or direct file access. Human users generally don't need to read them directly; the SKILL and `--help` output cover day-to-day guidance.
+
+### Doc organization
+
+The built-in doc set is organized in three layers:
+
+| Layer | Path | Covers |
+|-------|------|--------|
+| SiYuan domain knowledge | `siyuan-guide/` | Block data model, path semantics (id vs hpath), SQL query strategy, daily note model |
+| CLI usage reference | `cli-usage/` | Full command tree, global flags, input sources, permission config, extension authoring, error codes |
+| Task recipes | `recipes/` | Step-by-step workflows: connect workspace, find documents, read content, safely edit content |
 
 ```bash
-siyuan workspace which           # see resolved workspace + full rule list
-siyuan api <id> --dry-run        # preview: shows wouldRequestApproval
-siyuan api <id> --debug          # print curl-equivalent to stderr
+siyuan doc list                          # list all docs with file paths and summaries
+siyuan doc read README.md                # read a doc by path or unique name
+siyuan doc read recipes/edit-content.md  # task-oriented operation recipes
 ```
 
-Error codes are specific: `ENDPOINT_DENIED` (rule blocked the endpoint) and `CONTENT_DENIED` (rule blocked the target notebook/path) both include the matching rule index for diagnosis. For the full permission rule reference, run `siyuan doc read permission`.
+The docs root path is printed by `siyuan --help`, so agents with file system access can read files directly without going through the CLI.
+
+---
+
+## Building Task-Specific Skills
+
+`siyuan-cli` is the **substrate** — it gives agents the ability to discover and call the CLI. Real workflows should be built as separate task-specific skills on top of it, e.g.:
+
+- literature note ingestion
+- daily note review
+- project knowledge-base maintenance
+- refactoring tags and attributes
+- exporting documents for publication
+- syncing issue trackers into SiYuan
+
+Install the skill:
+
+```bash
+siyuan skill install                       # default: ~/.agents/skills/
+siyuan skill install --target claude       # → ~/.claude/skills/
+siyuan skill install --target .copilot --local  # → ./.copilot/skills/ (project-local)
+```
+
+Tip: install `skill-creator`, then ask your agent:
+
+> I want to xxxx, please create a skill based on `siyuan-cli`
 
 ---
 
@@ -399,7 +443,7 @@ siyuan extension cache
 siyuan api custom.echo --text "hello"
 ```
 
-### Tool extension example
+### Custom tool example
 
 Create `~/.config/siyuan-cli/extensions/tools/hello.ts`:
 
@@ -431,59 +475,9 @@ For the full authoring guide: `siyuan doc read cli-usage/extension`.
 
 ---
 
-## Agent Integration
+## Troubleshooting
 
-### Built-in docs
-
-The CLI ships a complete reference doc set on disk. Agents can discover and read it without leaving the terminal:
-
-```bash
-siyuan doc list                          # list all docs with file paths and summaries
-siyuan doc read README.md                # read a doc by path or unique name
-siyuan doc read recipes/edit-content.md  # task-oriented operation recipes
-```
-
-The docs root path is printed by `siyuan --help`, so agents with file system access can read files directly without going through the CLI.
-
-The doc set is organized in three layers:
-
-| Layer | Path | Covers |
-|-------|------|--------|
-| SiYuan domain knowledge | `siyuan-guide/` | Block data model, path semantics (id vs hpath), SQL query strategy, daily note model |
-| CLI usage reference | `cli-usage/` | Full command tree, global flags, input sources, permission config, extension authoring, error codes |
-| Task recipes | `recipes/` | Step-by-step workflows: connect workspace, find documents, read content, safely edit content |
-
-### Agent SKILL
-
-Install a compact SKILL file into your coding agent's config directory:
-
-```bash
-siyuan skill install                    # default: ~/.agents/skills/
-siyuan skill install --target claude    # → ~/.claude/skills/
-siyuan skill install --target .pi --local  # → ./.pi/skills/ (project-local)
-```
-
-The SKILL serves as the entry point for agent discovery — it tells the agent what `siyuan-cli` is, introduces SiYuan's block-centric data model, and points to the built-in docs for detailed reference. Once installed, agents operating in that environment will recognize and use the CLI when tasks involve SiYuan.
-
-You don't need to memorize every command or flag. The CLI is designed for self-guided discovery: `--help` on any command, `siyuan doc list` for the full doc index, and `siyuan doc read <topic>` when you need depth. In agent scenarios, let the agent read the docs itself.
-
----
-
-## Installation
-
-```bash
-# npm
-npm install -g @frostime/siyuan-cli
-
-# pnpm
-pnpm add -g @frostime/siyuan-cli
-```
-
-Requires **Node.js ≥ 20**.
-
-## Others
-
-### Windows Git Bash / MSYS note
+### Windows Git Bash / MSYS
 
 Arguments starting with `/` may be rewritten into Windows paths by the shell before reaching the CLI. This affects SiYuan virtual paths like `--hpath "/TestDoc"`. Two workarounds:
 
@@ -494,6 +488,22 @@ MSYS_NO_PATHCONV=1 siyuan tool resolve-path --hpath "/TestDoc"
 # Or use double-slash as a Git Bash / MSYS escape
 siyuan tool resolve-path --hpath //TestDoc
 ```
+
+### Auth failures
+
+- Verify the token with `siyuan workspace verify <name>`
+- Check that SiYuan's kernel is running and reachable at the configured URL
+- Tokens from `tokenSource: env` are resolved at call time; ensure the env var is set in the calling shell
+
+### Wrong workspace
+
+Run `siyuan workspace which` to inspect the resolved workspace and its resolution source. Use `--workspace <name>` to override for a single command.
+
+### Permission denied
+
+- Run `siyuan api <id> --dry-run` to see if the operation would be blocked
+- Run `siyuan workspace which` to review the full rule list
+- Edit the `siyuan-cli/config.yaml` file
 
 ---
 
