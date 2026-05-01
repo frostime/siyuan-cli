@@ -14,149 +14,113 @@ Agent-first CLI for SiYuan Note.
 1. **Verify CLI is installed.** If `siyuan` is not found:
    `npm install -g @frostime/siyuan-cli`
 
-2. **Discover the docs root and command tree:**
-   ```bash
-   siyuan --help
-   ```
-   This prints the built-in docs root path and the full command tree.
-   The docs root is where all built-in reference docs live; you can `read` them directly.
+2. **Check version.** If `SKILL.metadata.version != siyuan --version`, re-install skill:
+   `siyuan skill install`
 
-3. **List available docs:**
+3. **Discover CLI builit-in docs root and command tree:**
    ```bash
-   siyuan doc list
+   siyuan --help          # prints docs root path + full command tree
+   siyuan doc list         # lists built-in docs with real file paths
    ```
-   Each entry shows a relative path (resolve against the docs root) and a one-line summary.
 
 4. **Check workspace connectivity:**
    ```bash
    siyuan workspace list
    siyuan workspace which
    ```
-   If no workspace is configured, follow the `recipes/connect-workspace.md` recipe.
+   If no workspace is configured, read `recipes/connect-workspace.md`.
 
-5. **Load essential domain knowledge** (before any content operation):
-   - `siyuan-guide/siyuan-block.md` — the block-centric data model
-   - `siyuan-guide/document-tree-and-paths.md` — id / parent_id / root_id / path / hpath semantics
+## Task dispatch
 
-6. **For specific tasks**, read the matching recipe:
-   - Connecting a new workspace → `recipes/connect-workspace.md`
-   - Locating a document/block → `recipes/find-target.md`
-   - Reading content → `recipes/read-content.md`
-   - Editing content → `recipes/edit-content.md`
+Route by user intent — read the matching doc, don't guess:
 
-Use the real docs paths disclosed by help output when your runtime can read files directly. `siyuan doc` is convenience sugar for discovery and reading.
+| User wants to… | Read first | Key command |
+|---|---|---|
+| Find a document or block | `recipes/find-target.md` | `siyuan tool resolve-path`, `siyuan api query.sql` |
+| Read content | `recipes/read-content.md` | `siyuan tool get-block-content` |
+| Edit or append content | `recipes/edit-content.md` | `siyuan api block.updateBlock`, `siyuan tool append-content` |
+| Query with SQL | `siyuan-guide/sql-query-guide.md` | `siyuan api query.sql` |
+| Work with daily notes | `siyuan-guide/dailynote-model.md` | `siyuan tool list-dailynote`, `siyuan tool append-content` |
+| Understand block model | `siyuan-guide/siyuan-block.md` | — |
+| Understand paths | `siyuan-guide/document-tree-and-paths.md` | — |
+| Write extensions | `cli-usage/extension.md` | `siyuan extension init` |
+| Configure workspace | `cli-usage/workspace-config.md` | `siyuan workspace add` |
 
-> [!Note]
-> This SKILL solely covers the usage of siyuan-cli.
-> Please treat siyuan-cli as foundational tool to interact with SiYuan, and this SKILL does not cover specific workflows built on it.
-> For specific needs, user/agent COULD create separate SKILLs tailored to actual work.
+Resolve doc paths against the docs root disclosed by `siyuan --help`.
+Use `siyuan doc list` to get absolute paths on the current system.
 
+Current bundled documents:
 
-## Core concepts
-
-SiYuan is a block-centric database, not a Markdown filesystem.
-
-- **Block** is the primary data entity. A document is a special container block (`type='d'`); paragraphs, headings, lists inside it are also blocks.
-- **Key fields**: `id` (stable primary key), `parent_id` (direct parent), `root_id` (owning document), `box` (notebook id), `path` (id-based document path, stable), `hpath` (human-readable path, unstable).
-- **Markdown** is the representation format, not the data model. Use `content` for search, `markdown` for format preservation.
-- **SQL** is the query interface. Five tables: `blocks` (content), `refs` (references), `attributes` (metadata), `assets` (files), `spans` (inline elements).
-- **Custom attributes** use `custom-` prefix (e.g. `custom-dailynote-20240101`).
-- **Block reference syntax**: `((<BlockId> "anchor text"))`. Block link: `[text](siyuan://blocks/<BlockId>)`.
-
-## Quick start
-
-```bash
-# Direct URL (local or remote)
-siyuan workspace add main --url http://127.0.0.1:6806 --token <token>
-
-# Or: auto-discover port from workspace directory (local only)
-siyuan workspace add devspace --workspace-dir /path/to/SiYuanDevSpace --token <token>
-
-siyuan workspace verify main
-siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
+```
+<siyuan-cli-doc-dir>/
+├── cli-usage/
+│   ├── cli-overview.md
+│   ├── extension.md
+│   ├── permission.md
+│   └── workspace-config.md
+├── recipes/
+│   ├── connect-workspace.md
+│   ├── edit-content.md
+│   ├── find-target.md
+│   └── read-content.md
+├── siyuan-guide/
+│   ├── dailynote-model.md
+│   ├── document-tree-and-paths.md
+│   ├── siyuan-block.md
+│   └── sql-query-guide.md
+└── README.md
 ```
 
-## Common commands
+## Domain cheat sheet
 
-```bash
-# Discovery
-siyuan doc list                      # built-in docs with real file paths
-siyuan api list                      # all endpoints
-siyuan api <id> --help               # endpoint parameters and examples
-siyuan tool list                     # all tools
+High-frequency knowledge that docs cover in depth — inlined here to reduce round-trips.
 
-# Query
-siyuan api query.sql "SELECT id, content FROM blocks WHERE type='h' AND root_id='<doc-id>' LIMIT 20"
+**Block model**:
+- Block is the primary data entity; a document is a container block (`type='d'`)
+- `id` = stable primary key; `parent_id` = direct parent; `root_id` = owning document
+- `box` = notebook id; `path` = id-based doc path (stable); `hpath` = human-readable doc path (unstable, changes on rename)
+- `path` and `hpath` on non-document blocks describe the **containing document**, not the block itself
+- `content` = plain text (for search); `markdown` = full source (for format preservation)
+- Block reference: `((<BlockId> "anchor text"))`; block link: `[text](siyuan://blocks/<BlockId>)`
+- Custom attributes use `custom-` prefix (e.g. `custom-dailynote-20240101`)
 
-# Resolve path
-siyuan tool resolve-path --hpath "/private/diary"
-# Git Bash / MSYS fallback
-siyuan tool resolve-path --hpath //private/diary
+**SQL (read-only, five tables)**:
+- `blocks` — primary content; `refs` — reference relationships; `attributes` — metadata; `assets` — resource files; `spans` — inline elements
+- Always `LIMIT`; narrow scope with `root_id`, `box`, `type` before fuzzy `LIKE`
+- Text search → `content`; format preservation → `markdown`; tree structure → `parent_id`; document scope → `root_id`
+- Daily notes: `JOIN attributes A ON B.id = A.block_id WHERE A.name LIKE 'custom-dailynote-%'`
 
-# Append content
-siyuan tool append-content --targetId <id> --targetType document --markdown @file:./note.md
+**Path semantics**:
+- Stable addressing priority: `id` > `root_id` > `path`; never rely on `hpath` as key
+- `parent_id` answers block hierarchy; `root_id` answers document membership; `path`/`hpath` answer document location — don't mix these
 
-# Document tree
-siyuan tool list-doc-tree --notebook <notebook-id>
+## Gotchas
 
-# Extensions
-siyuan extension --help              # entry point: layout + workflow
-siyuan extension init                # scaffold extension directory
-siyuan extension cache               # batch-generate schema.json caches
-siyuan extension list                # discovered extensions + cache status
-siyuan api|tool describe <id>        # confirm CLI recognized an extension contract
-siyuan tool hello-ext --name Alice   # example: run a user-defined tool extension
-
-# Workspace
-siyuan workspace add <name> --workspace-dir <path> --token <t>  # auto-discover port by directory
-siyuan workspace which               # show current resolution
-siyuan workspace list                # list all configured workspaces
-siyuan workspace verify <name>       # test connection
-siyuan workspace show <name>         # show details + resolved baseUrl
-```
-
-## Key rules
-
-- Prefer `id` / `path` over `hpath` for stable addressing.
-- Always `LIMIT` SQL queries; narrow scope with `root_id`, `box`, `type` first.
-- Use `@file:` or `@stdin` for large text inputs (markdown, SQL, templates). Shell heredoc feeds stdin inline without a temp file:
+- **MSYS / Git Bash path rewrite**: leading `/` in arguments gets rewritten. Prefer `MSYS_NO_PATHCONV=1 siyuan ...`; `//path` is a fallback.
+- **`@stdin` is single-use**: one `@stdin` per invocation. Use `@file:` when multiple fields need long input.
+- **Shell heredoc for inline SQL/markdown**:
   ```bash
   siyuan api query.sql --stmt @stdin <<'EOF'
   SELECT id, content FROM blocks WHERE ...
   EOF
   ```
-  `@stdin` is single-use per invocation; use `@file:` when multiple fields need long input.
-- In Windows Git Bash / MSYS, leading `/` arguments may be shell-rewritten before the CLI receives them. Prefer `MSYS_NO_PATHCONV=1 pnpm run siyuan ...`; `//path` and `//` are Git Bash / MSYS-compatible fallbacks for SiYuan virtual paths.
-- Write operations support `--dry-run`; destructive actions require `--yes`.
-- Always `siyuan workspace which` before writes to confirm the target.
-- Errors go to stderr as JSON; stdout stays clean. Exit codes: 0=OK, 1=general, 2=config, 3=network, 4=auth, 5=permission.
+- **Write safety**: `--dry-run` to preview; `--yes` to bypass approval when allowed. Always `siyuan workspace which` before writes.
+- **Error handling**: stderr = JSON, stdout = clean data. Exit codes: 0=OK, 1=general, 2=config, 3=network, 4=auth, 5=permission.
+
+## Foundation note
+
+This SKILL covers siyuan-cli usage only. It does not cover specific workflows built on it.
+For task-specific needs, create separate SKILLs that use siyuan-cli as the underlying tool.
 
 ## Source bootstrapping
 
-Built-in docs and runtime code ship in the same installed package. Use `siyuan doc list` to discover the real docs root, then inspect the sibling `dist/` directory when you need to understand internal behavior, discover unlisted capabilities, or verify implementation details.
-
-Key runtime files:
+When you need to understand internal behavior or discover unlisted capabilities, use `siyuan doc list` to find the docs root, then inspect the sibling `dist/` directory.
 
 | File | What to read it for |
 |------|--------------------|
-| `dist/shared/schema.d.mts` | `EndpointSchema`, `ToolSchema`, `ToolContext`, `GlobalArgs` declarations |
-| `dist/shared/client.mjs` | `SiyuanClient.call(endpoint, payload)` — the raw HTTP client |
-| `dist/api/registry.mjs` | How endpoints are registered and looked up |
-| `dist/tool/registry.mjs` | How `ToolContext` is assembled (includes `callEndpoint`, `callEndpointRaw`) |
+| `dist/shared/schema.d.mts` | `EndpointSchema`, `ToolSchema`, `ToolContext`, `GlobalArgs` |
+| `dist/shared/client.mjs` | `SiyuanClient.call(endpoint, payload)` — raw HTTP client |
+| `dist/api/registry.mjs` | Endpoint registration and lookup |
+| `dist/tool/registry.mjs` | `ToolContext` assembly (`callEndpoint`, `callEndpointRaw`) |
 
-GitHub fallback:
-- siyuan-cli: https://github.com/frostime/siyuan-cli
-- SiYuan kernel API list: https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go
-
-## Bundled docs
-
-Use the disclosed docs root to read built-in files directly.
-
-Recommended reading order:
-
-1. `README.md`
-2. `recipes/*.md`
-3. `siyuan-guide/*.md`
-4. `cli-usage/*.md`
-5. `cli-usage/extension.md` — if you need to write custom extensions
-
+GitHub: [siyuan-cli](https://github.com/frostime/siyuan-cli) · [SiYuan kernel API](https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go)
