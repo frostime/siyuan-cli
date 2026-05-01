@@ -249,9 +249,6 @@ export class PermissionEngine implements PermissionEngineLike {
         const pureCaller = candidates.filter(
             (r) => !hasResourceCondition(r)
         );
-        const resourceQualified = candidates.filter((r) =>
-            hasResourceCondition(r)
-        );
 
         if (pureCaller.length > 0) {
             // Find the first pure-caller rule in the original order
