@@ -108,7 +108,7 @@ Format: `- [name](spec-docs/<file>) — one-line summary`
 create spec-docs with `sspec doc new "<name>"`
 -->
 
-- [EndpointSchema](spec-docs/endpoint-schema.md) — Authored contract for endpoint identity, classification/risk derivation, guard coupling, CLI semantics, output precedence, and cache boundaries
+- [EndpointSchema](spec-docs/endpoint-schema.md) — Authored contract for endpoint identity, classification/risk derivation, risk catalog with concrete endpoint/riskOverride inventory, guard coupling, CLI semantics, output precedence, and cache boundaries
 
 ## Notes
 <!-- Project-level memory. Append-only log of learnings, gotchas, preferences.

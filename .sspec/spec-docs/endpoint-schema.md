@@ -1,7 +1,7 @@
 ---
 name: EndpointSchema
 description: Authored contract for siyuan-cli endpoint definitions, including identity derivation, permission guard coupling, CLI behavior, and output semantics
-updated: 2026-04-29
+updated: 2026-05-01
 scope:
   - /src/shared/schema.ts
   - /src/api/registry.ts
@@ -76,6 +76,8 @@ Rules:
 - Authors MUST NOT invent a second identity field for endpoints.
 - Built-in and extension endpoints share the same identity derivation logic.
 
+Code refs: `/src/shared/schema.ts#deriveEndpointId`, `/src/api/registry.ts#register`, `/src/api/registry.ts#registerExtension`.
+
 ### 2. `classification` is authored truth
 
 `classification` is the semantic source of truth for endpoint behavior.
@@ -93,9 +95,12 @@ classification: {
 Derived semantics:
 - Registry tags are derived from `classification`.
 - Risk is derived from `classification` unless `riskOverride` is set.
-- Approval behavior uses the derived risk at runtime: if the permission engine returns `allow` (including from the default) but the endpoint risk is `destructive` or `critical`, the guard **upgrades the verdict to `approval`** automatically. This means a `default: allow` config is not sufficient to let high-risk operations through without human sign-off — `--yes` or an explicit `approval` → bypass via `behavior.allowYes` is still required. Explicit `deny` is never overridden by risk.
+- Permission action uses endpoint mode: `mode: read` → `action: read`; `mode: write|invoke` → `action: write`.
+- Approval is a post-processing step: if rule effect is `allow` and risk is high (`destructive`/`critical`), guard upgrades to approval. Explicit `deny` is never overridden. `--yes` bypass applies only when `behavior.allowYes` is true.
 
   Guard logic (guard.ts): `wouldRequestApproval = ruleEffect === 'approval' || (ruleEffect === 'allow' && isHighRisk(risk))`
+
+Code refs: `/src/api/registry.ts#deriveRisk`, `/src/api/guard.ts#executeEndpoint`, `/src/api/guard.ts#isWriteLike`.
 
 Risk matrix:
 
@@ -109,6 +114,43 @@ Risk matrix:
 | `write + workspace` | `critical` |
 | `invoke + runtime` | `destructive` |
 | `invoke + network` | `critical` |
+
+### 2a. Risk inventory policy
+
+This section keeps only anchor examples. Full endpoint-to-risk inventory is runtime data.
+
+Live inventory command (repo-local):
+
+```bash
+pnpm run siyuan api list
+```
+
+Anchor endpoints:
+
+- **Critical**: `file.putFile` (`write + workspace`), `network.forwardProxy` (`invoke + network`), `system.exit` (`riskOverride: critical`).
+- **Destructive**: `filetree.moveDocs` (`write + content + batch`), `sqlite.flushTransaction` (`invoke + runtime`).
+- **Elevated**: `asset.upload` (`write + asset + single`), `block.deleteBlock` (`write + content + single`), `export.exportResources` (`read + workspace`).
+
+Code refs: `/src/api/registry.ts#deriveRisk`, `/src/api/guard.ts#executeEndpoint`, `/src/api/endpoints/**`.
+
+#### Notable riskOverride examples
+
+`riskOverride` exists for endpoints whose classification would misrepresent actual risk. These cases are deliberate design decisions, documented here for maintainers:
+
+| Endpoint | Classification would derive | Actual risk via override | Rationale |
+|---|---|---|---|
+| `system.exit` | `destructive` (`invoke + runtime`) | `critical` | Shuts down the entire kernel; more severe than general runtime control |
+| `system.logoutAuth` | `destructive` (`invoke + runtime`) | `sensitive` | Session invalidation only — no data mutation |
+| `system.getConf` | `safe` (`read + meta`) | `sensitive` | Returns full system configuration including network/sync settings |
+| `notification.pushMsg` | `destructive` (`invoke + runtime`) | `safe` | UI toast only — no durable state change |
+| `notification.pushErrMsg` | `destructive` (`invoke + runtime`) | `safe` | Same as pushMsg |
+
+#### Key patterns
+
+1. **batch scope is the destructive boundary.** Any `write + content/asset` with `scope: batch` is destructive; same classification with `scope: single` is only elevated. This prevents bulk mutations from bypassing human approval.
+2. **`workspace` surface is always privileged.** `write + workspace` → critical (highest tier). `read + workspace` → elevated (one tier above `read + content`). Endpoints at this surface access the kernel's workspace filesystem directly.
+3. **Delete operations have asymmetric risk by surface.** `file.removeFile` (workspace-surface) is critical; `block.deleteBlock` / `filetree.removeDoc` / `notebook.removeNotebook` (content-surface) are only elevated despite identical irreversibility.
+4. **`riskOverride` is reserved for endpoints whose classification-surface pair would produce a misleading risk.** Use sparingly — prefer adjusting `classification` over overriding risk.
 
 ### 3. Global read endpoints require a response guard
 
@@ -145,6 +187,8 @@ classification: { mode: 'read', surface: 'content', scope: 'global' }
 // no guard.response or guard.filterResponse
 ```
 
+Code refs: `/src/api/registry.ts#validateSchema` (global-read guard requirement).
+
 ### 4. `guard.payloadTargets` must anchor into `payload.properties`
 
 `payloadTargets` describe which payload fields represent protected resources.
@@ -165,25 +209,31 @@ Rules:
 - `access` controls whether permission checks are evaluated as `read` or `write`.
 
 Runtime effect:
-- `executeEndpoint()` resolves each declared target and runs resource-level permission checks before the kernel call.
+- `executeEndpoint()` resolves each declared target and checks permission before the kernel call.
+- Each target uses its own `access` (`read`/`write`) when calling `checkContentRef`.
+- `kind: workspace-path` currently checks caller/action only; path-conditional matching is reserved for a later phase.
+
+Code refs: `/src/api/registry.ts#validateSchema`, `/src/api/guard.ts#applyPayloadGuard`, `/src/shared/permission.ts#checkContentRef`.
 
 ### 5. `guard.response.itemsAt` must fit terminal array filtering
 
 Declarative response filtering supports only pointer paths compatible with terminal-array rewriting.
 
-Allowed shapes:
-- `[*]`
-- `blocks[*]`
-- `notebooks[*]`
+Allowed shape rule:
+- zero or more object-key segments, followed by exactly one terminal array expansion.
+- examples: `[*]`, `blocks[*]`, `data.blocks[*]`.
 
 Disallowed shape pattern:
 - multiple array expansions in one path,
+- non-terminal array expansions,
 - paths that cannot be rewritten by terminal filtering.
 
 Reason:
 - runtime filtering extracts an array, filters items, then writes the filtered array back into the response shape.
 
 When the response shape is more complex than this model, authors MUST use `guard.filterResponse` instead.
+
+Code refs: `/src/shared/pointer-path.ts#isTerminalFilterCompatiblePointerPath`, `/src/shared/pointer-path.ts#runPointerFilterTerminal`, `/src/api/guard.ts#applyResponseGuard`.
 
 ### 6. CLI metadata must match payload semantics
 
@@ -231,6 +281,8 @@ Example:
 cli: { skipFields: ['file'] }
 ```
 
+Code refs: `/src/shared/argv.ts#parsePayload`, `/src/api/command.ts#buildEndpointSubCommand` (reserved-arg collision + `skipFields`).
+
 ### 7. Multipart switches transport semantics
 
 When `multipart` is present:
@@ -248,6 +300,8 @@ Effects:
 
 This is a transport-mode switch, not a display hint.
 
+Code refs: `/src/api/guard.ts#executeEndpoint` (multipart upload branch), `/src/api/command.ts#buildEndpointSubCommand` (multipart collision exception).
+
 ### 8. Output precedence is fixed
 
 Compact rendering follows this order:
@@ -260,6 +314,8 @@ Rules:
 - If `format` exists, it always wins.
 - `formatStrategy` is used only when `format` is absent.
 - Without either, compact output falls back to JSON serialization.
+
+Code refs: `/src/api/command.ts#callEndpoint`, `/src/shared/output.ts#preparePrintedOutput`, `/src/shared/output.ts#applyFormatStrategy`.
 
 ### 9. Cache serialization is intentionally lossy
 
@@ -284,6 +340,8 @@ Consequence:
 - discovery/help/list can operate from cache,
 - execution must load source code to recover function behavior.
 
+Code refs: `/src/extension/cache.ts#extractEndpointCacheData`, `/src/extension/cache.ts#buildEndpointSchemaFromCache`, `/src/api/command.ts#resolveEndpointForExecution`.
+
 ### 10. Registry parity requirement
 
 Built-in endpoints and API extensions MUST satisfy the same registry-level `EndpointSchema` rules.
@@ -293,6 +351,8 @@ Difference in handling:
 - extension invalid schema: registration warns and skips the extension.
 
 This preserves safety while keeping extension discovery resilient.
+
+Code refs: `/src/api/registry.ts#register`, `/src/api/registry.ts#registerExtension`.
 
 ## Examples
 
@@ -326,35 +386,7 @@ export const schema: EndpointSchema = {
 }
 ```
 
-### B. Valid workspace write with reserved flag collision
-
-```ts
-export const schema: EndpointSchema = {
-  endpoint: '/api/file/putFile',
-  summary: 'Put file under workspace directory',
-  payload: {
-    type: 'object',
-    required: ['path', 'file'],
-    properties: {
-      path: { type: 'string' },
-      file: { type: 'string' }
-    }
-  },
-  classification: {
-    mode: 'write',
-    surface: 'workspace',
-    scope: 'single',
-    operation: 'update'
-  },
-  cli: { skipFields: ['file'] },
-  guard: {
-    payloadTargets: [{ path: 'path', kind: 'workspace-path', access: 'write' }]
-  },
-  formatStrategy: 'transaction'
-}
-```
-
-### C. Invalid global read without response guard
+### B. Invalid global read without response guard
 
 ```ts
 export const schema: EndpointSchema = {
