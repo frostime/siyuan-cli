@@ -109,6 +109,8 @@ create spec-docs with `sspec doc new "<name>"`
 -->
 
 - [EndpointSchema](spec-docs/endpoint-schema.md) — Authored contract for endpoint identity, classification/risk derivation, risk catalog with concrete endpoint/riskOverride inventory, guard coupling, CLI semantics, output precedence, and cache boundaries
+- [permission-model](spec-docs/permission-model.md) — Permission engine architecture: rule-list model, two-phase evaluation, rule cascade, project override semantics, and known limitations (resource-level `approval` not yet functional — see request `26-05-01T20-07_resource-level-approval-not-triggered.md`)
+- [approval-broker](spec-docs/approval-broker.md) — Approval broker architecture: lazy-spawn process model, token IPC, state file layout, lifecycle policy, HTTP API, and browser UI
 
 ## Notes
 <!-- Project-level memory. Append-only log of learnings, gotchas, preferences.

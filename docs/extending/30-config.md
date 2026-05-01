@@ -162,6 +162,12 @@ Permission checks happen in two phases because the available context differs:
 - First full-match rule wins.
 - No match → `default` effect.
 
+### Effect asymmetry: `approval` applies to payload checks only
+
+All three effects work correctly in both phases for **payload checks** (pre-execution). A resource-qualified `approval` rule — e.g. `{ notebook: "X", action: write, effect: approval }` — correctly triggers the Approval Center before the kernel call.
+
+For **response filtering** (`guard.response` / `filterItems` on the response), only `deny` is meaningful. Items matched by an `approval` rule in the response are kept (treated as `allow`). Approval is a pre-execution gate; once the kernel has responded, the operation is complete and there is nothing left to confirm.
+
 ### Risk-auto approval (post-processing in guard.ts)
 
 If the rule evaluation returns `allow` but the endpoint's derived risk is `destructive` or `critical`, the guard sends the call through approval. User rules that return `deny` are never overridden (deny is always honored).

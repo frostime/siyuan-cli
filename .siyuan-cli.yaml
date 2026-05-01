@@ -12,3 +12,7 @@ permission:
     - endpoint: "system.*"
       effect: confirm
       note: "Force the approval flow for the current approval UX tests"
+    - notebook: "20231224140619-bpyuay4"
+      action: write
+      effect: approval
+      note: "Test resource-level approval for notebook Test"

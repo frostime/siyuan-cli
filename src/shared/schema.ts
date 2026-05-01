@@ -273,7 +273,7 @@ export interface PermissionEngineLike {
     checkContentRef(
         ref: { kind: ResourceKind; value: string; access: 'read' | 'write' },
         caller?: CallerContext
-    ): Promise<void>;
+    ): Promise<PermissionEffect>;
     resolveContentIds(
         ids: string[]
     ): Promise<Map<string, { notebook: string; path: string }>>;
