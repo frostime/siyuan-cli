@@ -36,6 +36,7 @@ export interface PermissionRule {
     action?: 'read' | 'write';
     notebook?: string;    // exact match notebook id
     path?: string;        // glob on SiYuan id-based path
+    root_id?: string;     // exact match document block id; normalized to path: "**/<id>.sy"
     // workspacePath reserved for Phase 2
     effect: PermissionEffect;
     note?: string;        // human annotation, ignored by engine

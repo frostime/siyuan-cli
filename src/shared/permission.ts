@@ -51,10 +51,15 @@ export function cascadePermission(
         ...(projectPermission?.rules ?? []),
         ...(ws?.permission?.rules ?? []),
         ...(config.defaults?.permission?.rules ?? [])
-    ].map((rule) => ({
-        ...rule,
-        effect: resolvePermissionEffect(rule.effect)
-    }));
+    ]
+        .map((rule) => {
+            if (!rule.root_id) return rule;
+            return { ...rule, path: `**/${rule.root_id}.sy` };
+        })
+        .map((rule) => ({
+            ...rule,
+            effect: resolvePermissionEffect(rule.effect)
+        }));
     const defaultEffect = resolvePermissionEffect(
         projectPermission?.default ??
             ws?.permission?.default ??

@@ -111,10 +111,19 @@ function defaultConfig(): AppConfig {
 function normalizePermission(permission?: PermissionConfig): PermissionConfig {
     return {
         default: resolvePermissionEffect(permission?.default ?? 'allow'),
-        rules: (permission?.rules ?? []).map((rule) => ({
-            ...rule,
-            effect: resolvePermissionEffect(rule.effect)
-        }))
+        rules: (permission?.rules ?? []).map((rule) => {
+            if (rule.root_id) {
+                return {
+                    ...rule,
+                    path: `**/${rule.root_id}.sy`,
+                    effect: resolvePermissionEffect(rule.effect)
+                };
+            }
+            return {
+                ...rule,
+                effect: resolvePermissionEffect(rule.effect)
+            };
+        })
     };
 }
 
@@ -207,6 +216,15 @@ function migrateLegacyWindowsConfig(targetPath: string): void {
 const ID_PATTERN = /^\d{14}-[0-9a-z]{7}$/;
 const ID_SEGMENT_RE = /\d{14}-[0-9a-z]{7}/;
 
+function hasLeafIdSegment(pathPattern: string): boolean {
+    for (const match of pathPattern.matchAll(/\d{14}-[0-9a-z]{7}/g)) {
+        const end = (match.index ?? 0) + match[0].length;
+        const next = pathPattern[end];
+        if (next !== '/') return true;
+    }
+    return false;
+}
+
 /** Soft warning helper — never throws, just writes to stderr. */
 function warnRulesSmoke(
     scope: string,
@@ -225,16 +243,55 @@ function warnRulesSmoke(
                 }) + '\n'
             );
         }
-        if (rule.path && !ID_SEGMENT_RE.test(rule.path)) {
+        if (rule.root_id && rule.path) {
             process.stderr.write(
                 JSON.stringify({
-                    warning: 'LIKELY_HPATH_NOT_ID_IN_PATH',
+                    warning: 'ROOT_ID_OVERRIDES_PATH',
                     scope,
-                    at: `rules[${i}].path`,
-                    value: rule.path,
-                    hint: 'Path rules take an id-based SiYuan path, not an hpath.'
+                    at: `rules[${i}]`,
+                    hint: 'root_id takes precedence; explicit path is ignored.'
                 }) + '\n'
+            );
+        }
+        if (rule.root_id && !ID_PATTERN.test(rule.root_id)) {
+            process.stderr.write(
+                JSON.stringify({
+                    warning: 'LIKELY_HPATH_NOT_ID',
+                    scope,
+                    at: `rules[${i}].root_id`,
+                    value: rule.root_id,
+                    hint: 'root_id rules take a document block id.'
+                }) + '\n'
+            );
+        }
+        if (rule.path && !rule.root_id) {
+            const hasIdSegment = ID_SEGMENT_RE.test(rule.path);
+            if (!hasIdSegment) {
+                process.stderr.write(
+                    JSON.stringify({
+                        warning: 'LIKELY_HPATH_NOT_ID_IN_PATH',
+                        scope,
+                        at: `rules[${i}].path`,
+                        value: rule.path,
+                        hint: 'Path rules take an id-based SiYuan path, not an hpath.'
+                    }) + '\n'
                 );
+            }
+            if (
+                hasIdSegment &&
+                !rule.path.includes('.sy') &&
+                hasLeafIdSegment(rule.path)
+            ) {
+                process.stderr.write(
+                    JSON.stringify({
+                        warning: 'LIKELY_PATH_MISSING_SY_SUFFIX',
+                        scope,
+                        at: `rules[${i}].path`,
+                        value: rule.path,
+                        hint: 'Path rules match raw blocks.path values. Document paths usually end with ".sy" (for a doc id, use patterns like "**/<docId>.sy").'
+                    }) + '\n'
+                );
+            }
         }
     }
 }

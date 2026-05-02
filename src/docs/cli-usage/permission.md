@@ -33,7 +33,7 @@ permission:
       effect: allow
 
     - notebook: "20260101215354-bbb"
-      path: "/20260107143325-zbrtqup/**"
+      path: "**/20260107143325-zbrtqup.sy"
       effect: deny
 
     - action: write
@@ -48,9 +48,34 @@ permission:
 | `tool` | string | glob (micromatch) | any tool (or direct API call) |
 | `action` | `"read"` \| `"write"` | exact | any action |
 | `notebook` | string | exact match (must be kernel id format) | any notebook |
-| `path` | string | glob (micromatch) | any path |
+| `path` | string | glob (micromatch) on raw `blocks.path` values (includes `.sy` for documents) | any path |
+| `root_id` | string | exact match document block id; normalized internally to `path: "**/<id>.sy"` | any document |
 | `effect` | `"allow"` \| `"deny"` \| `"approval"` | — | **required** |
 | `note` | string | — | human annotation, ignored by engine |
+
+### `path` semantics
+
+`path` is matched against the kernel's raw `blocks.path` column value. A document path ends with `.sy` (for example `/20230725154155-hq3iw5w.sy`).
+
+- Match one document by id: `path: "**/<docId>.sy"`
+- `path: "**/<docId>"` does not match that document
+- `path: "/<docId>/**"` matches descendants under that document id directory, not the document file itself
+- Without glob wildcards (`*`, `**`, `?`, `[]`, `{}`), matching is exact string only
+
+### `root_id` semantics
+
+`root_id` is a convenience alias for `path: "**/<docId>.sy"`. It matches any block whose owning document has the given `root_id`, regardless of where the document sits in the notebook tree.
+
+If both `root_id` and `path` are set on the same rule, `root_id` takes precedence and `path` is ignored (a `ROOT_ID_OVERRIDES_PATH` warning is emitted).
+
+```yaml
+# These two rules are equivalent:
+- root_id: "20230725154155-hq3iw5w"
+  effect: deny
+
+- path: "**/20230725154155-hq3iw5w.sy"
+  effect: deny
+```
 
 ## Evaluation: top-to-bottom, first match wins
 
@@ -90,8 +115,8 @@ rules:
 |---------|---------|
 | `query.*` | `query.sql` |
 | `block.get*` | `block.getBlockKramdown`, `block.getBlockInfo` |
-| `/journal/**` | `/journal/x.sy`, `/journal/a/b.sy` |
-| `/journal/*` | `/journal/x.sy` (one level only) |
+| `**/20260107143325-zbrtqup.sy` | `/20260107143325-zbrtqup.sy`, `/parent/20260107143325-zbrtqup.sy` |
+| `/20260107143325-zbrtqup/**` | `/20260107143325-zbrtqup/child.sy`, `/20260107143325-zbrtqup/a/b.sy` |
 
 ## Risk-based auto-approval
 
@@ -242,6 +267,9 @@ workspaces:
           effect: deny
         - notebook: "20260101215354-bbb"
           effect: allow
+        # Deny a specific document anywhere it appears (equivalent to path: "**/20260107143334-l5eqs5i.sy")
+        - root_id: "20260107143334-l5eqs5i"
+          effect: deny
 ```
 
 Final rule chain for workspace `main`: workspace rules (5) ++ defaults rules (3) = 8 rules, evaluated top-to-bottom.
@@ -260,8 +288,10 @@ Final rule chain for workspace `main`: workspace rules (5) ++ defaults rules (3)
 
 On load, the CLI warns (stderr, non-fatal) about likely mistakes:
 
-- `LIKELY_HPATH_NOT_ID`: a `notebook` rule value doesn't match the kernel id pattern `^\d{14}-[0-9a-z]{7}$` — you may have used an hpath instead of an id
+- `LIKELY_HPATH_NOT_ID`: a `notebook` or `root_id` rule value doesn't match the kernel id pattern `^\d{14}-[0-9a-z]{7}$` — you may have used an hpath instead of an id
 - `LIKELY_HPATH_NOT_ID_IN_PATH`: a `path` rule value contains no id segment — same issue
+- `LIKELY_PATH_MISSING_SY_SUFFIX`: a `path` rule value ends on an id segment without `.sy`; doc-targeting patterns usually need `.sy` (for example `**/<docId>.sy`)
+- `ROOT_ID_OVERRIDES_PATH`: both `root_id` and `path` set on the same rule; `path` is ignored
 
 ## Related docs
 

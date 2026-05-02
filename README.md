@@ -279,6 +279,10 @@ permission:
     - path: "/20260107143325-zbrtqup/**"
       action: write
       effect: deny
+
+    # Block a specific document by id (equivalent to path: "**/20260107143325-zbrtqup.sy")
+    - root_id: "20260107143325-zbrtqup"
+      effect: deny
 ```
 
 Rules match on `endpoint`/`tool`/`action` (evaluated immediately from the request) and on `notebook`/`path` (resolved from block ids in the payload). Three effects: **deny** (hard block, exit code 5), **allow** (pass through), **approval** (pause for human sign-off).
