@@ -1,7 +1,29 @@
 /**
  * argv → payload parser.
  * Handles: --json/-j, --file/-f, named flags, positional (primary), input sources.
- * See reference/siyuan-cli-design/04-module-api.md §3.
+ *
+ * Input priority chain (later overrides earlier):
+ *   1. --json / -j '<json>'           → seeds base payload
+ *   2. --file / -f <path | ->          → replaces base payload
+ *   3. positional → cli.primary field  → overrides single field
+ *   4. --<field> <value>               → overrides single field
+ *   5. schema property defaults        → fills remaining missing fields
+ *   6. ajv validation                  → rejects invalid payload
+ *
+ * Input sources (per field, controlled by cli.allowSource):
+ *   literal   — direct string value (default for all fields)
+ *   @file:X   — read from file (resolved from cwd)
+ *   @stdin / - — read from stdin (once per invocation; STDIN_CONFLICT if reused)
+ *   @env:VAR  — read from environment variable
+ *   @@file:X  — escape → pass @file:X literally
+ *
+ * Type coercion (argv strings → payload types):
+ *   string  → pass through
+ *   integer → parseInt(value, 10)
+ *   number  → Number(value)
+ *   boolean → value === "true"
+ *   array   → JSON.parse(value); fallback to raw string on parse error
+ *   object  → JSON.parse(value); fallback to raw string on parse error
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'pathe';

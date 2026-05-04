@@ -1,7 +1,7 @@
 /**
  * Workspace directory → port/baseUrl resolver.
  *
- * Algorithm (5-step):
+ * Algorithm (4-step):
  *   1. Probe seed port (default 6806) for /api/system/getWorkspaces.
  *   2. Match returned workspace path against target workspaceDir.
  *   3. Read <path>/conf/conf.json → extract serverAddrs → pick localhost port.

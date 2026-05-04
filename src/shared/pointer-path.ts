@@ -1,10 +1,29 @@
 /**
  * Pointer-path mini-DSL — parse, traverse, and filter JSON-like structures.
  *
- * Syntax: dot-separated path segments with optional array expansion.
- *   - `blocks[*]`    → expand array at key "blocks"
- *   - `[*]`          → expand root array
- *   - `blocks[*].id` → expand array, then read key "id" from each item
+ * Grammar (BNF):
+ *   PointerPath ::= Segment ( "." Segment )*
+ *   Segment     ::= Name ("[*]")?
+ *                 | "[*]"              // root array expansion (first segment only)
+ *   Name        ::= [A-Za-z_][A-Za-z0-9_]*
+ *
+ * Examples:
+ *   `id`              → top-level string property
+ *   `ids[*]`          → top-level array, each element a string
+ *   `blocks[*]`       → top-level array of objects
+ *   `blocks[*].id`    → string field of each element
+ *   `[*]`             → root itself is an array
+ *   `data.blocks[*]`  → array two segments deep
+ *
+ * Shape policy (STRICT_POINTER_POLICY):
+ *   - missing key → skip silently
+ *   - non-array where array expected → throw PointerPathShapeError
+ *   - non-object before a key → skip (graceful heterogeneous array handling)
+ *
+ * Terminal filter invariants (enforced by runPointerFilterTerminal + registry validation):
+ *   - terminal segment must be an array expansion
+ *   - at most one array expansion in the whole path
+ *   These ensure the filter can extract → filter → write-back in place.
  */
 
 export type PointerPath = string;

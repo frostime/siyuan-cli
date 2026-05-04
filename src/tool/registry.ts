@@ -69,6 +69,14 @@ export async function createToolContext(
     const permission = createPermissionEngine(config, workspace, client);
     if (toolId) permission.checkTool(toolId);
 
+    /**
+     * Call an endpoint through the full guard pipeline.
+     * Includes: payload validation → permission check (Phase 1+2) → approval gate
+     * → dry-run short-circuit → kernel call → response filtering.
+     * Threads `callerTool` for tool-scoped permission rules.
+     *
+     * Use for any call a user could make directly. Respects --dry-run, --yes, --debug.
+     */
     const callEndpoint: ToolContext['callEndpoint'] = async <T = unknown>(
         id: string,
         payload: unknown
@@ -89,6 +97,14 @@ export async function createToolContext(
         }) as Promise<T>;
     };
 
+    /**
+     * Call an endpoint directly, bypassing all guards.
+     * Skips: payload validation, permission check, approval, dry-run, debug.
+     * Use ONLY for internal read probes (e.g. SQL lookup to resolve an id)
+     * where re-entering the guard pipeline would hurt UX.
+     *
+     * ⚠ No permission enforcement. Think before reaching for this.
+     */
     const callEndpointRaw: ToolContext['callEndpointRaw'] = async <T = unknown>(
         endpoint: string,
         payload: unknown

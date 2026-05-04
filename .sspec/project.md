@@ -111,6 +111,8 @@ create spec-docs with `sspec doc new "<name>"`
 - [EndpointSchema](spec-docs/endpoint-schema.md) — Authored contract for endpoint identity, classification/risk derivation, risk catalog with concrete endpoint/riskOverride inventory, guard coupling, CLI semantics, output precedence, and cache boundaries
 - [permission-model](spec-docs/permission-model.md) — Permission engine architecture: rule-list model, two-phase evaluation, rule cascade, project override semantics, and approval effect semantics
 - [approval-broker](spec-docs/approval-broker.md) — Approval broker architecture: lazy-spawn process model, token IPC, state file layout, lifecycle policy, HTTP API, and browser UI
+- [workspace-resolution](spec-docs/workspace-resolution.md) — Workspace resolution chain (flag → env → project-file → global-current), project-file discovery, permission override independence, workspaceDir port discovery, and IMPLICIT_WORKSPACE warning design
+- [error-model](spec-docs/error-model.md) — Error model architecture: exit code semantics, error-to-exit mapping across modules, agent-side error handling contract, and framework warning catalog
 
 ## Notes
 <!-- Project-level memory. Append-only log of learnings, gotchas, preferences.
