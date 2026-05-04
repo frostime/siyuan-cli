@@ -10,6 +10,7 @@ scope:
   - /src/approval/broker-paths.ts
   - /src/approval/broker-browser.ts
   - /src/approval/ui.ts
+  - /src/approval/approval-center.html
   - /src/approval/types.ts
   - /src/approval/errors.ts
 deprecated: false
@@ -162,7 +163,7 @@ Audit records are appended to `audit/YYYY-MM-DD.jsonl` on every decision (approv
 
 ## Browser UI
 
-The browser UI is an HTML page rendered by `src/approval/ui.ts` and served directly by the broker's HTTP server at `GET /approval?token=<t>`. It is a self-contained single-page app (no external dependencies) that:
+The browser UI is an HTML page loaded from `src/approval/approval-center.html` by `src/approval/ui.ts` (which injects the auth token) and served directly by the broker's HTTP server at `GET /approval?token=<t>`. It is a self-contained single-page app (no external dependencies) that:
 
 - Polls `GET /api/approval/requests` to list pending requests.
 - Displays payload preview, resource summary, risk level, and expiry countdown.
@@ -217,6 +218,7 @@ requestAndWait(preparedRequest)
 | `src/approval/store.ts` | Request persistence (JSON files), audit log (JSONL) |
 | `src/approval/broker-paths.ts` | All filesystem path helpers; pure utilities, no process logic |
 | `src/approval/broker-browser.ts` | Cross-platform browser open |
-| `src/approval/ui.ts` | Browser UI HTML renderer |
+| `src/approval/ui.ts` | Browser UI template loader (reads `approval-center.html`, injects token) |
+| `src/approval/approval-center.html` | Browser UI HTML/JS source |
 | `src/approval/types.ts` | All approval-related TypeScript types |
 | `src/approval/errors.ts` | `ApprovalRejectedError`, `ApprovalTimeoutError`, `ApprovalCancelledError`, `ApprovalBrokerUnavailableError` |

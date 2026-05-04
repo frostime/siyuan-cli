@@ -1,6 +1,6 @@
 ---
 name: permission-model
-description: "Permission engine architecture: rule-list model, two-phase evaluation, rule cascade, project override semantics, and known limitations."
+description: "Permission engine architecture: rule-list model, two-phase evaluation, rule cascade, project override semantics, and approval effect semantics."
 updated: 2026-05-01
 scope:
   - /src/shared/permission.ts
@@ -34,10 +34,13 @@ Each rule has optional conditions and a mandatory effect:
 | `action` | exact: `read` \| `write` | any action |
 | `notebook` | exact match on notebook id | any notebook |
 | `path` | glob (micromatch) on SiYuan id-based path | any path |
+| `root_id` | convenience alias, normalized to `path: "**/<id>.sy"` | any root |
 | `effect` | — | **required**: `allow` \| `deny` \| `approval` |
 | `note` | — | ignored; human annotation |
 
 A rule with no conditions matches every context — useful as a final catch-all.
+
+**`root_id` is a convenience alias.** When set, it is normalized to `path: "**/<root_id>.sy"` during config loading. If both `root_id` and `path` are set, a `ROOT_ID_OVERRIDES_PATH` warning is emitted and `root_id` takes precedence. `root_id` values missing the `.sy` suffix trigger a `LIKELY_PATH_MISSING_SY_SUFFIX` warning.
 
 **`notebook` and `path` only accept ID-based values**, not hpaths. Reason: hpaths are mutable (renaming a document changes its hpath), while IDs are stable. The engine does not resolve hpaths. A smoke-test warning (`LIKELY_HPATH_NOT_ID`, `LIKELY_HPATH_NOT_ID_IN_PATH`) is emitted on config load when a value looks like an hpath.
 
