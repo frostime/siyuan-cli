@@ -67,8 +67,10 @@ When uncertain, align — never proceed with unclarified assumptions.
 | Directive (`@resume`, `@memory`, etc.) | Execute → §4 |
 | Request under `.sspec/requests` | Assess scale → §2 |
 | Resume existing change | `read(memory)` → infer phase from State → load phase SKILL → continue |
+| Create request | `sspec request new` |
+| Create spec doc | `sspec doc new` |
 | Micro (≤3 files, ≤30min, obvious) | Do directly |
-| Mini (user opts out of formal change) | Clarify+Design thinking → `.sspec/tmp/` → §2.0 |
+| Mini (user opts out of formal change) | Clarify+Design thinking → `sspec tmp new` → §2.0 |
 
 **Trigger-word → SKILL**:
 
