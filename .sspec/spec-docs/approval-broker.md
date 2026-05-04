@@ -139,7 +139,7 @@ The broker exposes a minimal REST API on `http://127.0.0.1:<port>`. All endpoint
 
 ### Long-poll semantics
 
-`GET /api/approval/requests/:id/wait` holds the connection open until a decision arrives or `timeoutMs` elapses. The CLI caller uses `timeoutMs = timeoutSec * 1000 + 1000` (1s buffer). On timeout, the broker returns HTTP 504 with `{ error: "APPROVAL_WAIT_TIMEOUT" }`, and the client throws `ApprovalTimeoutError`.
+`GET /api/approval/requests/:id/wait` holds the connection open until a decision arrives or `timeoutMs` elapses. The CLI caller uses `timeoutMs = timeoutSec * 1000 + 1000` (1s buffer) as the client-side fetch timeout. The broker receives the raw `timeoutMs` query parameter for its long-poll wait. The 1s buffer ensures the client fetch does not abort before the broker's own timeout fires. On timeout, the broker returns HTTP 504 with `{ error: "APPROVAL_WAIT_TIMEOUT" }`, and the client throws `ApprovalTimeoutError`.
 
 Multiple waiters for the same request are supported (multiple CLI processes can wait on the same request ID).
 
@@ -155,7 +155,9 @@ created (pending)
   └─ timed_out → actor: caller (expiresAt elapsed, detected by 500ms poll)
 ```
 
-`ApprovalRequest` is persisted to `requests/<id>.json` at each state transition. Decided requests remain on disk until the broker exits (cleanup on shutdown removes the entire `runtime/approval/` directory).
+`ApprovalRequest` is persisted to `requests/<id>.json` at each state transition. Decided requests remain on disk after the broker exits.
+
+<!-- TODO: ISSUE — broker shutdown only cleans up state files (pid/port/token) via `cleanupApprovalBrokerState()`. Request files in `requests/` and audit logs in `audit/` are NOT removed. `removeApprovalStateDir()` exists in broker-paths.ts but is never called from broker.ts. Decide: either call it on shutdown, or accept accumulation and remove this note. -->
 
 Audit records are appended to `audit/YYYY-MM-DD.jsonl` on every decision (approved, rejected, cancelled, timed_out). The audit log survives broker restarts — it is not cleaned up on shutdown.
 

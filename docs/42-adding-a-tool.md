@@ -68,7 +68,7 @@ details:
 
 ```ts
 // src/tool/builtins/list-backlinks.ts
-import type { ToolSchema } from "../core/schema.js";
+import type { ToolSchema } from "../shared/schema.js";
 
 type RefRow = { id: string; root_id: string; content: string };
 type DocRow = { id: string; hpath: string };

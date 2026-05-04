@@ -63,7 +63,7 @@ final default = project.default
 
 Implemented in `cascadePermission()` in `src/shared/permission.ts`.
 
-**Project permission replaces, not merges.** When `.siyuan-cli.yaml` declares a `permission` block, it becomes the sole source of `rules` and `default` for that invocation. Workspace-level and defaults-level rules are skipped entirely. This makes the active permission set fully inspectable from a single file (`siyuan workspace which`).
+**Project permission takes precedence by position, not by replacement.** When `.siyuan-cli.yaml` declares a `permission` block, its rules are prepended to the rule list. Because evaluation is first-match-wins, project rules shadow workspace/defaults rules for any context they cover. Workspace/defaults rules remain in the list and still apply to contexts the project rules did not match.
 
 The project `permission` block is **independent of how the workspace name was determined**. If `--workspace prod` overrides the workspace but a `.siyuan-cli.yaml` is found in cwd, the project's permission still applies. Rationale: `--workspace` expresses "use a different target", while the project file expresses "in this directory, these rules apply" — they are orthogonal.
 

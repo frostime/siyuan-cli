@@ -94,12 +94,14 @@ Soft warnings (stderr, non-fatal):
 
 ## Permission override independence
 
-When a project file declares `permission`, that block **completely replaces** workspace-level and defaults-level permission for the invocation:
+When a project file declares `permission`, its rules are **prepended** to the rule list and its `default` overrides the fallback:
 
 ```
-final rules   = project.rules
-final default = project.default ?? "allow"
+final rules   = project.rules ++ workspace.rules ++ defaults.rules
+final default = project.default ?? workspace.default ?? defaults.default ?? "allow"
 ```
+
+Because evaluation is first-match-wins, project rules shadow workspace/defaults rules for any context they cover. Workspace/defaults rules remain in the list and still apply to contexts the project rules did not match.
 
 This replacement is **independent of how the workspace name was determined**. If `--workspace prod` overrides the workspace but a `.siyuan-cli.yaml` in cwd declares permission, the project's permission still applies.
 
@@ -170,5 +172,5 @@ The warning does not change exit code. Agents should treat it as a signal to add
 |---|---|
 | `src/workspace/resolve.ts` | `resolveWorkspace`, `resolveEffectiveWorkspace`, `materializeWorkspace` |
 | `src/workspace/project-config.ts` | `findProjectConfig`, `loadProjectConfig`, field validation, smoke warnings |
-| `src/workspace/resolver.ts` | `resolveWorkspaceDirToBaseUrl` (5-step port discovery) |
+| `src/workspace/resolver.ts` | `resolveWorkspaceDirToBaseUrl` (4-step port discovery) |
 | `src/workspace/config.ts` | `loadConfig`, `cascadePermission`, workspace entry management |

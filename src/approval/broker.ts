@@ -101,6 +101,9 @@ export async function startApprovalBroker(port = 0): Promise<void> {
             resolveWaiters(request);
         }
         if (graceTimer) clearTimeout(graceTimer);
+        // TODO: ISSUE — only state files are cleaned up; requests/ and audit/ accumulate.
+        // Consider calling removeApprovalStateDir() here to fully clean up,
+        // or accept accumulation if audit persistence is intentional.
         cleanupApprovalBrokerState();
         server.close(() => {
             process.exit(0);

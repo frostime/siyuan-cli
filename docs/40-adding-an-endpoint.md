@@ -29,7 +29,7 @@ Goal: wrap `/api/block/getRefIDs` that takes `{ id }` and returns `{ refIDs: str
 
 ```ts
 // src/api/endpoints/block/getRefIDs.ts
-import type { EndpointSchema } from "../../core/schema.js";
+import type { EndpointSchema } from "../../shared/schema.js";
 
 export const schema: EndpointSchema = {
   endpoint: "/api/block/getRefIDs",

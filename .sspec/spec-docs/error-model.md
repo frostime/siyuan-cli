@@ -154,7 +154,7 @@ Warnings go to stderr as JSON but do not affect exit code. Agents should parse t
 | `UNKNOWN_PROJECT_CONFIG_KEY` | `project-config.ts` | Top-level key in `.siyuan-cli.yaml` not recognized |
 | `UNKNOWN_PROJECT_BEHAVIOR_KEY` | `project-config.ts` | Key in project `behavior` block not recognized |
 | `UNKNOWN_BEHAVIOR_KEY` | `config.ts` | Key in global/workspace `behavior` block not recognized |
-| `CONFIG_MIGRATED` | `config.ts` | Legacy `%APPDATA%` config migrated to XDG location |
+| `CONFIG_MIGRATED` | `config.ts` | Legacy `%APPDATA%` config migrated to XDG location (emitted as `notice`, not `warning`) |
 
 ---
 
