@@ -23,10 +23,13 @@ export const schema: EndpointSchema = {
     },
     guard: {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }],
-        response: {
-            itemsAt: '[*]',
-            fieldMap: { id: 'id', path: 'path', notebook: 'box' }
-        }
+        // response guard disabled: getChildBlocks returns {id, type, subType} only,
+        // which lacks path/box. Response filtering would trigger resolveContentIds
+        // via SQL and throw BLOCK_NOT_FOUND for blocks not in the SQL table.
+        // response: {
+        //     itemsAt: '[*]',
+        //     fieldMap: { id: 'id', path: 'path', notebook: 'box' }
+        // }
     },
     formatStrategy: 'records'
 };

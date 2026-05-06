@@ -83,10 +83,10 @@ export const tool: ToolSchema = {
     tags: ['read'],
     input: {
         type: 'object',
-        required: ['ids'],
+        required: ['id'],
         additionalProperties: false,
         properties: {
-            ids: {
+            id: {
                 type: 'string',
                 description:
                     'One or more block/document IDs, comma-separated (e.g. "20241016135347-zlrn2cz" or "id1,id2")'
@@ -94,20 +94,20 @@ export const tool: ToolSchema = {
         }
     },
     cli: {
-        primary: 'ids',
+        primary: 'id',
         examples: [
             { command: 'siyuan tool get-block-info 20241016135347-zlrn2cz' },
-            { command: 'siyuan tool get-block-info --ids "id1,id2"' }
+            { command: 'siyuan tool get-block-info --id "id1,id2"' }
         ]
     },
     async run(ctx, input) {
-        const { ids } = input as { ids: string };
+        const { id } = input as { id: string };
 
-        const idList = ids
+        const idList = id
             .split(',')
             .map((s) => s.trim())
             .filter(Boolean);
-        if (idList.length === 0) throw new Error('ids is required.');
+        if (idList.length === 0) throw new Error('id is required.');
 
         const escaped = idList.map((id) => `'${escapeSqliteLiteral(id)}'`).join(', ');
         const rows = await ctx.callEndpoint<BlockRow[]>('query.sql', {
