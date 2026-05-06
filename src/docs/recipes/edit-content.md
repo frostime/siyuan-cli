@@ -22,28 +22,70 @@ Use this when the user wants to update an existing document or block instead of 
 1. Confirm workspace resolution.
 2. Resolve the target to a stable id.
 3. Inspect metadata and content.
-4. Choose the write path.
-5. Apply the write.
+4. Choose the write path: single block → `updateBlock`; multiple blocks → `batchUpdateBlock`; whole-document plain-text replace with no child refs → `brute-edit`.
+5. Apply the write. For safe writes: dry-run first, then execute.
 6. Read back the result.
 
 # Commands
 
-## Replace existing block content
+## Replace single block content
 
 ```bash
 siyuan workspace which
 siyuan tool get-block-info <block-id>
 siyuan tool get-block-content <block-id> --showId true
 
-# inline via heredoc (no temp file)
+# heredoc (preferred for inline content)
 siyuan api block.updateBlock --id <block-id> --dataType markdown --data @stdin <<'EOF'
 Replacement markdown content here.
 EOF
 
-# or from file when content is long / reusable
+# or from file
 siyuan api block.updateBlock --id <block-id> --data @file:./content.md --dataType markdown
 
 siyuan tool get-block-content <block-id>
+```
+
+## Batch replace multiple blocks
+
+Use `batchUpdateBlock` for atomic multi-block edits — prefer `dataType: "markdown"`.
+
+```bash
+siyuan workspace which
+siyuan tool get-block-content <doc-id> --showId true
+
+# Prepare a JSON payload file
+cat > blocks.json <<'EOF'
+[
+  { "id": "<block-id-1>", "data": "New content 1", "dataType": "markdown" },
+  { "id": "<block-id-2>", "data": "New content 2", "dataType": "markdown" }
+]
+EOF
+
+# Dry-run first, then execute
+siyuan api block.batchUpdateBlock --blocks @file:./blocks.json --dry-run
+siyuan api block.batchUpdateBlock --blocks @file:./blocks.json --yes
+
+siyuan tool get-block-content <doc-id>
+```
+
+Caution: updating a document block (`type='d'`) with `batchUpdateBlock` replaces the document's entire child tree.
+
+## Full-document brute-edit
+
+Rewrites the whole document via search-and-replace. Child block IDs are regenerated — only safe when no child blocks hold custom attributes or inbound references.
+
+```bash
+siyuan workspace which
+siyuan api block.batchUpdateBlock --blocks @stdin --dry-run <<'EOF'
+[{"id":"<doc-id>","data":"# Title\n\nNew body...","dataType":"markdown"}]
+EOF
+
+# Or use the brute-edit tool for search-replace pairs
+siyuan tool brute-edit <doc-id> --replacements '[{"search":"old text","replace":"new text"}]' --dry-run
+siyuan tool brute-edit <doc-id> --replacements '[{"search":"old text","replace":"new text"}]' --yes
+
+siyuan tool get-block-content <doc-id>
 ```
 
 ## Append content with preview

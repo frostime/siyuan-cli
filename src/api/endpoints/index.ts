@@ -48,6 +48,7 @@ import { schema as blockAppendBlock } from './block/appendBlock.js';
 import { schema as blockPrependBlock } from './block/prependBlock.js';
 import { schema as blockInsertBlock } from './block/insertBlock.js';
 import { schema as blockUpdateBlock } from './block/updateBlock.js';
+import { schema as blockBatchUpdateBlock } from './block/batchUpdateBlock.js';
 import { schema as blockDeleteBlock } from './block/deleteBlock.js';
 import { schema as blockMoveBlock } from './block/moveBlock.js';
 import { schema as blockFoldBlock } from './block/foldBlock.js';
@@ -139,6 +140,7 @@ const schemas: EndpointSchema<any>[] = [
     blockPrependBlock,
     blockInsertBlock,
     blockUpdateBlock,
+    blockBatchUpdateBlock,
     blockDeleteBlock,
     blockMoveBlock,
     blockFoldBlock,
