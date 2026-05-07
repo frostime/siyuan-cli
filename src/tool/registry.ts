@@ -3,7 +3,7 @@ import { loadConfig, materializeWorkspace, resolveEffectiveWorkspace } from '../
 import { SiyuanClient } from '../shared/client.js';
 import { createPermissionEngine } from '../shared/permission.js';
 import { executeEndpoint } from '../api/guard.js';
-import { preparePrintedOutput } from '../shared/output.js';
+import { createJsonPrintExtra, preparePrintedOutput, type JsonPrintExtra } from '../shared/output.js';
 import type {
     GlobalArgs,
     ToolContext,
@@ -56,7 +56,8 @@ export const toolRegistry = new ToolRegistry();
 
 export async function createToolContext(
     args: GlobalArgs,
-    toolId?: string
+    toolId?: string,
+    jsonExtra?: JsonPrintExtra
 ): Promise<ToolContext> {
     const config = loadConfig(args.config);
     const workspace = resolveEffectiveWorkspace(config, {
@@ -91,6 +92,7 @@ export async function createToolContext(
             config,
             workspace,
             callerTool: toolId,
+            jsonExtra,
             dryRun: args.dryRun,
             yes: args.yes,
             debug: args.debug
@@ -123,21 +125,29 @@ export async function createToolContext(
     };
 }
 
-export function renderToolResult(result: ToolResult, args: GlobalArgs): void {
+export function renderToolResult(
+    result: ToolResult,
+    args: GlobalArgs,
+    jsonExtra = args.print === 'json' ? createJsonPrintExtra() : undefined
+): void {
     for (const warning of result.warnings ?? []) {
-        process.stderr.write(`[warn] ${warning}\n`);
+        if (jsonExtra) {
+            jsonExtra.warnings.push({ warning });
+        } else {
+            process.stderr.write(`[warn] ${warning}\n`);
+        }
     }
-    if (args.debug && result.meta) {
+    if (jsonExtra && result.meta) {
+        jsonExtra.meta = result.meta;
+    } else if (args.debug && result.meta) {
         process.stderr.write(JSON.stringify({ meta: result.meta }) + '\n');
     }
     const rendered = preparePrintedOutput({
         print: args.print,
         details: result.details ?? null,
-        compact: result.content
+        compact: result.content,
+        jsonExtra
     });
-    if (rendered.warning) {
-        process.stderr.write(JSON.stringify(rendered.warning) + '\n');
-    }
     process.stdout.write(rendered.stdout + '\n');
 }
 
@@ -163,7 +173,7 @@ export function buildToolHelp(tool: ToolSchema): string {
     lines.push('');
     lines.push('OUTPUT');
     lines.push('  default: --print compact → stdout prints content');
-    lines.push('  --print json: stdout prints details only as JSON');
+    lines.push('  --print json: stdout prints { ok, data, extra } envelope JSON');
     if (tool.cli?.examples?.length) {
         lines.push('');
         lines.push('EXAMPLES');

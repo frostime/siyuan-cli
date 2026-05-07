@@ -1,4 +1,5 @@
 import type { RegisteredEndpoint, RiskLabel } from '../shared/schema.js';
+import type { JsonPrintExtra } from '../shared/output.js';
 
 export type ApprovalStatus =
     | 'pending'
@@ -70,6 +71,7 @@ export interface ApprovalClientOptions {
     cwd?: string;
     autoOpen?: boolean;
     openBrowser?: (url: string) => void | Promise<void>;
+    jsonExtra?: JsonPrintExtra;
 }
 
 export interface RequestApprovalInput {

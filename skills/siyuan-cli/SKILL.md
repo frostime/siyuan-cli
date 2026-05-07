@@ -116,7 +116,7 @@ When shortcuts are insufficient, run `siyuan doc list`, then read the relevant d
 ## Gotchas
 
 - Windows Git Bash / MSYS may rewrite leading `/` virtual paths. Use `MSYS_NO_PATHCONV=1 ...` or `//path` when needed.
-- stdout is result data; stderr carries JSON errors/warnings.
+- stdout is result data; stderr carries JSON errors/warnings. In `--print json` mode, approval-pending and auto-open diagnostics stay on stderr so stdout remains a single JSON envelope.
 - Exit codes: 0 OK, 1 general, 2 config, 3 network, 4 auth, 5 permission.
 - Permission/approval behavior is workspace/project config dependent. Inspect with `siyuan workspace which`.
 

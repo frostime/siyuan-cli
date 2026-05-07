@@ -315,7 +315,7 @@ export function buildEndpointHelp(endpoint: {
 
     lines.push('OUTPUT');
     lines.push('  default: --print compact → stdout prints endpoint compact text or JSON fallback');
-    lines.push('  --print json: stdout prints raw result JSON');
+    lines.push('  --print json: stdout prints { ok, data, extra } envelope JSON');
     lines.push('');
 
     if (schema.cli?.examples?.length) {

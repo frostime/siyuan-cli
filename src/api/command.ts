@@ -11,7 +11,7 @@ import { createPermissionEngine } from '../shared/permission.js';
 import { executeEndpoint } from './guard.js';
 import { parsePayload } from '../shared/argv.js';
 import { normalizePayloadPaths } from './msys-path.js';
-import { applyFormatStrategy, preparePrintedOutput } from '../shared/output.js';
+import { applyFormatStrategy, createJsonPrintExtra, preparePrintedOutput } from '../shared/output.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
 import { getExtensionDir } from '../workspace/paths.js';
 import {
@@ -210,17 +210,6 @@ async function callEndpoint(
         args: rawArgs,
         positional
     });
-    const config = loadConfig(rawArgs['config'] as string | undefined);
-
-    const workspace = resolveEffectiveWorkspace(config, {
-        workspace: rawArgs['workspace'] as string | undefined,
-        baseUrl: rawArgs['baseUrl'] as string | undefined,
-        token: rawArgs['token'] as string | undefined
-    });
-    const materialized = await materializeWorkspace(workspace);
-    const client = new SiyuanClient(materialized);
-    const engine = createPermissionEngine(config, workspace, client);
-
     const args = {
         workspace: rawArgs['workspace'] as string | undefined,
         baseUrl: rawArgs['baseUrl'] as string | undefined,
@@ -231,6 +220,18 @@ async function callEndpoint(
         debug: rawArgs['debug'] as boolean | undefined,
         print: (rawArgs['print'] as GlobalArgs['print'] | undefined) ?? 'compact'
     } satisfies GlobalArgs;
+    const jsonExtra = args.print === 'json' ? createJsonPrintExtra() : undefined;
+
+    const config = loadConfig(args.config);
+
+    const workspace = resolveEffectiveWorkspace(config, {
+        workspace: rawArgs['workspace'] as string | undefined,
+        baseUrl: rawArgs['baseUrl'] as string | undefined,
+        token: rawArgs['token'] as string | undefined
+    });
+    const materialized = await materializeWorkspace(workspace);
+    const client = new SiyuanClient(materialized);
+    const engine = createPermissionEngine(config, workspace, client);
 
     normalizePayloadPaths(payload as Record<string, unknown>, entry.schema.guard?.payloadTargets);
 
@@ -241,6 +242,7 @@ async function callEndpoint(
         engine,
         config,
         workspace,
+        jsonExtra,
         dryRun: args.dryRun,
         yes: args.yes,
         debug: args.debug
@@ -256,11 +258,8 @@ async function callEndpoint(
             : entry.schema.formatStrategy
                 ? () => applyFormatStrategy(entry.schema.formatStrategy!, result)
                 : undefined,
-        warning: { endpoint: entry.id }
+        jsonExtra
     });
-    if (rendered.warning) {
-        process.stderr.write(JSON.stringify(rendered.warning) + '\n');
-    }
     process.stdout.write(rendered.stdout + '\n');
 }
 

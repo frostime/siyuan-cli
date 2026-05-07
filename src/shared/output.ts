@@ -1,26 +1,53 @@
 import type { FormatStrategy, GlobalArgs } from './schema.js';
 
+export interface JsonPrintExtra {
+    warnings: unknown[];
+    notices: unknown[];
+    approvals: unknown[];
+    debug: unknown[];
+    meta?: Record<string, unknown>;
+}
+
+export interface JsonPrintEnvelope {
+    ok: true;
+    data: unknown;
+    extra: JsonPrintExtra;
+}
+
 export interface PreparedPrintOutput {
     stdout: string;
-    warning?: Record<string, unknown>;
 }
 
 export interface PreparePrintOptions {
     print?: GlobalArgs['print'];
     details: unknown;
     compact?: string | (() => string);
-    warning?: Record<string, unknown>;
+    jsonExtra?: JsonPrintExtra;
 }
 
 export function jsonStringify(value: unknown): string {
     return JSON.stringify(value ?? null, null, 2);
 }
 
+export function createJsonPrintExtra(): JsonPrintExtra {
+    return {
+        warnings: [],
+        notices: [],
+        approvals: [],
+        debug: []
+    };
+}
+
 export function preparePrintedOutput(
     opts: PreparePrintOptions
 ): PreparedPrintOutput {
     if (opts.print === 'json') {
-        return { stdout: jsonStringify(opts.details) };
+        const envelope: JsonPrintEnvelope = {
+            ok: true,
+            data: opts.details ?? null,
+            extra: opts.jsonExtra ?? createJsonPrintExtra()
+        };
+        return { stdout: jsonStringify(envelope) };
     }
     if (opts.compact === undefined) {
         return { stdout: jsonStringify(opts.details) };

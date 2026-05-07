@@ -100,7 +100,7 @@ By default, stdout is a human-readable `content` string. Structured data is avai
 ```bash
 siyuan tool <id> ...                  # compact content (human-readable)
 siyuan tool <id> ... --print compact  # compact content (explicit)
-siyuan tool <id> ... --print json     # details JSON (machine-readable)
+siyuan tool <id> ... --print json     # envelope JSON (machine-readable)
 ```
 
 ## Global flags
@@ -123,7 +123,7 @@ APIs and tools additionally accept:
 
 | Flag | Meaning |
 |------|---------|
-| `--print compact\|json` | Choose output mode; APIs use compact formatter text or JSON fallback, tools use compact content or details JSON |
+| `--print compact\|json` | Choose output mode; APIs use compact formatter text or envelope JSON, tools use compact content or envelope JSON |
 
 ## Input sources
 

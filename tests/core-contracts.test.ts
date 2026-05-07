@@ -9,6 +9,7 @@ import {
     cascadePermission
 } from '../src/shared/permission.ts';
 import { applyPayloadGuard } from '../src/api/guard.ts';
+import { createJsonPrintExtra, preparePrintedOutput } from '../src/shared/output.ts';
 import type { AppConfig, PermissionConfig } from '../src/workspace/config.ts';
 import {
     evaluatePointerPath,
@@ -477,6 +478,24 @@ test('array payload targets reject on any denied item', async () => {
         )
     );
     assert.deepEqual(seen, ['ok', 'bad']);
+});
+
+test('preparePrintedOutput wraps json mode into a parseable envelope', () => {
+    const extra = createJsonPrintExtra();
+    extra.warnings.push({ warning: 'TEST_WARNING' });
+    const rendered = preparePrintedOutput({
+        print: 'json',
+        details: { answer: 42 },
+        jsonExtra: extra
+    });
+    const parsed = JSON.parse(rendered.stdout) as {
+        ok: boolean;
+        data: { answer: number };
+        extra: { warnings: unknown[] };
+    };
+    assert.equal(parsed.ok, true);
+    assert.deepEqual(parsed.data, { answer: 42 });
+    assert.equal(parsed.extra.warnings.length, 1);
 });
 
 test('workspace deny rejects workspace-path refs', async () => {
