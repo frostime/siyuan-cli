@@ -2,6 +2,7 @@ import { defineCommand } from 'citty';
 import { colors } from 'consola/utils';
 import { join } from 'pathe';
 import { parsePayload } from '../shared/argv.js';
+import { createJsonPrintExtra } from '../shared/output.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
 import { getExtensionDir } from '../workspace/paths.js';
 import {
@@ -148,12 +149,13 @@ async function runTool(
         args,
         positional
     });
-    const ctx = await createToolContext(args as any, resolved.tool.id);
+    const jsonExtra = args.print === 'json' ? createJsonPrintExtra() : undefined;
+    const ctx = await createToolContext(args as any, resolved.tool.id, jsonExtra);
     const result = await resolved.tool.run(ctx, input);
     if (resolved.source) {
         writeSchemaCache(resolved.source, resolved.tool);
     }
-    renderToolResult(result, args as any);
+    renderToolResult(result, args as any, jsonExtra);
 }
 
 // ————— SubCommand builders —————

@@ -20,6 +20,7 @@ import {
 } from '../shared/permission.js';
 import type { SiyuanClient } from '../shared/client.js';
 import { resolveEffectiveBehavior, type AppConfig, type ResolvedWorkspace } from '../workspace/config.js';
+import type { JsonPrintExtra } from '../shared/output.js';
 
 const RISK_TRIGGERS_IMPLICIT_WARNING = new Set<string>([
     'elevated',
@@ -27,22 +28,45 @@ const RISK_TRIGGERS_IMPLICIT_WARNING = new Set<string>([
     'critical'
 ]);
 
+function emitWarning(jsonExtra: JsonPrintExtra | undefined, warning: Record<string, unknown>): void {
+    if (jsonExtra) {
+        jsonExtra.warnings.push(warning);
+        return;
+    }
+    process.stderr.write(JSON.stringify(warning) + '\n');
+}
+
+function emitNotice(jsonExtra: JsonPrintExtra | undefined, notice: Record<string, unknown>): void {
+    if (jsonExtra) {
+        jsonExtra.notices.push(notice);
+        return;
+    }
+    process.stderr.write(JSON.stringify(notice) + '\n');
+}
+
+function emitDebug(jsonExtra: JsonPrintExtra | undefined, debug: Record<string, unknown>): void {
+    if (jsonExtra) {
+        jsonExtra.debug.push(debug);
+        return;
+    }
+    process.stderr.write(JSON.stringify({ debug }) + '\n');
+}
+
 function maybeWarnImplicitWorkspace(
     entry: RegisteredEndpoint,
-    workspace: ResolvedWorkspace | undefined
+    workspace: ResolvedWorkspace | undefined,
+    jsonExtra?: JsonPrintExtra
 ): void {
     if (!workspace) return;
     if (workspace.source !== 'global-current') return;
     if (!RISK_TRIGGERS_IMPLICIT_WARNING.has(entry.meta.risk)) return;
-    process.stderr.write(
-        JSON.stringify({
-            warning: 'IMPLICIT_WORKSPACE',
-            endpoint: entry.id,
-            workspace: workspace.name,
-            risk: entry.meta.risk,
-            hint: 'Resolved from global config.current. Pass --workspace, set $SIYUAN_CLI_WORKSPACE, or add .siyuan-cli.yaml to anchor the target.'
-        }) + '\n'
-    );
+    emitWarning(jsonExtra, {
+        warning: 'IMPLICIT_WORKSPACE',
+        endpoint: entry.id,
+        workspace: workspace.name,
+        risk: entry.meta.risk,
+        hint: 'Resolved from global config.current. Pass --workspace, set $SIYUAN_CLI_WORKSPACE, or add .siyuan-cli.yaml to anchor the target.'
+    });
 }
 
 export async function applyPayloadGuard(
@@ -87,7 +111,8 @@ export async function applyResponseGuard(
     schema: EndpointSchema,
     response: unknown,
     engine: PermissionEngineLike,
-    caller?: CallerContext
+    caller?: CallerContext,
+    jsonExtra?: JsonPrintExtra
 ): Promise<unknown> {
     const guard = schema.guard;
     if (!guard) return response;
@@ -120,13 +145,11 @@ export async function applyResponseGuard(
             const summary = Object.entries(reasons)
                 .map(([r, n]) => `${n}x: ${r}`)
                 .join('; ');
-            process.stderr.write(
-                JSON.stringify({
-                    warning: 'CONTENT_FILTERED',
-                    removed,
-                    reasons: summary
-                }) + '\n'
-            );
+            emitWarning(jsonExtra, {
+                warning: 'CONTENT_FILTERED',
+                removed,
+                reasons: summary
+            });
             return runPointerFilterTerminal(response, itemsAt, () => kept);
         }
     }
@@ -144,19 +167,20 @@ export interface ExecuteOptions {
     workspace?: ResolvedWorkspace;
     /** When called from inside a tool, carries the tool id for permission context. */
     callerTool?: string;
+    jsonExtra?: JsonPrintExtra;
     dryRun?: boolean;
     yes?: boolean;
     debug?: boolean;
 }
 
-function debugPreview(schema: EndpointSchema, payload: unknown): void {
+function debugPreview(schema: EndpointSchema, payload: unknown, jsonExtra?: JsonPrintExtra): void {
     const body = JSON.stringify(payload);
     const curl = `curl -X POST <baseUrl>${schema.endpoint} -H "Content-Type: application/json" --data ${JSON.stringify(body)}`;
-    process.stderr.write(
-        JSON.stringify({
-            debug: { endpoint: schema.endpoint, payload, curl }
-        }) + '\n'
-    );
+    emitDebug(jsonExtra, {
+        endpoint: schema.endpoint,
+        payload,
+        curl
+    });
 }
 
 function isWriteLike(entry: RegisteredEndpoint): boolean {
@@ -175,6 +199,7 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
         config,
         workspace,
         callerTool,
+        jsonExtra,
         dryRun,
         yes,
         debug
@@ -187,7 +212,7 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
     };
     const action: 'read' | 'write' = isWriteLike(entry) ? 'write' : 'read';
 
-    maybeWarnImplicitWorkspace(entry, workspace);
+    maybeWarnImplicitWorkspace(entry, workspace, jsonExtra);
 
     // Phase 1: caller-level gate
     engine.checkEndpoint(id);
@@ -195,7 +220,7 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
     // Phase 2: resource-level gate (payload targets)
     const { needsApproval: phase2NeedsApproval } = await applyPayloadGuard(schema, payload, engine, action, caller);
 
-    if (debug) debugPreview(schema, payload);
+    if (debug) debugPreview(schema, payload, jsonExtra);
 
     // Approval gate: three sources can trigger approval:
     //   1. Pure-caller rule returns 'approval' (engine.evaluate with caller-only context)
@@ -237,13 +262,11 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
                       : config?.defaults?.behavior?.allowYes !== undefined
                         ? 'defaults'
                         : 'built-in';
-            process.stderr.write(
-                JSON.stringify({
-                    notice: 'YES_BYPASSED',
-                    reason: 'behavior.allowYes is false, --yes ignored',
-                    source
-                }) + '\n'
-            );
+            emitNotice(jsonExtra, {
+                notice: 'YES_BYPASSED',
+                reason: 'behavior.allowYes is false, --yes ignored',
+                source
+            });
         }
         if (!workspace) {
             throw new ApprovalUnavailableError(id);
@@ -258,7 +281,7 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
                 ...(callerTool ? { callerTool } : {}),
                 timeoutSec
             }),
-            { autoOpen }
+            { autoOpen, jsonExtra }
         );
     }
 
@@ -285,5 +308,5 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
         response = await client.call(schema.endpoint, payload);
     }
 
-    return await applyResponseGuard(schema, response, engine, caller);
+    return await applyResponseGuard(schema, response, engine, caller, jsonExtra);
 }

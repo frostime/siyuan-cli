@@ -163,6 +163,82 @@ test('requestAndWait auto-opens the created approval URL', async () => {
     });
 });
 
+test('requestAndWait collects pending approval event in json extra', async () => {
+    await withTempConfigDir(async () => {
+        const paths = await import('../src/approval/broker-paths.ts');
+        const client = await import('../src/approval/client.ts');
+        const output = await import('../src/shared/output.ts');
+
+        paths.ensureApprovalStateDirs();
+        const server = createServer((req, res) => {
+            if (req.url === '/api/approval/status') {
+                res.writeHead(200, { 'content-type': 'application/json' });
+                res.end(JSON.stringify({ running: true }));
+                return;
+            }
+            if (req.url === '/api/approval/requests' && req.method === 'POST') {
+                res.writeHead(200, { 'content-type': 'application/json' });
+                res.end(JSON.stringify({
+                    requestId: 'apr_json',
+                    status: 'pending',
+                    url: 'http://127.0.0.1:7788/approval?token=secret-json',
+                    expiresAt: '2026-01-01T00:00:00.000Z'
+                }));
+                return;
+            }
+            if (req.url?.startsWith('/api/approval/requests/apr_json/wait')) {
+                res.writeHead(200, { 'content-type': 'application/json' });
+                res.end(JSON.stringify({
+                    status: 'approved',
+                    actor: 'human-cli',
+                    decidedAt: '2026-01-01T00:00:00.000Z'
+                }));
+                return;
+            }
+            res.writeHead(404, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({ error: 'NOT_FOUND', url: req.url }));
+        });
+
+        await new Promise<void>((resolve) => {
+            server.listen(0, '127.0.0.1', () => resolve());
+        });
+        const address = server.address();
+        assert.ok(address && typeof address !== 'string');
+        paths.writeBrokerState(process.pid, address.port, 'secret');
+        const jsonExtra = output.createJsonPrintExtra();
+
+        try {
+            const decision = await client.requestAndWait(
+                {
+                    workspaceName: 'main',
+                    endpointId: 'system.currentTime',
+                    endpointPath: '/api/system/currentTime',
+                    risk: 'safe',
+                    summary: 'Approve current time',
+                    payloadPreview: {},
+                    payloadDigest: 'sha256:x',
+                    resourceSummary: [],
+                    timeoutSec: 60
+                },
+                { autoOpen: false, jsonExtra }
+            );
+            assert.equal(decision.status, 'approved');
+            assert.deepEqual(jsonExtra.approvals, [{
+                event: 'APPROVAL_PENDING',
+                requestId: 'apr_json',
+                url: 'http://127.0.0.1:7788/approval?token=secret-json',
+                summary: 'Approve current time',
+                expiresAt: '2026-01-01T00:00:00.000Z'
+            }]);
+        } finally {
+            await new Promise<void>((resolve, reject) => {
+                server.close((error) => (error ? reject(error) : resolve()));
+            });
+            paths.cleanupApprovalBrokerState();
+        }
+    });
+});
+
 test('rejectApproval passes optional reason through to broker', async () => {
     await withTempConfigDir(async () => {
         const paths = await import('../src/approval/broker-paths.ts');

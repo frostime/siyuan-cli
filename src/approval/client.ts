@@ -31,19 +31,20 @@ import type {
 
 // ── Stdout/stderr helpers ────────────────────────────────────────────────────
 
-function writePendingEvent(event: ApprovalPendingEvent): void {
+function writePendingEvent(event: ApprovalPendingEvent, opts?: ApprovalClientOptions): void {
+    opts?.jsonExtra?.approvals.push(event);
     process.stderr.write(JSON.stringify(event) + '\n');
 }
 
-function writeAutoOpenWarning(url: string, details?: unknown): void {
-    process.stderr.write(
-        JSON.stringify({
-            warning: 'APPROVAL_AUTO_OPEN_FAILED',
-            url,
-            hint: 'Open the approval URL manually in a browser.',
-            ...(details !== undefined ? { details } : {})
-        }) + '\n'
-    );
+function writeAutoOpenWarning(url: string, opts?: ApprovalClientOptions, details?: unknown): void {
+    const warning = {
+        warning: 'APPROVAL_AUTO_OPEN_FAILED',
+        url,
+        hint: 'Open the approval URL manually in a browser.',
+        ...(details !== undefined ? { details } : {})
+    };
+    opts?.jsonExtra?.warnings.push(warning);
+    process.stderr.write(JSON.stringify(warning) + '\n');
 }
 
 // ── HTTP helpers ─────────────────────────────────────────────────────────────
@@ -146,11 +147,12 @@ export async function requestAndWait(
                 ? (await opts.openBrowser(created.url), true)
                 : await openApprovalBrowser(created.url);
             if (!opened) {
-                writeAutoOpenWarning(created.url);
+                writeAutoOpenWarning(created.url, opts);
             }
         } catch (error) {
             writeAutoOpenWarning(
                 created.url,
+                opts,
                 error instanceof Error ? { message: error.message } : { error: String(error) }
             );
         }
@@ -161,7 +163,7 @@ export async function requestAndWait(
         url: created.url,
         summary: request.summary,
         expiresAt: created.expiresAt
-    });
+    }, opts);
     const decision = await waitForDecisionWithResolvedBroker(
         broker,
         created.requestId,
