@@ -267,6 +267,8 @@ The following commands cover common block operations. Always inspect with a read
 | Move block | `siyuan api block.moveBlock --id <id> --previousId <target-id>` |
 | Transfer block ref | `siyuan api block.transferBlockRef --id <id> --fromID <source> --toID <target>` |
 
+> ⚠️ **`transferBlockRef` warning**: this operation rewrites all references from one block to another and triggers a full kernel reindex cycle. Avoid using it as a step inside an automated operation chain. Only use it as a deliberate, standalone action.
+
 #### Attributes
 
 | Task | Command |

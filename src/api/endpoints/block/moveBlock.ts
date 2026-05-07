@@ -24,8 +24,8 @@ export const schema: EndpointSchema = {
             previousID: {
                 type: 'string',
                 description:
-                    'Previous block ID (empty if moving to first position)',
-                pattern: '^\\d{14}-[0-9a-z]{7}$'
+                    'Previous block ID; empty string moves block to first child of parentID',
+                pattern: '^(\\d{14}-[0-9a-z]{7})?$'
             },
             parentID: {
                 type: 'string',

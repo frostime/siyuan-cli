@@ -15,6 +15,8 @@ Use this recipe for:
 - updating one known block
 - updating multiple known blocks atomically
 - controlled whole-document search-and-replace
+- moving a block to a new position within or across documents
+- moving a document to a different parent in the document tree
 
 This recipe is not a block-type handbook. For the SiYuan data model, read `siyuan-guide/siyuan-block.md`. For target discovery, read `recipes/find-target.md` first.
 
@@ -40,6 +42,8 @@ Use `--showId true` when you need to edit a specific child block.
 | Insert before/after a known block | `siyuan api block.insertBlock --nextID/--previousID` | Use `--parentID` when the parent is known |
 | Append/prepend under a parent block | `siyuan api block.appendBlock` / `block.prependBlock` | Creates new child blocks |
 | Whole-document search-and-replace | `siyuan tool brute-edit` | High-risk path; use only when ID churn is acceptable |
+| Move a block to a new position | `siyuan api block.moveBlock` | Block id is preserved; `--previousID` anchors position, `--parentID` is the container |
+| Move a document to another parent | `siyuan api filetree.moveDocsByID` | hpath changes; `id` and content are preserved |
 | Delete a document | `siyuan api filetree.removeDocByID` | Prefer over deleting a document block |
 
 # Side effects
@@ -51,6 +55,7 @@ Use `--showId true` when you need to edit a specific child block.
 | `block.updateBlock` / `batchUpdateBlock` on a document block (`type='d'`) | Child tree is replaced | Existing child ids, refs, and attributes may be invalidated |
 | `insertBlock` / `appendBlock` / `prependBlock` | Existing ids remain; new content gets new ids | Insert position must be correct |
 | `moveBlock` | Moved block id remains | Document structure changes |
+| `filetree.moveDocsByID` | All block ids remain | `hpath` changes; any hardcoded hpath references become stale |
 | `brute-edit` | Child block ids are regenerated | Unsafe for documents whose child blocks are referenced or attributed |
 
 # Commands
@@ -163,6 +168,39 @@ siyuan tool get-block-content <doc-id> --showId true
 ```
 
 Only use this when regenerating child block ids is acceptable.
+
+## Move a block
+
+```bash
+siyuan workspace which
+siyuan tool get-block-info <block-id>   # confirm target block and its current parent
+
+# Move to after a known sibling (most common)
+siyuan api block.moveBlock --id <block-id> --previousID <sibling-id> --parentID <parent-id>
+
+# Move to first child of a parent (previousID must be empty string)
+siyuan api block.moveBlock --id <block-id> --previousID "" --parentID <parent-id>
+
+siyuan tool get-block-info <block-id>   # verify new parent
+```
+
+`--previousID` anchors the position (the block that will precede the moved block); `--parentID` is the container. Both are required by the CLI. To move to the first child position, pass `--previousID ""`.
+
+## Move a document
+
+```bash
+siyuan workspace which
+siyuan tool get-block-info <doc-id>   # confirm current location
+
+# Move one or more documents under a new parent document or notebook root
+siyuan api filetree.moveDocsByID \
+  --fromIDs '["<doc-id>"]' \
+  --toID <target-parent-doc-or-notebook-id>
+
+siyuan tool resolve-path --id <doc-id>   # verify new hpath
+```
+
+`--toID` accepts either a document id (move inside that document) or a notebook id (move to notebook root). The block id and all content are preserved; only `hpath` and `path` change.
 
 # Verification
 

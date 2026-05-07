@@ -71,6 +71,8 @@ Run `siyuan workspace which` before writes.
    - multiple blocks → `siyuan api block.batchUpdateBlock --blocks @file:./blocks.json`
    - insert before/after → `siyuan api block.insertBlock --parentID <parent> --nextID <id>` or `--previousID <id>`
    - whole-doc search/replace → `siyuan tool brute-edit <doc-id> --replacements ... --dry-run`
+   - move block → `siyuan api block.moveBlock --id <id> --previousID <sibling-id> --parentID <parent-id>`
+   - move document → `siyuan api filetree.moveDocsByID --fromIDs '["<id>"]' --toID <target-parent-id>`
    - delete document → `siyuan api filetree.removeDocByID --id <doc-id>`
 5. Use `--dry-run` when supported; use `--yes` only when intended and allowed.
 6. Verify with `get-block-content ... --showId true`.
