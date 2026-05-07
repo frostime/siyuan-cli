@@ -7,23 +7,18 @@ metadata:
 
 # SiYuan CLI
 
-Agent-first CLI for SiYuan Note.
+Agent-first CLI for SiYuan Note. This SKILL is the entry protocol; detailed guidance lives in built-in docs (`siyuan doc list/read`).
 
-## Bootstrap (MUST follow this order on first use)
+## Bootstrap
 
-1. **Verify CLI is installed.** If `siyuan` is not found:
-   `npm install -g @frostime/siyuan-cli`
-
-2. **Check version.** If `SKILL.metadata.version != siyuan --version`, re-install skill:
-   `siyuan skill install`
-
-3. **Discover CLI built-in docs root and command tree:**
+1. If `siyuan` is missing: `npm install -g @frostime/siyuan-cli`.
+2. If `<THIS_SKILL_FILE>.metadata.version != siyuan --version`: `siyuan skill install` for update + `siyuan skill read` read newer.
+3. Discover CLI + docs:
    ```bash
-   siyuan --help          # prints docs root path + full command tree
-   siyuan doc list        # lists built-in docs with real file paths
+   siyuan --help      # command tree + docs root
+   siyuan doc list    # docs with real file paths
    ```
-
-4. **Check workspace connectivity:**
+4. Confirm workspace before content work:
    ```bash
    siyuan workspace list
    siyuan workspace which
@@ -31,174 +26,102 @@ Agent-first CLI for SiYuan Note.
    If no workspace is configured, read `recipes/connect-workspace.md`.
 
 Resolve doc paths against the docs root disclosed by `siyuan --help`.
-Use `siyuan doc list` to get absolute paths on the current system.
 
-## Mode selection
+## Mode gate
 
-Choose the operating mode before choosing commands.
+**Fast thinking**: read/list/search, or create/append with an explicit target. Use direct commands, bound output, verify only what is needed.
 
-| Mode | Use when | Behavior |
-|---|---|---|
-| Fast thinking | Read/list/search, or create/append with an explicit target | Use the shortcut command, keep output bounded, verify only what the task needs |
-| Slow thinking | Editing existing content; delete/move/rename/reorder/overwrite; batch changes; ambiguous target | Inspect first, choose an edit strategy, preview/confirm when possible, read back after writing |
+**Slow thinking**: editing existing content; delete/move/rename/reorder/overwrite; batch updates; ambiguous target/effect. Inspect first, choose strategy, write, read back.
 
-## Fast thinking shortcuts
+Slow triggers:
+- user asks to modify existing content
+- target is title/keyword/hpath rather than stable id
+- operation affects multiple blocks or a document block (`type='d'`)
+- operation may regenerate ids (`brute-edit`, document-block update)
+- destructive write or approval-gated operation
 
-| Intent | Default command | Notes |
-|---|---|---|
-| Confirm target workspace | `siyuan workspace which` | MUST run before writes |
-| List notebooks | `siyuan api notebook.lsNotebooks` | Use notebook id for stable targeting |
-| Browse document tree | `siyuan tool list-doc-tree --entry <notebook-or-doc-id> --depth 2` | Increase depth only when needed |
-| List daily notes | `siyuan tool list-dailynote --atDate yyyy-MM-dd` | Add `--notebookId <id>` when known |
-| Locate document/block | `siyuan tool resolve-path --hpath "/path"` | If ambiguous, read `recipes/find-target.md` |
-| Read block metadata | `siyuan tool get-block-info <id>` | Shows type/path/breadcrumb/TOC |
-| Read content | `siyuan tool get-block-content <id>` | Add `--showId true` when preparing edits |
-| Read exact Kramdown | `siyuan api block.getBlockKramdown --id <id>` | Useful for one block or format-sensitive reads |
-| Keyword search | `siyuan api search.fullTextSearchBlock "keyword"` | Prefer this for user keyword search |
-| Create document | `siyuan api filetree.createDocWithMd --notebook <id> --path "/path/doc" --markdown @stdin` | Prefer heredoc/stdin for long markdown |
-| Import local Markdown | `siyuan tool push-md ./note.md --notebook <id> --toPath /parent` | Create mode is default; overwrite is slow path |
-| Append content | `siyuan tool append-content --targetId <id> --targetType document --markdown @stdin` | Also supports `block` and `dailynote` |
+## Fast commands
 
-### Common pattern: heredoc for long markdown
+Run `siyuan workspace which` before writes.
 
-```bash
-# Create
-siyuan api filetree.createDocWithMd \
-  --notebook <id> --path "/path/doc" --markdown @stdin <<'EOF'
-# Title
-...
-EOF
+- notebooks: `siyuan api notebook.lsNotebooks`
+- tree: `siyuan tool list-doc-tree --entry <notebook-or-doc-id> --depth 2`
+- daily notes: `siyuan tool list-dailynote --atDate yyyy-MM-dd [--notebookId <id>]`
+- resolve hpath/id: `siyuan tool resolve-path --hpath "/path"` / `--id <id>`
+- block info: `siyuan tool get-block-info <id>`
+- content: `siyuan tool get-block-content <id> [--showId true] [--slice "0:30"]`
+- exact block source: `siyuan api block.getBlockKramdown --id <id>`
+- keyword search: `siyuan api search.fullTextSearchBlock "keyword"`
+- create doc: `siyuan api filetree.createDocWithMd --notebook <id> --path "/path/doc" --markdown @stdin`
+- import md: `siyuan tool push-md ./note.md --notebook <id> --toPath /parent`
+- append: `siyuan tool append-content --targetId <id> --targetType document --markdown @stdin`
 
-# Append
-siyuan tool append-content \
-  --targetId <id> --targetType document --markdown @stdin <<'EOF'
-## New section
+## Safe write protocol
 
-Paragraph content here.
-EOF
-```
-
-## Slow thinking protocol
-
-Use this for editing existing state or when the target/effect is unclear.
-
-Use slow thinking when the user asks to modify existing content, gives only a title/keyword for an edit target, or the operation may affect multiple blocks.
-
-1. **Classify effect**: update existing, delete, move, rename, reorder, overwrite, or batch.
-2. **Stabilize target**: identify workspace, notebook, document id, block id, and whether the target is a document block (`type='d'`).
-3. **Inspect before writing**:
+1. `siyuan workspace which`
+2. Stabilize target: workspace, notebook id, document id, block id; use `recipes/find-target.md` when unclear.
+3. Inspect:
    ```bash
-   siyuan workspace which
    siyuan tool get-block-info <id>
    siyuan tool get-block-content <id> --showId true
    ```
-4. **Choose write path**:
-   - Whole-document text replacement with safety checks → `siyuan tool brute-edit ... --dry-run`
-   - Single block update → `siyuan api block.updateBlock --id <id> --dataType markdown --data @stdin`
-   - Multiple block updates → `siyuan api block.batchUpdateBlock --blocks @file:./blocks.json`
-   - Insert/append/prepend without changing existing blocks → `append-content` or `block.appendBlock` / `block.insertBlock`
-   - Delete a document → `siyuan api filetree.removeDocByID --id <id>` (prefer this over `block.deleteBlock`; the latter may not fully remove document trees)
-5. **Verify**: read back the changed block/document and check no unexpected sibling content changed.
+4. Choose write path:
+   - append only → `siyuan tool append-content ... --markdown @stdin`
+   - one block → `siyuan api block.updateBlock --id <id> --dataType markdown --data @stdin`
+   - multiple blocks → `siyuan api block.batchUpdateBlock --blocks @file:./blocks.json`
+   - insert before/after → `siyuan api block.insertBlock --parentID <parent> --nextID <id>` or `--previousID <id>`
+   - whole-doc search/replace → `siyuan tool brute-edit <doc-id> --replacements ... --dry-run`
+   - delete document → `siyuan api filetree.removeDocByID --id <doc-id>`
+5. Use `--dry-run` when supported; use `--yes` only when intended and allowed.
+6. Verify with `get-block-content ... --showId true`.
 
-### Batch update rule
+Rules:
+- `dataType: "markdown"` by default; use `dom` only for DOM-level edits.
+- Updating a document block replaces its child tree; treat as high risk.
+- `brute-edit` regenerates child block ids; use only when child refs/attributes are not important.
+- Prefer `removeDocByID` over `block.deleteBlock` for deleting documents.
 
-Use `block.batchUpdateBlock` for multi-block edits. Default every item to `"dataType": "markdown"`; use `"dom"` only when DOM-level editing is explicitly required.
+## Long input pattern
 
-```json
-[
-  { "id": "20230315180000-abcdefg", "data": "New markdown", "dataType": "markdown" },
-  { "id": "20230315180100-hijklmn", "data": "Another block", "dataType": "markdown" }
-]
-```
+Use `@stdin` or `@file:` for markdown, SQL, JSON, and templates.
 
 ```bash
-siyuan api block.batchUpdateBlock --blocks @file:./blocks.json
+siyuan api block.updateBlock --id <id> --dataType markdown --data @stdin <<'EOF'
+Replacement markdown
+EOF
 ```
 
-Caution: when updating a document block (`type='d'` / `NodeDocument`), this API deletes the document's existing child blocks and appends the new content. Treat document-block updates as slow path and verify references/attributes before proceeding.
+`@stdin` is single-use per invocation. Use `@file:` when multiple fields need long input.
 
-## Builtin Document Reading
+## Docs routing
 
-When the fast/slow shortcuts are insufficient, run `siyuan doc list` to see the current doc inventory.
-Key docs by topic area:
-- **Read / find / edit**: `recipes/read-content.md`, `recipes/find-target.md`, `recipes/edit-content.md`
-- **Domain knowledge**: `siyuan-guide/siyuan-block.md`, `siyuan-guide/document-tree-and-paths.md`, `siyuan-guide/sql-query-guide.md`
-- **Daily notes**: `siyuan-guide/dailynote-model.md`
-- **Configuration**: `cli-usage/workspace-config.md`, `cli-usage/permission.md`
-- **CLI details**: `cli-usage/cli-overview.md`
-- **Extension authoring**: `cli-usage/extension.md`
+When shortcuts are insufficient, run `siyuan doc list`, then read the relevant doc:
 
-```
-<siyuan-cli-doc-dir>/
-├── cli-usage/
-│   ├── cli-overview.md
-│   ├── extension.md
-│   ├── permission.md
-│   └── workspace-config.md
-├── recipes/
-│   ├── connect-workspace.md
-│   ├── edit-content.md
-│   ├── find-target.md
-│   └── read-content.md
-├── siyuan-guide/
-│   ├── dailynote-model.md
-│   ├── document-tree-and-paths.md
-│   ├── siyuan-block.md
-│   └── sql-query-guide.md
-└── README.md
-```
+- find/read/edit: `recipes/find-target.md`, `recipes/read-content.md`, `recipes/edit-content.md`
+- block/path/sql/daily model: `siyuan-guide/siyuan-block.md`, `document-tree-and-paths.md`, `sql-query-guide.md`, `dailynote-model.md`
+- CLI/config/permission/extension: `cli-usage/cli-overview.md`, `workspace-config.md`, `permission.md`, `extension.md`
 
+## Domain rules
 
-## Domain cheat sheet
-
-High-frequency knowledge that docs cover in depth — inlined here to reduce round-trips.
-
-**Block model**:
-- Block is the primary data entity; a document is a container block (`type='d'`).
-- `id` = stable primary key; `parent_id` = direct parent; `root_id` = owning document.
-- `box` = notebook id; `path` = id-based doc path (stable); `hpath` = human-readable doc path (unstable, changes on rename).
-- `path` and `hpath` on non-document blocks describe the containing document, not the block itself.
-- `content` = plain text for search; `markdown` / Kramdown = source representation.
-- Block reference: `((<BlockId> "anchor text"))`; block link: `[text](siyuan://blocks/<BlockId>)`.
-- Custom attributes use `custom-` prefix (e.g. `custom-dailynote-20240101`).
-
-**Path semantics**:
-- Stable addressing priority: `id` > `root_id` > `path`; avoid relying on `hpath` as a key.
-- `parent_id` answers block hierarchy; `root_id` answers document membership; `path`/`hpath` answer document location.
-
-**SQL**:
-- Tables: `blocks`, `refs`, `attributes`, `assets`, `spans`.
-- Use SQL for scoped inspection, metadata joins, and cases no built-in tool covers.
-- Always `LIMIT`; narrow scope with `root_id`, `box`, `type` before fuzzy `LIKE`.
-- Text search → `content`; format preservation → `markdown`; tree structure → `parent_id`; document scope → `root_id`.
+- Block is the primary entity; document = container block (`type='d'`).
+- `id` is stable. Prefer it for writes. `hpath` is human-readable and rename-sensitive.
+- `parent_id` = block hierarchy; `root_id` = owning document; `box` = notebook id.
+- Non-document `path`/`hpath` describe the containing document.
+- `content` = plain text for search; `markdown`/Kramdown = source representation.
+- SQL is read-only for agents: always `LIMIT`, narrow with `box`, `root_id`, `type` before fuzzy `LIKE`.
+- Block ref syntax: `((<BlockId> "anchor"))`. Custom attributes use `custom-` prefix.
 
 ## Gotchas
 
-- **MSYS / Git Bash path rewrite**: leading `/` in arguments gets rewritten. Prefer `MSYS_NO_PATHCONV=1 siyuan ...`; `//path` is a fallback.
-- **`@stdin` is single-use**: one `@stdin` per invocation. Use `@file:` when multiple fields need long input.
-- **Shell heredoc for inline SQL/markdown**:
-  ```bash
-  siyuan api query.sql --stmt @stdin <<'EOF'
-  SELECT id, content FROM blocks WHERE ... LIMIT 20
-  EOF
-  ```
-- **Write safety**: `--dry-run` to preview when supported; `--yes` to bypass approval when allowed. Always `siyuan workspace which` before writes.
-- **Error handling**: stderr = JSON, stdout = clean data. Exit codes: 0=OK, 1=general, 2=config, 3=network, 4=auth, 5=permission.
+- Windows Git Bash / MSYS may rewrite leading `/` virtual paths. Use `MSYS_NO_PATHCONV=1 ...` or `//path` when needed.
+- stdout is result data; stderr carries JSON errors/warnings.
+- Exit codes: 0 OK, 1 general, 2 config, 3 network, 4 auth, 5 permission.
+- Permission/approval behavior is workspace/project config dependent. Inspect with `siyuan workspace which`.
 
-## Foundation note
+## Internals
 
-This SKILL covers siyuan-cli usage only. It does not cover specific workflows built on it.
-For task-specific needs, create separate SKILLs that use siyuan-cli as the underlying tool.
+This SKILL covers CLI usage, not task-specific workflows. Create separate skills on top of it for literature ingestion, daily review, project KB maintenance, etc.
 
-## Source bootstrapping
-
-When you need to understand internal behavior or discover unlisted capabilities, use `siyuan doc list` to find the docs root, then inspect the sibling `dist/` directory.
-
-| File | What to read it for |
-|------|--------------------|
-| `dist/shared/schema.d.mts` | `EndpointSchema`, `ToolSchema`, `ToolContext`, `GlobalArgs` |
-| `dist/shared/client.mjs` | `SiyuanClient.call(endpoint, payload)` — raw HTTP client |
-| `dist/api/registry.mjs` | Endpoint registration and lookup |
-| `dist/tool/registry.mjs` | `ToolContext` assembly (`callEndpoint`, `callEndpointRaw`) |
+For internals or extension typing, read `siyuan doc read cli-usage/extension`, then inspect sibling `dist/` in the installed package (especially `dist/shared/schema.d.mts`).
 
 GitHub: [siyuan-cli](https://github.com/frostime/siyuan-cli) · [SiYuan kernel API](https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go)
