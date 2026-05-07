@@ -43,10 +43,16 @@ Uses global --dry-run to preview without writing.`,
     },
     cli: {
         primary: 'id',
+        allowSource: {
+            replacements: ['literal', 'stdin']
+        },
         examples: [
             {
                 command:
                     'siyuan tool brute-edit 20241016135347-zlrn2cz --replacements \'[{"search":"old","replace":"new"}]\''
+            },
+            {
+                command: 'cat replacements.json | siyuan tool brute-edit 20241016135347-zlrn2cz --replacements @stdin'
             },
             {
                 command: 'siyuan tool brute-edit 20241016135347-zlrn2cz --replacements \'[...]\' --maxSize 102400'

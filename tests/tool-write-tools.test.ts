@@ -1,5 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, openSync, closeSync, writeFileSync, unlinkSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { parsePayload } from '../src/shared/argv.ts';
+import type { EndpointSchema } from '../src/shared/schema.ts';
 
 // ————— brute-edit: original-span application logic —————
 
@@ -209,4 +215,65 @@ test('push-md: targetHpath derivation for non-root parent', () => {
     const sanitized = 'my-note';
     const targetHpath = normalizedToPath === '/' ? '/' + sanitized : normalizedToPath + '/' + sanitized;
     assert.equal(targetHpath, '/inbox/my-note');
+});
+
+test('brute-edit: replacements can be sourced from stdin', () => {
+    const schema: EndpointSchema = {
+        endpoint: '/api/tool/brute-edit',
+        summary: 'Brute edit',
+        payload: {
+            type: 'object',
+            required: ['id', 'replacements'],
+            additionalProperties: false,
+            properties: {
+                id: { type: 'string' },
+                replacements: { type: 'string' },
+                maxSize: { type: 'integer', default: 51200 }
+            }
+        },
+        classification: {
+            mode: 'write',
+            surface: 'content',
+            scope: 'single',
+            operation: 'update'
+        },
+        cli: {
+            primary: 'id',
+            allowSource: {
+                replacements: ['literal', 'stdin']
+            }
+        }
+    };
+
+    const dir = mkdtempSync(join(tmpdir(), 'siyuan-cli-stdin-'));
+    const stdinFile = join(dir, 'stdin.txt');
+    writeFileSync(stdinFile, '[{"search":"foo","replace":"bar"}]', 'utf8');
+
+    const originalTTY = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
+    const originalFd = Object.getOwnPropertyDescriptor(process.stdin, 'fd');
+    const fd = openSync(stdinFile, 'r');
+
+    try {
+        Object.defineProperty(process.stdin, 'isTTY', { value: false, configurable: true });
+        Object.defineProperty(process.stdin, 'fd', { value: fd, configurable: true });
+
+        const payload = parsePayload({
+            schema,
+            args: {
+                id: '20260507131852-5604q2q',
+                replacements: '@stdin'
+            }
+        });
+
+        assert.equal(payload.id, '20260507131852-5604q2q');
+        assert.equal(payload.replacements, '[{"search":"foo","replace":"bar"}]');
+        assert.equal(payload.maxSize, 51200);
+    } finally {
+        closeSync(fd);
+        if (originalTTY) Object.defineProperty(process.stdin, 'isTTY', originalTTY);
+        else delete (process.stdin as { isTTY?: boolean }).isTTY;
+        if (originalFd) Object.defineProperty(process.stdin, 'fd', originalFd);
+        else delete (process.stdin as { fd?: number }).fd;
+        rmSync(dir, { recursive: true, force: true });
+    }
 });

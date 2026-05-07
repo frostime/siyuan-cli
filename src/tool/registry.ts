@@ -161,6 +161,17 @@ export function buildToolHelp(tool: ToolSchema): string {
         if (prop.description) lines.push(`        ${prop.description}`);
     }
     lines.push('');
+
+    // Input sources
+    const allowSource = tool.cli?.allowSource;
+    if (allowSource && Object.keys(allowSource).length > 0) {
+        lines.push('INPUT SOURCES');
+        for (const [field, sources] of Object.entries(allowSource)) {
+            lines.push(`  ${field}: ${sources.join(' | ')}`);
+        }
+        lines.push('');
+    }
+
     lines.push('OUTPUT');
     lines.push('  default: --print compact → stdout prints content');
     lines.push('  --print json: stdout prints details only as JSON');

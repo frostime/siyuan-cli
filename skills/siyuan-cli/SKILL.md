@@ -70,7 +70,7 @@ Run `siyuan workspace which` before writes.
    - one block → `siyuan api block.updateBlock --id <id> --dataType markdown --data @stdin`
    - multiple blocks → `siyuan api block.batchUpdateBlock --blocks @file:./blocks.json`
    - insert before/after → `siyuan api block.insertBlock --parentID <parent> --nextID <id>` or `--previousID <id>`
-   - whole-doc search/replace → `siyuan tool brute-edit <doc-id> --replacements ... --dry-run`
+   - whole-doc search/replace → `siyuan tool brute-edit <doc-id> --replacements @stdin --dry-run` (JSON via stdin avoids shell escaping of long replacement lists)
    - move block → `siyuan api block.moveBlock --id <id> --previousID <sibling-id> --parentID <parent-id>`
    - move document → `siyuan api filetree.moveDocsByID --fromIDs '["<id>"]' --toID <target-parent-id>`
    - delete document → `siyuan api filetree.removeDocByID --id <doc-id>`
@@ -88,6 +88,10 @@ Rules:
 Use `@stdin` or `@file:` for markdown, SQL, JSON, and templates.
 
 ```bash
+# pipe replacement JSON → avoids shell escaping for large replacement lists
+cat replacements.json | siyuan tool brute-edit <doc-id> --replacements @stdin --dry-run
+
+# heredoc for block content
 siyuan api block.updateBlock --id <id> --dataType markdown --data @stdin <<'EOF'
 Replacement markdown
 EOF

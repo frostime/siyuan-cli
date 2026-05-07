@@ -35,6 +35,10 @@
 本项目应当使用 `dev` 的思源空间开发测试，避免访问用户主空间。
 测试过程中若 dev workspace 未启动，应当告知用户，要求他启动。
 
+## Gotchas
+
+- When editing the siyuan-cli skill, edit `<cwd>/skills/siyuan-cli` (source) instead of `~/.agents/skills/...` (distribution)  
+
 ---
 
 <!-- SSPEC:START -->
