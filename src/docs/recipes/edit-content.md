@@ -1,60 +1,112 @@
 ---
 title: Edit content
-summary: Safely locate a document or block, inspect it, update content, and verify the result.
+summary: Safely inspect, choose an edit strategy, update SiYuan content, and verify the result.
 ---
 
 # Goal
 
-Modify existing SiYuan content with a stable target, explicit inspection, and post-write verification.
+Modify existing SiYuan content with a stable target, explicit pre-flight inspection, and post-write verification.
 
-# When to use
+# Scope
 
-Use this when the user wants to update an existing document or block instead of only appending new content.
+Use this recipe for:
 
-# Inputs
+- appending or inserting Markdown into a known document/block
+- updating one known block
+- updating multiple known blocks atomically
+- controlled whole-document search-and-replace
 
-- target document id or block id
-- replacement markdown or inserted markdown
-- enough context to verify the correct target
+This recipe is not a block-type handbook. For the SiYuan data model, read `siyuan-guide/siyuan-block.md`. For target discovery, read `recipes/find-target.md` first.
 
-# Steps
+# Pre-flight
 
-1. Confirm workspace resolution.
-2. Resolve the target to a stable id.
-3. Inspect metadata and content.
-4. Choose the write path: single block → `updateBlock`; multiple blocks → `batchUpdateBlock`; whole-document plain-text replace with no child refs → `brute-edit`.
-5. Apply the write. For safe writes: dry-run first, then execute.
-6. Read back the result.
-
-# Commands
-
-## Replace single block content
+Before any write, confirm the workspace and inspect the target.
 
 ```bash
 siyuan workspace which
-siyuan tool get-block-info <block-id>
-siyuan tool get-block-content <block-id> --showId true
-
-# heredoc (preferred for inline content)
-siyuan api block.updateBlock --id <block-id> --dataType markdown --data @stdin <<'EOF'
-Replacement markdown content here.
-EOF
-
-# or from file
-siyuan api block.updateBlock --id <block-id> --data @file:./content.md --dataType markdown
-
-siyuan tool get-block-content <block-id>
+siyuan tool get-block-info <block-or-doc-id>
+siyuan tool get-block-content <block-or-doc-id> --showId true
 ```
 
-## Batch replace multiple blocks
+Use `--showId true` when you need to edit a specific child block.
 
-Use `batchUpdateBlock` for atomic multi-block edits — prefer `dataType: "markdown"`.
+# Strategy selector
+
+| Goal | Prefer | Notes |
+|------|--------|-------|
+| Append content to a known document/block/daily note | `siyuan tool append-content` | Safest path when existing content should remain unchanged |
+| Replace one known block | `siyuan api block.updateBlock` | Use a block id, not a title or fuzzy match |
+| Replace multiple known blocks | `siyuan api block.batchUpdateBlock` | Atomic multi-block update |
+| Insert before/after a known block | `siyuan api block.insertBlock --nextID/--previousID` | Use `--parentID` when the parent is known |
+| Append/prepend under a parent block | `siyuan api block.appendBlock` / `block.prependBlock` | Creates new child blocks |
+| Whole-document search-and-replace | `siyuan tool brute-edit` | High-risk path; use only when ID churn is acceptable |
+| Delete a document | `siyuan api filetree.removeDocByID` | Prefer over deleting a document block |
+
+# Side effects
+
+| Operation | Existing child block IDs | Main risk |
+|-----------|--------------------------|-----------|
+| `block.updateBlock` on a leaf/container child | Target id usually remains | Markdown may change the block type |
+| `block.batchUpdateBlock` on child blocks | Target ids remain | Wrong id updates the wrong block atomically |
+| `block.updateBlock` / `batchUpdateBlock` on a document block (`type='d'`) | Child tree is replaced | Existing child ids, refs, and attributes may be invalidated |
+| `insertBlock` / `appendBlock` / `prependBlock` | Existing ids remain; new content gets new ids | Insert position must be correct |
+| `moveBlock` | Moved block id remains | Document structure changes |
+| `brute-edit` | Child block ids are regenerated | Unsafe for documents whose child blocks are referenced or attributed |
+
+# Commands
+
+## Append content
+
+```bash
+siyuan workspace which
+siyuan tool append-content \
+  --targetId <doc-or-block-id> \
+  --targetType document \
+  --markdown @stdin \
+  --dry-run <<'EOF'
+## New section
+
+Paragraph content here.
+EOF
+
+siyuan tool append-content \
+  --targetId <doc-or-block-id> \
+  --targetType document \
+  --markdown @stdin \
+  --yes <<'EOF'
+## New section
+
+Paragraph content here.
+EOF
+```
+
+Use `--targetType block` for block targets and `--targetType dailynote` when `--targetId` is a notebook id.
+
+## Replace one block
 
 ```bash
 siyuan workspace which
 siyuan tool get-block-content <doc-id> --showId true
 
-# Prepare a JSON payload file
+siyuan api block.updateBlock \
+  --id <block-id> \
+  --dataType markdown \
+  --data @stdin \
+  --yes <<'EOF'
+Replacement markdown content here.
+EOF
+
+siyuan tool get-block-content <doc-id> --showId true
+```
+
+Use `@file:./content.md` instead of `@stdin` when content already lives in a file.
+
+## Replace multiple blocks
+
+```bash
+siyuan workspace which
+siyuan tool get-block-content <doc-id> --showId true
+
 cat > blocks.json <<'EOF'
 [
   { "id": "<block-id-1>", "data": "New content 1", "dataType": "markdown" },
@@ -62,64 +114,87 @@ cat > blocks.json <<'EOF'
 ]
 EOF
 
-# Dry-run first, then execute
 siyuan api block.batchUpdateBlock --blocks @file:./blocks.json --dry-run
 siyuan api block.batchUpdateBlock --blocks @file:./blocks.json --yes
 
-siyuan tool get-block-content <doc-id>
+siyuan tool get-block-content <doc-id> --showId true
 ```
 
-Caution: updating a document block (`type='d'`) with `batchUpdateBlock` replaces the document's entire child tree.
+Default to `dataType: "markdown"`. Use `dom` only when DOM-level editing is explicitly required.
 
-## Full-document brute-edit
-
-Rewrites the whole document via search-and-replace. Child block IDs are regenerated — only safe when no child blocks hold custom attributes or inbound references.
+## Insert before or after a block
 
 ```bash
-siyuan workspace which
-siyuan api block.batchUpdateBlock --blocks @stdin --dry-run <<'EOF'
-[{"id":"<doc-id>","data":"# Title\n\nNew body...","dataType":"markdown"}]
+# Insert before <next-block-id>
+siyuan api block.insertBlock \
+  --parentID <parent-id> \
+  --nextID <next-block-id> \
+  --dataType markdown \
+  --data @stdin \
+  --yes <<'EOF'
+Inserted before the target block.
 EOF
 
-# Or use the brute-edit tool for search-replace pairs
-siyuan tool brute-edit <doc-id> --replacements '[{"search":"old text","replace":"new text"}]' --dry-run
-siyuan tool brute-edit <doc-id> --replacements '[{"search":"old text","replace":"new text"}]' --yes
-
-siyuan tool get-block-content <doc-id>
+# Insert after <previous-block-id>
+siyuan api block.insertBlock \
+  --parentID <parent-id> \
+  --previousID <previous-block-id> \
+  --dataType markdown \
+  --data @stdin \
+  --yes <<'EOF'
+Inserted after the target block.
+EOF
 ```
 
-## Append content with preview
+## Whole-document search-and-replace
 
 ```bash
 siyuan workspace which
-siyuan tool get-block-info <doc-or-block-id>
-siyuan tool append-content --targetId <doc-or-block-id> --targetType document --markdown @file:./append.md --dry-run
-siyuan tool append-content --targetId <doc-or-block-id> --targetType document --markdown @file:./append.md
-siyuan tool get-block-content <doc-or-block-id>
+siyuan tool get-block-info <doc-id>
+siyuan tool brute-edit <doc-id> \
+  --replacements '[{"search":"old text","replace":"new text"}]' \
+  --dry-run
+
+siyuan tool brute-edit <doc-id> \
+  --replacements '[{"search":"old text","replace":"new text"}]' \
+  --yes
+
+siyuan tool get-block-content <doc-id> --showId true
 ```
 
-# Success checks
+Only use this when regenerating child block ids is acceptable.
 
-- the target id is confirmed before writing
-- the intended block or document changed
-- read-back content reflects the intended update
-- no unexpected sibling content changed
+# Verification
+
+After writing:
+
+```bash
+siyuan tool get-block-content <doc-or-block-id> --showId true
+```
+
+Check that:
+
+- the intended target changed
+- neighboring sibling content did not change unexpectedly
+- the resulting block ids are known when follow-up edits are needed
+- the target still belongs to the intended workspace/notebook/document
 
 # Recovery
 
 ## Wrong target risk
 
-- re-run `get-block-info`
-- use `get-block-content --showId true`
-- narrow to block id before retrying
+- re-run `siyuan workspace which`
+- re-run `siyuan tool get-block-info <id>`
+- read content with `--showId true`
+- narrow to a stable block id before retrying
 
 ## Write denied or approval required
 
-- inspect permission rules
+- inspect permission rules with `siyuan workspace which`
 - if the Approval Center opens, approve or reject the request there
 - `siyuan approval list` shows pending requests and their ids
 - retry with `--yes` only when the action is intended and safe
-- if `behavior.allowYes` is `false`, `--yes` is disabled; approve via the Approval Center instead
+- if `behavior.allowYes` is `false`, approve via the Approval Center instead
 
 # Related docs
 
@@ -127,3 +202,4 @@ siyuan tool get-block-content <doc-or-block-id>
 - `recipes/read-content.md`
 - `siyuan-guide/siyuan-block.md`
 - `cli-usage/workspace-config.md`
+- `cli-usage/permission.md`

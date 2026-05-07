@@ -68,10 +68,10 @@ siyuan tool resolve-path --hpath //private/diary
 siyuan tool append-content --targetId <id> --targetType document --markdown @file:./note.md
 
 # List document tree
-siyuan tool list-doc-tree --notebook <notebook-id>
+siyuan tool list-doc-tree --entry <notebook-or-doc-id> --depth 2
 
 # List daily notes by date range
-siyuan tool list-dailynote --notebook <notebook-id> --from 20250101 --to 20250131
+siyuan tool list-dailynote --notebookId <notebook-id> --afterDate 2025-01-01 --beforeDate 2025-01-31
 ```
 
 ## Help discovery

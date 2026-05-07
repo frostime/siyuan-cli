@@ -36,10 +36,14 @@ siyuan
 │   ├── reject   Reject one request from the terminal
 │   ├── open     Open the Approval Center in the browser
 │   └── stop     Stop the broker
-└── skill        Manage the bundled agent skill
-    ├── install  Install or update to a target
-    ├── read     Read the bundled SKILL.md
-    └── uninstall
+├── skill        Manage the bundled agent skill
+│   ├── install  Install or update to a target
+│   ├── read     Read the bundled SKILL.md
+│   └── uninstall
+└── extension    Manage user extensions
+    ├── init     Scaffold the extensions directory
+    ├── list     List discovered extensions
+    └── cache    Load extensions and write schema cache files
 ```
 
 ## Calling kernel APIs

@@ -26,7 +26,7 @@ Use this when the user gives a title, keyword, notebook, hpath, or partial locat
 
 ```bash
 siyuan tool resolve-path --hpath "/private/diary"
-siyuan tool list-doc-tree --notebook <notebook-id>
+siyuan tool list-doc-tree --entry <notebook-or-doc-id> --depth 2
 siyuan tool get-block-info <block-or-doc-id>
 siyuan api query.sql "SELECT id, hpath, path FROM blocks WHERE type='d' AND content LIKE '%keyword%' LIMIT 10"
 ```

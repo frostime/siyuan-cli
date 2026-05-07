@@ -5,7 +5,7 @@ A command-line interface that allows external agents (Claude Code, Codex, OpenCo
 `siyuan-cli` is essentially a wrapper that calls the SiYuan HTTP kernel API for local agents. It complements what those raw HTTP calls lack: connection management, access control, and self-documentation required by agentic workflows.
 It is designed for agents such as OpenCode, Claude Code, Codex, and Pi Coding Agent, which can run shell commands, inspect stdout/stderr, and read files.
 
-> **Beta** · v0.11 · Node.js ≥ 20 · [GPL-3.0](LICENSE)
+> **Beta** · Node.js ≥ 20 · [GPL-3.0](LICENSE)
 
 ---
 
@@ -67,11 +67,13 @@ If you update `siyuan-cli`, run the command again to update the skill.
 
 ### 5. Use it in your agent
 
-Launch an agent that is able to: 1) Visit SKILL; 2) Read file; 3) Run bash, like OpenCode, Codex, Claude Code etc.
+Launch an agent that can read skill files, read local files, and run shell commands.
 
 Say to your agent:
 
-> "Help me to use siyuan-cli, read the SKILL and its builtin documents."
+> "Help me use siyuan-cli. Read the installed `siyuan-cli` SKILL, then use `siyuan doc list` for built-in docs when needed."
+
+The README is a human-facing overview. Detailed operational guidance lives in the installed SKILL and built-in docs exposed by `siyuan doc list`.
 
 ---
 

@@ -169,10 +169,10 @@ Prefer to show:
 
 | Task | Command |
 |------|---------|
-| List doc tree under notebook | `siyuan tool list-doc-tree --notebook <id>` |
-| List doc tree under document | `siyuan tool list-doc-tree --doc <id>` |
-| List docs by path | `siyuan api filetree.listDocsByPath --path "/..."` |
-| Search documents | `siyuan api filetree.searchDocs --keyword "..."` |
+| List doc tree under notebook | `siyuan tool list-doc-tree --entry <notebook-id>` |
+| List doc tree under document | `siyuan tool list-doc-tree --entry <document-id>` |
+| List docs by path | `siyuan api filetree.listDocsByPath --notebook <id> --path "/..."` |
+| Search documents | `siyuan api filetree.searchDocs --k "..."` |
 
 #### Notebook management
 
@@ -187,7 +187,7 @@ Prefer to show:
 
 | Task | Command |
 |------|---------|
-| Create document with markdown | `siyuan api filetree.createDocWithMd --notebook <id> --path "/foo/bar" --md "# Title"` |
+| Create document with markdown | `siyuan api filetree.createDocWithMd --notebook <id> --path "/foo/bar" --markdown "# Title"` |
 | Rename document by ID | `siyuan api filetree.renameDocByID --id <id> --title "New Title"` |
 | Rename by path | `siyuan api filetree.renameDoc --notebook <id> --path "/..." --title "..."` |
 | Move document by ID | `siyuan api filetree.moveDocsByID --fromIDs '["<id>"]' --toID <target-id>` |

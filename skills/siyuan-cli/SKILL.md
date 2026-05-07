@@ -48,14 +48,14 @@ Choose the operating mode before choosing commands.
 |---|---|---|
 | Confirm target workspace | `siyuan workspace which` | MUST run before writes |
 | List notebooks | `siyuan api notebook.lsNotebooks` | Use notebook id for stable targeting |
-| Browse document tree | `siyuan tool list-doc-tree <notebook-or-doc-id> --depth 2` | Increase depth only when needed |
+| Browse document tree | `siyuan tool list-doc-tree --entry <notebook-or-doc-id> --depth 2` | Increase depth only when needed |
 | List daily notes | `siyuan tool list-dailynote --atDate yyyy-MM-dd` | Add `--notebookId <id>` when known |
 | Locate document/block | `siyuan tool resolve-path --hpath "/path"` | If ambiguous, read `recipes/find-target.md` |
 | Read block metadata | `siyuan tool get-block-info <id>` | Shows type/path/breadcrumb/TOC |
 | Read content | `siyuan tool get-block-content <id>` | Add `--showId true` when preparing edits |
 | Read exact Kramdown | `siyuan api block.getBlockKramdown --id <id>` | Useful for one block or format-sensitive reads |
 | Keyword search | `siyuan api search.fullTextSearchBlock "keyword"` | Prefer this for user keyword search |
-| Create document | `siyuan api filetree.createDocWithMd --notebook <id> --path "/path/doc.sy" --markdown @stdin` | Prefer heredoc/stdin for long markdown |
+| Create document | `siyuan api filetree.createDocWithMd --notebook <id> --path "/path/doc" --markdown @stdin` | Prefer heredoc/stdin for long markdown |
 | Import local Markdown | `siyuan tool push-md ./note.md --notebook <id> --toPath /parent` | Create mode is default; overwrite is slow path |
 | Append content | `siyuan tool append-content --targetId <id> --targetType document --markdown @stdin` | Also supports `block` and `dailynote` |
 
@@ -64,19 +64,25 @@ Choose the operating mode before choosing commands.
 ```bash
 # Create
 siyuan api filetree.createDocWithMd \
-  --notebook <id> --path "/path/doc.sy" --markdown @stdin <<'EOF'
+  --notebook <id> --path "/path/doc" --markdown @stdin <<'EOF'
 # Title
 ...
 EOF
 
 # Append
 siyuan tool append-content \
-  --targetId <id> --targetType document --markdown "You should use SiYuan in right matter"
+  --targetId <id> --targetType document --markdown @stdin <<'EOF'
+## New section
+
+Paragraph content here.
+EOF
 ```
 
 ## Slow thinking protocol
 
 Use this for editing existing state or when the target/effect is unclear.
+
+Use slow thinking when the user asks to modify existing content, gives only a title/keyword for an edit target, or the operation may affect multiple blocks.
 
 1. **Classify effect**: update existing, delete, move, rename, reorder, overwrite, or batch.
 2. **Stabilize target**: identify workspace, notebook, document id, block id, and whether the target is a document block (`type='d'`).
