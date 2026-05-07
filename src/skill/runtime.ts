@@ -145,3 +145,44 @@ export function uninstallSkill(opts: Omit<SkillTargetOptions, 'dryRun'> = {}) {
     rmSync(targetDir, { recursive: true, force: true });
     return { removed: targetDir };
 }
+
+/**
+ * Parse `metadata.version` from a SKILL.md YAML frontmatter block.
+ * Returns undefined if the frontmatter or version field is missing.
+ */
+function parseSkillVersion(content: string): string | undefined {
+    const match = content.match(/^---[\s\S]*?metadata:[\s\S]*?version:\s*["']?([^\s"']+)["']?[\s\S]*?---/);
+    return match?.[1];
+}
+
+/**
+ * Check whether the installed SKILL at the default target matches the CLI version.
+ * Returns a warning string if there is a mismatch or the SKILL is missing, otherwise null.
+ *
+ * #TODO HINT: currently only checks `~/.agents/skills/` (default target).
+ * If multi-target checking is needed, iterate over additional targets here
+ * (e.g. `~/.claude/skills/`, `~/.pi/agent/skills/`).
+ */
+export function checkInstalledSkillVersion(cliVersion: string): string | null {
+    const targetDir = resolveSkillTargetDir({ target: 'agents' });
+    const targetFile = join(targetDir, 'SKILL.md');
+
+    if (!existsSync(targetFile)) {
+        return `SKILL file not found at ${targetFile}. Run \`siyuan skill install\` to install it.`;
+    }
+
+    try {
+        const content = readFileSync(targetFile, 'utf-8');
+        const installedVersion = parseSkillVersion(content);
+        if (!installedVersion) {
+            return `Cannot read version from ${targetFile}. Run \`siyuan skill install\` to reinstall.`;
+        }
+        if (installedVersion !== cliVersion) {
+            return `SKILL version mismatch: installed ${installedVersion}, CLI ${cliVersion}. Run \`siyuan skill install\` to update.`;
+        }
+    } catch {
+        return `Failed to read ${targetFile}. Run \`siyuan skill install\` to reinstall.`;
+    }
+
+    return null;
+}

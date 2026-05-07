@@ -1,6 +1,6 @@
 {
     "name": "@frostime/siyuan-cli",
-    "version": "0.12.2",
+    "version": "0.12.3",
     "description": "Agent-first CLI for SiYuan Note — workspace management, kernel API proxy, workflow tools, and agent skill install",
     "type": "module",
     "main": "./dist/cli.mjs",

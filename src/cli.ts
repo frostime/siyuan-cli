@@ -6,6 +6,7 @@ import { workspaceCommand } from './workspace/command.js';
 import { apiCommand, getEndpointHelpEntry, renderGroupedApiHelp } from './api/command.js';
 import { toolCommand, getToolHelpText, renderGroupedToolHelp } from './tool/command.js';
 import { skillCommand } from './skill/command.js';
+import { checkInstalledSkillVersion } from './skill/runtime.js';
 import { docCommand, formatDocsHint } from './doc/command.js';
 import { approvalCommand } from './approval/command.js';
 import {
@@ -94,6 +95,19 @@ async function customShowUsage<T extends Record<string, unknown>>(
 
     if (!parent || meta?.name === 'doc' || parentMeta?.name === 'doc') {
         process.stdout.write(formatDocsHint());
+    }
+
+    // Append SKILL version warning if the installed skill is missing or outdated.
+    if (!parent || meta?.name === 'siyuan') {
+        const cliVersion = typeof main.meta === 'function'
+            ? (await main.meta()).version
+            : main.meta.version;
+        if (cliVersion) {
+            const warning = checkInstalledSkillVersion(cliVersion);
+            if (warning) {
+                process.stdout.write(`\n[CLI Warning] ${warning}\n`);
+            }
+        }
     }
 }
 
