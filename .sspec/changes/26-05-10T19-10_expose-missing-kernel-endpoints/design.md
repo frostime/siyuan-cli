@@ -39,24 +39,24 @@ Config/Schema   → schema definition + migration path + compatibility strategy
 
 ## 1. Endpoint Inventory
 
-This table fixes the endpoint inventory and initial classification direction. `Guard hypothesis` is deliberately provisional until docs/source confirm each payload shape.
+This table fixes the endpoint inventory and implementation baseline after external research. Detailed payload/response contracts live in `reference/missing-kernel-api-contracts.md`; conflict-prone endpoints still need local smoke tests before final review.
 
-| Endpoint id | Kernel path | Classification direction | Guard hypothesis (research required) | Output direction |
+| Endpoint id | Kernel path | Classification baseline | Guard baseline | Output direction |
 |-------------|-------------|--------------------------|--------------------------------------|------------------|
-| `attr.batchGetBlockAttrs` | `/api/attr/batchGetBlockAttrs` | `read/content/batch/inspect` | `ids[*]` read | JSON/object |
-| `attr.batchSetBlockAttrs` | `/api/attr/batchSetBlockAttrs` | `write/content/batch/update` | per-item `id` write | transaction/OK |
-| `block.getBlockKramdowns` | `/api/block/getBlockKramdowns` | `read/content/batch/inspect` | `ids[*]` read | JSON/object |
-| `block.batchInsertBlock` | `/api/block/batchInsertBlock` | `write/content/batch/create` | per-item anchor IDs write | transaction |
-| `block.batchAppendBlock` | `/api/block/batchAppendBlock` | `write/content/batch/create` | per-item `parentID` write | transaction |
-| `block.batchPrependBlock` | `/api/block/batchPrependBlock` | `write/content/batch/create` | per-item `parentID` write | transaction |
-| `block.getDocInfo` | `/api/block/getDocInfo` | `read/content/single/inspect` | document/block id read | object |
-| `block.getDocsInfo` | `/api/block/getDocsInfo` | `read/content/batch/inspect` | document/block ids read | records/JSON |
-| `block.getTailChildBlocks` | `/api/block/getTailChildBlocks` | `read/content/batch/inspect` | parent/doc id read | records |
-| `block.getBlockSiblingID` | `/api/block/getBlockSiblingID` | `read/content/single/inspect` | block id read | object |
-| `block.appendDailyNoteBlock` | `/api/block/appendDailyNoteBlock` | `write/content/single/create` | notebook write | transaction |
-| `block.prependDailyNoteBlock` | `/api/block/prependDailyNoteBlock` | `write/content/single/create` | notebook write | transaction |
-| `filetree.duplicateDoc` | `/api/filetree/duplicateDoc` | `write/content/single/create` | source path/notebook write-capable | transaction/OK |
-| `filetree.getFullHPathByID` | `/api/filetree/getFullHPathByID` | `read/content/single/inspect` | id read | direct |
+| `attr.batchGetBlockAttrs` | `/api/attr/batchGetBlockAttrs` | `read/content/batch/inspect` | `ids[*]` read | object |
+| `attr.batchSetBlockAttrs` | `/api/attr/batchSetBlockAttrs` | `write/content/batch/update` | `blockAttrs[*].id` write | direct/OK |
+| `block.getBlockKramdowns` | `/api/block/getBlockKramdowns` | `read/content/batch/inspect` | `ids[*]` read | object |
+| `block.batchInsertBlock` | `/api/block/batchInsertBlock` | `write/content/batch/create` | `blocks[*].parentID/previousID/nextID` write, skipping empty anchors | transaction |
+| `block.batchAppendBlock` | `/api/block/batchAppendBlock` | `write/content/batch/create` | `blocks[*].parentID` write | transaction |
+| `block.batchPrependBlock` | `/api/block/batchPrependBlock` | `write/content/batch/create` | `blocks[*].parentID` write | transaction |
+| `block.getDocInfo` | `/api/block/getDocInfo` | `read/content/single/inspect` | `id` read | object |
+| `block.getDocsInfo` | `/api/block/getDocsInfo` | `read/content/batch/inspect` | `ids[*]` read | records |
+| `block.getTailChildBlocks` | `/api/block/getTailChildBlocks` | `read/content/single/inspect` | `id` read | records |
+| `block.getBlockSiblingID` | `/api/block/getBlockSiblingID` | `read/meta/single/inspect` | `id` read | object |
+| `block.appendDailyNoteBlock` | `/api/block/appendDailyNoteBlock` | `write/content/single/create` | `notebook` write | transaction |
+| `block.prependDailyNoteBlock` | `/api/block/prependDailyNoteBlock` | `write/content/single/create` | `notebook` write | transaction |
+| `filetree.duplicateDoc` | `/api/filetree/duplicateDoc` | `write/content/single/create` | source `id` write conservatively | object |
+| `filetree.getFullHPathByID` | `/api/filetree/getFullHPathByID` | `read/content/single/inspect` | `id` read | direct |
 
 ## 2. Structural Pattern
 
@@ -79,22 +79,19 @@ src/api/endpoints/index.ts
 
 No registry or guard architecture changes are needed.
 
-## 3. Research Gate Before Implementation
+## 3. Verification Gate During Implementation
 
-Implementation MUST first verify each endpoint's payload and response shape. Guard paths are only authored after verification.
+Implementation uses `reference/missing-kernel-api-contracts.md` as the baseline. Before final review, locally verify the endpoints where the report identifies docs/source disagreement or tricky guard semantics.
 
 ```text
-For each endpoint:
-  1. Locate kernel docs/source signature.
-  2. Record payload fields + required/optional fields.
-  3. Decide classification from actual effect.
-  4. Add guard.payloadTargets only for verified id/notebook/path fields.
-  5. If no resource field exists, document why guard is absent.
+Verify before final review:
+  1. `block.getDocsInfo` raw response shape and default booleans.
+  2. `filetree.duplicateDoc` response shape if safe dev fixture exists.
+  3. `block.batchInsertBlock` empty-anchor behavior and guard skipping.
+  4. `block.getBlockKramdowns` response map and optional mode.
 ```
 
-### Guard examples, not commitments
-
-The following are examples of the kind of pointer paths expected if the payload shape matches; they are not final until research confirms the field names.
+### Guard examples
 
 ```ts
 guard: {

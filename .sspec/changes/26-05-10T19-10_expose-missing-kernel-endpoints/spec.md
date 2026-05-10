@@ -1,6 +1,6 @@
 ---
 name: expose-missing-kernel-endpoints
-status: PLANNING
+status: REVIEW
 change-type: single
 created: 2026-05-10 19:10:17
 reference:
@@ -47,7 +47,7 @@ Add `EndpointSchema` files for the requested missing APIs and register them in `
 
 This change intentionally covers both the first-priority and second-priority endpoints from the request. `block.getBlockKramdown` already exists; this change adds only the plural batch endpoint `block.getBlockKramdowns`.
 
-Endpoint inventory is fixed by this design. Payload schemas, response shapes, and guard pointer paths are explicitly **research-required** before implementation: current guard notes are hypotheses, not final contracts. Authoritative kernel docs/source decide the final schema.
+Endpoint inventory is fixed by this design. Payload schemas, response shapes, and guard pointer paths have an external research baseline in `reference/missing-kernel-api-contracts.md`; implementation will use it as input and verify conflict-prone points with local source/raw smoke tests before finalizing schemas.
 
 ### Key Change
 <!-- MUST label each independent change item as **Type Label: Title**.
@@ -107,3 +107,5 @@ or architectural logic changes. Link here: → See [design.md](./design.md)
 Simple changes MAY delete this section and describe the technical approach inline. -->
 
 → See [design.md](./design.md)
+
+→ Research baseline: [reference/missing-kernel-api-contracts.md](./reference/missing-kernel-api-contracts.md)

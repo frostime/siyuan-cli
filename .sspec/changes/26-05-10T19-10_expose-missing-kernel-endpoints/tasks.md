@@ -1,6 +1,6 @@
 ---
 change: "expose-missing-kernel-endpoints"
-updated: ""
+updated: "2026-05-10T21:36+08:00"
 ---
 
 # Tasks
@@ -10,34 +10,64 @@ updated: ""
 
 ## Tasks
 
-<!-- MUST organize by phases. Each task <2h, independently testable.
-Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
+### Phase 1: Research integration and guard prerequisite ⏳
+- [x] Update `spec.md` / `design.md` / `memory.md` to reference `reference/missing-kernel-api-contracts.md` and concrete baseline decisions.
+- [x] Update `src/api/guard.ts` to skip empty-string payload targets so optional anchor IDs can be schema-valid without false permission failures.
+**Verification**: `pnpm run typecheck`; existing guarded endpoints keep behavior for non-empty IDs.
 
-### Phase 1: <name> ⏳
-- [ ] Task description `path/file.py`
-- [ ] Task description `path/file.py`
-**Verification**: <how to verify this phase>
+### Phase 2: Attribute and batch Kramdown endpoints ⏳
+- [x] Add `src/api/endpoints/attr/batchGetBlockAttrs.ts`.
+- [x] Add `src/api/endpoints/attr/batchSetBlockAttrs.ts`.
+- [x] Add `src/api/endpoints/block/getBlockKramdowns.ts`.
+**Verification**: registry loads; endpoint describe shows expected payload/guard/classification.
 
-### Feedback Tasks (→ [NNN-description](./revisions/NNN-description.md))
-Use this section for review/feedback tasks that still belong to the current change.
+### Phase 3: Batch block creation endpoints ⏳
+- [x] Add `src/api/endpoints/block/batchInsertBlock.ts`.
+- [x] Add `src/api/endpoints/block/batchAppendBlock.ts`.
+- [x] Add `src/api/endpoints/block/batchPrependBlock.ts`.
+**Verification**: registry loads; schemas allow intended payload shapes including empty optional insert anchors.
 
-If accepted feedback changes scope/design:
-- **Pre-gate** (spec not yet approved): update `spec.md` / `design.md` directly, then add tasks here.
-- **Post-gate** (design baseline locked): create `revisions/NNN-*.md` FIRST, then update this section. Do NOT edit `spec.md` / `design.md`.
+### Phase 4: Block read/helper endpoints ⏳
+- [x] Add `src/api/endpoints/block/getDocInfo.ts`.
+- [x] Add `src/api/endpoints/block/getDocsInfo.ts`.
+- [x] Add `src/api/endpoints/block/getTailChildBlocks.ts`.
+- [x] Add `src/api/endpoints/block/getBlockSiblingID.ts`.
+- [x] Add `src/api/endpoints/block/appendDailyNoteBlock.ts`.
+- [x] Add `src/api/endpoints/block/prependDailyNoteBlock.ts`.
+**Verification**: registry loads; `getDocsInfo` defaults `refCount=false`, `av=false`.
 
-The section header MUST link the corresponding revision file (relative path).
-If the work belongs in a new follow-up or replacement change, the agent MUST NOT put it here unless the user has first approved that direction via `@align`.
--->
+### Phase 5: Filetree endpoints and registration ⏳
+- [x] Add `src/api/endpoints/filetree/duplicateDoc.ts`.
+- [x] Add `src/api/endpoints/filetree/getFullHPathByID.ts`.
+- [x] Update `src/api/endpoints/index.ts` to import/register all new schemas.
+**Verification**: `pnpm run typecheck`; `pnpm run siyuan api list` includes all 14 new endpoint IDs.
+
+### Phase 6: Local dev smoke tests and final verification ⏳
+- [x] Temporarily update project `.siyuan-cli.yaml` if needed, keeping `workspace: dev`, and restore it after tests.
+- [x] Smoke test representative read endpoints against dev workspace: `attr.batchGetBlockAttrs`, `block.getBlockKramdowns`, `block.getDocsInfo`, `block.getBlockSiblingID`, `filetree.getFullHPathByID`.
+- [x] Run `pnpm run typecheck`, `pnpm run build`, and `pnpm run test`.
+**Verification**: smoke outputs match expected shapes; `.siyuan-cli.yaml` restored with no diff; any unrelated test failure is documented.
 
 ---
 
 ## Progress
 
-**Overall**: 0%
+**Overall**: 100%
 
 | Phase | Progress | Status |
 |-------|----------|--------|
-| Phase 1 | 0% | ⏳ |
+| Phase 1 | 100% | ✅ |
+| Phase 2 | 100% | ✅ |
+| Phase 3 | 100% | ✅ |
+| Phase 4 | 100% | ✅ |
+| Phase 5 | 100% | ✅ |
+| Phase 6 | 100% | ✅ |
 
 **Recent**:
-- (none yet)
+- [2026-05-10T21:36+08:00] Plan created from archived web-agent research; user allowed temporary `.siyuan-cli.yaml` edits for dev-space testing.
+- [2026-05-10T21:36+08:00] Integrated research baseline into spec/design and updated guard to skip empty-string payload targets.
+- [2026-05-10T21:38+08:00] Added batch attribute and plural Kramdown endpoint schemas.
+- [2026-05-10T21:40+08:00] Added batch insert/append/prepend block endpoint schemas.
+- [2026-05-10T21:42+08:00] Added block info/sibling/tail/daily-note helper endpoint schemas.
+- [2026-05-10T21:44+08:00] Added filetree duplicate/full-hpath endpoints and registered all new schemas.
+- [2026-05-10T21:49+08:00] Verified typecheck/build, registry listing, dev smoke reads, batchInsert empty-anchor dry-run, and `.siyuan-cli.yaml` restore; full test suite still has unrelated `getChildBlocks` assertion failure.

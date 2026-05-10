@@ -36,11 +36,18 @@ import { schema as filetreeGetHPathByID } from './filetree/getHPathByID.js';
 import { schema as filetreeGetHPathByPath } from './filetree/getHPathByPath.js';
 import { schema as filetreeGetIDsByHPath } from './filetree/getIDsByHPath.js';
 import { schema as filetreeGetPathByID } from './filetree/getPathByID.js';
+import { schema as filetreeGetFullHPathByID } from './filetree/getFullHPathByID.js';
+import { schema as filetreeDuplicateDoc } from './filetree/duplicateDoc.js';
 import { schema as filetreeSearchDocs } from './filetree/searchDocs.js';
 
 // Block APIs
 import { schema as blockGetBlockKramdown } from './block/getBlockKramdown.js';
+import { schema as blockGetBlockKramdowns } from './block/getBlockKramdowns.js';
 import { schema as blockGetChildBlocks } from './block/getChildBlocks.js';
+import { schema as blockGetDocInfo } from './block/getDocInfo.js';
+import { schema as blockGetDocsInfo } from './block/getDocsInfo.js';
+import { schema as blockGetTailChildBlocks } from './block/getTailChildBlocks.js';
+import { schema as blockGetBlockSiblingID } from './block/getBlockSiblingID.js';
 import { schema as blockGetBlockBreadcrumb } from './block/getBlockBreadcrumb.js';
 import { schema as blockGetBlockDOM } from './block/getBlockDOM.js';
 import { schema as blockGetBlockInfo } from './block/getBlockInfo.js';
@@ -49,15 +56,22 @@ import { schema as blockPrependBlock } from './block/prependBlock.js';
 import { schema as blockInsertBlock } from './block/insertBlock.js';
 import { schema as blockUpdateBlock } from './block/updateBlock.js';
 import { schema as blockBatchUpdateBlock } from './block/batchUpdateBlock.js';
+import { schema as blockBatchInsertBlock } from './block/batchInsertBlock.js';
+import { schema as blockBatchAppendBlock } from './block/batchAppendBlock.js';
+import { schema as blockBatchPrependBlock } from './block/batchPrependBlock.js';
 import { schema as blockDeleteBlock } from './block/deleteBlock.js';
 import { schema as blockMoveBlock } from './block/moveBlock.js';
 import { schema as blockFoldBlock } from './block/foldBlock.js';
 import { schema as blockUnfoldBlock } from './block/unfoldBlock.js';
 import { schema as blockTransferBlockRef } from './block/transferBlockRef.js';
+import { schema as blockAppendDailyNoteBlock } from './block/appendDailyNoteBlock.js';
+import { schema as blockPrependDailyNoteBlock } from './block/prependDailyNoteBlock.js';
 
 // Attr APIs
 import { schema as attrGetBlockAttrs } from './attr/getBlockAttrs.js';
 import { schema as attrSetBlockAttrs } from './attr/setBlockAttrs.js';
+import { schema as attrBatchGetBlockAttrs } from './attr/batchGetBlockAttrs.js';
+import { schema as attrBatchSetBlockAttrs } from './attr/batchSetBlockAttrs.js';
 
 // Search APIs
 import { schema as searchFullTextSearchBlock } from './search/fullTextSearchBlock.js';
@@ -129,10 +143,17 @@ const schemas: EndpointSchema<any>[] = [
     filetreeGetHPathByPath,
     filetreeGetIDsByHPath,
     filetreeGetPathByID,
+    filetreeGetFullHPathByID,
+    filetreeDuplicateDoc,
     filetreeSearchDocs,
     // Block
     blockGetBlockKramdown,
+    blockGetBlockKramdowns,
     blockGetChildBlocks,
+    blockGetDocInfo,
+    blockGetDocsInfo,
+    blockGetTailChildBlocks,
+    blockGetBlockSiblingID,
     blockGetBlockBreadcrumb,
     blockGetBlockDOM,
     blockGetBlockInfo,
@@ -141,14 +162,21 @@ const schemas: EndpointSchema<any>[] = [
     blockInsertBlock,
     blockUpdateBlock,
     blockBatchUpdateBlock,
+    blockBatchInsertBlock,
+    blockBatchAppendBlock,
+    blockBatchPrependBlock,
     blockDeleteBlock,
     blockMoveBlock,
     blockFoldBlock,
     blockUnfoldBlock,
     blockTransferBlockRef,
+    blockAppendDailyNoteBlock,
+    blockPrependDailyNoteBlock,
     // Attr
     attrGetBlockAttrs,
     attrSetBlockAttrs,
+    attrBatchGetBlockAttrs,
+    attrBatchSetBlockAttrs,
     // Search
     searchFullTextSearchBlock,
     // Export

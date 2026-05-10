@@ -92,6 +92,7 @@ export async function applyPayloadGuard(
                         `payload path "${target.path}" must resolve to string values`
                     );
                 }
+                if (value === '') continue;
                 const effect = await engine.checkContentRef(
                     { kind: target.kind, value, access: target.access },
                     caller
