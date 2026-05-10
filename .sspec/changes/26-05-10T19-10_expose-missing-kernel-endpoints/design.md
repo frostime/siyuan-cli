@@ -39,8 +39,10 @@ Config/Schema   → schema definition + migration path + compatibility strategy
 
 ## 1. Endpoint Inventory
 
-| Endpoint id | Kernel path | Classification | Guard intent | Output |
-|-------------|-------------|----------------|--------------|--------|
+This table fixes the endpoint inventory and initial classification direction. `Guard hypothesis` is deliberately provisional until docs/source confirm each payload shape.
+
+| Endpoint id | Kernel path | Classification direction | Guard hypothesis (research required) | Output direction |
+|-------------|-------------|--------------------------|--------------------------------------|------------------|
 | `attr.batchGetBlockAttrs` | `/api/attr/batchGetBlockAttrs` | `read/content/batch/inspect` | `ids[*]` read | JSON/object |
 | `attr.batchSetBlockAttrs` | `/api/attr/batchSetBlockAttrs` | `write/content/batch/update` | per-item `id` write | transaction/OK |
 | `block.getBlockKramdowns` | `/api/block/getBlockKramdowns` | `read/content/batch/inspect` | `ids[*]` read | JSON/object |
@@ -77,11 +79,22 @@ src/api/endpoints/index.ts
 
 No registry or guard architecture changes are needed.
 
-## 3. Guard Rules
+## 3. Research Gate Before Implementation
 
-### Batch item paths
+Implementation MUST first verify each endpoint's payload and response shape. Guard paths are only authored after verification.
 
-Use pointer paths that match the kernel payload shape after signature verification:
+```text
+For each endpoint:
+  1. Locate kernel docs/source signature.
+  2. Record payload fields + required/optional fields.
+  3. Decide classification from actual effect.
+  4. Add guard.payloadTargets only for verified id/notebook/path fields.
+  5. If no resource field exists, document why guard is absent.
+```
+
+### Guard examples, not commitments
+
+The following are examples of the kind of pointer paths expected if the payload shape matches; they are not final until research confirms the field names.
 
 ```ts
 guard: {

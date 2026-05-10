@@ -1,6 +1,6 @@
 ---
 change: "raw-api-fallback"
-updated: ""
+updated: "2026-05-10T19:40+08:00"
 ---
 
 # Tasks
@@ -10,34 +10,36 @@ updated: ""
 
 ## Tasks
 
-<!-- MUST organize by phases. Each task <2h, independently testable.
-Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
+### Phase 1: Raw behavior config ⏳
+- [x] Update `src/shared/schema.ts` — add `RawApiBehaviorConfig`, resolved raw type, and validation for `behavior.rawApi` per spec.
+- [x] Update `src/workspace/config.ts` — normalize and resolve raw behavior as a whole object across defaults/workspace/project.
+- [ ] Update `src/workspace/project-config.ts` — allow project-level `behavior.rawApi` through existing behavior validation.
+**Verification**: `pnpm run typecheck`; invalid raw config produces config parse error while unknown keys still warn.
 
-### Phase 1: <name> ⏳
-- [ ] Task description `path/file.py`
-- [ ] Task description `path/file.py`
-**Verification**: <how to verify this phase>
+### Phase 2: Raw API command ⏳
+- [ ] Update `src/shared/argv.ts` — expose a schema-free JSON payload parser for `--json` / `--file` / stdin reuse.
+- [ ] Update `src/api/command.ts` — add `siyuan api raw <endpoint>` command, endpoint normalization, raw allowlist check, stderr warning, and pure JSON stdout.
+**Verification**: `pnpm run typecheck`; `pnpm run siyuan api --help` lists `raw`; raw disabled/allowlist errors return targeted error codes.
 
-### Feedback Tasks (→ [NNN-description](./revisions/NNN-description.md))
-Use this section for review/feedback tasks that still belong to the current change.
-
-If accepted feedback changes scope/design:
-- **Pre-gate** (spec not yet approved): update `spec.md` / `design.md` directly, then add tasks here.
-- **Post-gate** (design baseline locked): create `revisions/NNN-*.md` FIRST, then update this section. Do NOT edit `spec.md` / `design.md`.
-
-The section header MUST link the corresponding revision file (relative path).
-If the work belongs in a new follow-up or replacement change, the agent MUST NOT put it here unless the user has first approved that direction via `@align`.
--->
+### Phase 3: Docs and smoke checks ⏳
+- [ ] Update `src/docs/cli-usage/workspace-config.md` — document `behavior.rawApi` examples and explicit `"*"` all-open pattern.
+- [ ] Update `src/docs/cli-usage/permission.md` — document raw API boundary: no schema/resource guard/response filtering.
+- [ ] Run verification commands and update progress.
+**Verification**: `pnpm run typecheck`; command help renders; raw config docs match implemented field names.
 
 ---
 
 ## Progress
 
-**Overall**: 0%
+**Overall**: 22%
 
 | Phase | Progress | Status |
 |-------|----------|--------|
-| Phase 1 | 0% | ⏳ |
+| Phase 1 | 67% | 🚧 |
+| Phase 2 | 0% | ⏳ |
+| Phase 3 | 0% | ⏳ |
 
 **Recent**:
-- (none yet)
+- [2026-05-10T19:40+08:00] Plan created for raw-api-fallback implementation.
+- [2026-05-10T19:43+08:00] Added raw API behavior types and validation.
+- [2026-05-10T19:46+08:00] Added raw API behavior normalization and resolution.

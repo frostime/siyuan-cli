@@ -43,11 +43,11 @@ Simple: single paragraph. Complex: split into "Current state" + "User need". -->
 ### Approach
 <!-- Core solution (1-3 paragraphs) + why this approach over alternatives -->
 
-Add `EndpointSchema` files for the requested missing APIs and register them in `src/api/endpoints/index.ts`. Each endpoint follows the existing convention: one schema file per endpoint, authored `classification`, `guard.payloadTargets` where the payload identifies protected resources, and compact output through existing format strategies unless the endpoint needs raw JSON preservation.
+Add `EndpointSchema` files for the requested missing APIs and register them in `src/api/endpoints/index.ts`. Each endpoint follows the existing convention: one schema file per endpoint, authored `classification`, `guard.payloadTargets` where the verified payload identifies protected resources, and compact output through existing format strategies unless the endpoint needs raw JSON preservation.
 
 This change intentionally covers both the first-priority and second-priority endpoints from the request. `block.getBlockKramdown` already exists; this change adds only the plural batch endpoint `block.getBlockKramdowns`.
 
-Endpoint payload contracts will be verified against kernel docs/source before implementation. The design fixes the endpoint inventory, risk classification, and guard intent; exact JSON schema details follow the authoritative kernel API signature.
+Endpoint inventory is fixed by this design. Payload schemas, response shapes, and guard pointer paths are explicitly **research-required** before implementation: current guard notes are hypotheses, not final contracts. Authoritative kernel docs/source decide the final schema.
 
 ### Key Change
 <!-- MUST label each independent change item as **Type Label: Title**.

@@ -1,6 +1,6 @@
 # Memory: raw-api-fallback
 
-**Updated**: 2026-05-10T19:10+08:00
+**Updated**: 2026-05-10T19:36+08:00
 
 ## Git Baseline (Immutable)
 <!-- Captured during `sspec change new` before any change files are written.
@@ -22,7 +22,7 @@ M  .sspec/requests/26-05-07T13-00_expose-missing-kernel-apis.md
 <!-- Where we are and what's next — one to three lines.
 This is the resume entry point; the first section an agent reads on cold start. -->
 
-Design drafted after user clarified raw API config semantics. Next: @align gate; if approved, plan tasks.
+Design drafted and revised after gate feedback. Next: user approval; if approved, plan tasks and implement raw first on branch `feat/raw-api-fallback`.
 
 ## Key Files
 <!-- Files critical to understanding/continuing this change.
@@ -56,6 +56,7 @@ Obsolete items → mark [obsolete: timestamp], never silently delete. -->
 - [2026-05-10T19:10+08:00] [Decision] Project-level `.siyuan-cli.yaml` may enable raw API.
 - [2026-05-10T19:10+08:00] [Decision] Successful raw calls should not require extra approval; warnings are acceptable, but stdout must remain pure JSON for `jq` parsing.
 - [2026-05-10T19:10+08:00] [Rejected] Do not rely on normal permission resource rules for raw; no schema means no trustworthy `payloadTargets` or risk classification.
+- [2026-05-10T19:36+08:00] [Constraint] User clarified raw phase should not add or continue an approval mechanism; keep raw simple with config allowlist and stderr warnings only.
 
 ## Milestones
 <!-- MUST append one line per session. Pure facts; new entries appended at the end.
@@ -63,3 +64,4 @@ CLI treats the last valid bullet as the latest milestone.
 - [ISO timestamp] one-sentence summary -->
 
 - [2026-05-10T19:10+08:00] Created change and drafted spec/design for config-gated raw API fallback.
+- [2026-05-10T19:36+08:00] Switched to branch `feat/raw-api-fallback` and revised design to remove approval ambiguity.

@@ -48,18 +48,13 @@ export interface RawApiBehaviorConfig {
 }
 
 export interface BehaviorConfig {
-    allowYes?: boolean;
-    approval?: {
-        timeout?: number;
-        autoOpen?: boolean;
-    };
+    // Existing behavior fields stay unchanged and are omitted here.
     rawApi?: RawApiBehaviorConfig;
 }
 
-export interface ResolvedBehaviorConfig {
-    allowYes: boolean;
-    approval: { timeout: number; autoOpen: boolean };
-    rawApi: { enabled: boolean; allow: string[] };
+export interface ResolvedRawApiBehaviorConfig {
+    enabled: boolean;
+    allow: string[];
 }
 ```
 
@@ -137,7 +132,7 @@ CLI args
 | `RAW_API_ALLOW_REQUIRED` | stderr + nonzero exit | `enabled: true` but allow missing/empty | `Add at least one endpoint pattern; use "*" only if you intend to allow all raw APIs.` |
 | `RAW_API_ENDPOINT_DENIED` | stderr + nonzero exit | endpoint id matches no allow pattern | `Allowed patterns: attr.batch*, block.getDocInfo`. |
 | `RAW_API_INVALID_ENDPOINT` | stderr + nonzero exit | not `/api/<group>/<name>` or `<group>.<name>` | `Use block.getDocInfo or /api/block/getDocInfo`. |
-| `RAW_API_NO_SCHEMA_GUARD` | stderr warning | every successful raw invocation | `No payload schema, resource guard, approval, or response filter is applied.` |
+| `RAW_API_NO_SCHEMA_GUARD` | stderr warning | every successful raw invocation | `No payload schema, resource guard, or response filter is applied.` |
 
 Stdout stays pure JSON for successful calls and remains safe for `jq`.
 
@@ -146,6 +141,6 @@ Stdout stays pure JSON for successful calls and remains safe for `jq`.
 | Not implemented | Reason |
 |-----------------|--------|
 | Resource-level permission guard | raw has no `EndpointSchema.guard.payloadTargets`; pretending otherwise creates false safety. |
-| Risk auto-approval | no reliable classification exists for arbitrary raw endpoints. Config allowlist is the explicit authorization mechanism. |
+| Any extra confirmation flow | current phase keeps raw simple; config allowlist is the explicit authorization mechanism. Existing behavior for registered endpoints is unchanged. |
 | Compact formatting | raw output should be machine-readable JSON, not endpoint-specific text. |
 | Response filtering | raw has no response schema and may return arbitrary shapes. |

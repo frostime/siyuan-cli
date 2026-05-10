@@ -46,7 +46,7 @@ Add `siyuan api raw <endpoint>` as an explicit fallback path for direct kernel A
 
 Authorization is configuration-based, not inferred from incomplete schema metadata. A new `behavior.rawApi` block controls whether raw is enabled and which endpoint-id patterns are allowed. Both `enabled: true` and a non-empty allow pattern list are required; all other cases fail with a targeted raw error and a config example. Project-level `.siyuan-cli.yaml` may declare this block.
 
-This deliberately keeps raw simple: no resource-level guard, no response filtering, no compact formatter, no automatic approval. The command emits raw-specific warnings to stderr only so stdout stays jq-friendly.
+This deliberately keeps raw simple: no resource-level guard, no response filtering, no compact formatter, and no extra confirmation flow. The command emits raw-specific warnings to stderr only so stdout stays jq-friendly.
 
 ### Key Change
 <!-- MUST label each independent change item as **Type Label: Title**.
