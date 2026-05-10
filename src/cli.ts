@@ -99,9 +99,8 @@ async function customShowUsage<T extends Record<string, unknown>>(
 
     // Append SKILL version warning if the installed skill is missing or outdated.
     if (!parent || meta?.name === 'siyuan') {
-        const cliVersion = typeof main.meta === 'function'
-            ? (await main.meta()).version
-            : main.meta.version;
+        const mainMeta = await resolveValue(main.meta);
+        const cliVersion = mainMeta?.version;
         if (cliVersion) {
             const warning = checkInstalledSkillVersion(cliVersion);
             if (warning) {

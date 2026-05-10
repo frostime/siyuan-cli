@@ -49,27 +49,40 @@ export interface PermissionConfig {
 
 // ————— Behavior config model —————
 
+export interface RawApiBehaviorConfig {
+    enabled?: boolean;
+    allow?: string[];
+}
+
 export interface BehaviorConfig {
     allowYes?: boolean;              // default: true — when false, --yes is ignored
     approval?: {
         timeout?: number;            // seconds, default: 60
         autoOpen?: boolean;          // default: true — auto-open Approval Center in browser
     };
+    rawApi?: RawApiBehaviorConfig;
 }
 
 /** Fully resolved behavior with all fields populated. Used after merge. */
+export interface ResolvedRawApiBehaviorConfig {
+    enabled: boolean;
+    allow: string[];
+}
+
 export interface ResolvedBehaviorConfig {
     allowYes: boolean;
     approval: {
         timeout: number;
         autoOpen: boolean;
     };
+    rawApi: ResolvedRawApiBehaviorConfig;
 }
 
 // ————— Behavior validation —————
 
-const BEHAVIOR_KEYS = new Set(['allowYes', 'approval']);
+const BEHAVIOR_KEYS = new Set(['allowYes', 'approval', 'rawApi']);
 const APPROVAL_KEYS = new Set(['timeout', 'autoOpen']);
+const RAW_API_KEYS = new Set(['enabled', 'allow']);
 
 export interface BehaviorValidationError {
     kind: 'error';
@@ -122,6 +135,27 @@ export function validateBehaviorRaw(
             }
             if (a['autoOpen'] !== undefined && typeof a['autoOpen'] !== 'boolean') {
                 results.push({ kind: 'error', message: `${scope}.behavior.approval.autoOpen must be a boolean.` });
+            }
+        }
+    }
+    const rawApi = b['rawApi'];
+    if (rawApi !== undefined) {
+        if (typeof rawApi !== 'object' || rawApi === null || Array.isArray(rawApi)) {
+            results.push({ kind: 'error', message: `${scope}.behavior.rawApi must be an object.` });
+        } else {
+            const r = rawApi as Record<string, unknown>;
+            for (const key of Object.keys(r)) {
+                if (!RAW_API_KEYS.has(key)) {
+                    results.push({ kind: 'warning', key: `behavior.rawApi.${key}` });
+                }
+            }
+            if (r['enabled'] !== undefined && typeof r['enabled'] !== 'boolean') {
+                results.push({ kind: 'error', message: `${scope}.behavior.rawApi.enabled must be a boolean.` });
+            }
+            if (r['allow'] !== undefined) {
+                if (!Array.isArray(r['allow']) || !r['allow'].every((item) => typeof item === 'string')) {
+                    results.push({ kind: 'error', message: `${scope}.behavior.rawApi.allow must be an array of strings.` });
+                }
             }
         }
     }

@@ -1,6 +1,6 @@
 ---
 name: raw-api-fallback
-status: PLANNING
+status: REVIEW
 change-type: single
 created: 2026-05-10 19:10:15
 reference:

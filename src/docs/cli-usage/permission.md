@@ -201,6 +201,30 @@ When writing a custom endpoint or tool, consider:
 
 See `extension.md` for the full authoring guide.
 
+## Raw API fallback boundary
+
+`siyuan api raw <endpoint>` is controlled by `behavior.rawApi`, not by endpoint schemas. Raw calls still use normal workspace resolution and token handling, but they do not have an `EndpointSchema`.
+
+Consequences:
+
+- no payload schema validation;
+- no `guard.payloadTargets`, so notebook/path/resource-scoped permission cannot be enforced;
+- no response filtering;
+- no compact endpoint formatter.
+
+Configure raw access explicitly in `workspace-config.md`:
+
+```yaml
+behavior:
+  rawApi:
+    enabled: true
+    allow:
+      - "block.getDocInfo"
+      - "attr.batch*"
+```
+
+Use `allow: ["*"]` only when you intentionally allow all raw kernel APIs.
+
 ## Permission cascade
 
 Without a project override, global permission resolution is:

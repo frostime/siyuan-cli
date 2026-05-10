@@ -1,6 +1,6 @@
 # Memory: raw-api-fallback
 
-**Updated**: 2026-05-10T19:36+08:00
+**Updated**: 2026-05-10T20:02+08:00
 
 ## Git Baseline (Immutable)
 <!-- Captured during `sspec change new` before any change files are written.
@@ -22,7 +22,7 @@ M  .sspec/requests/26-05-07T13-00_expose-missing-kernel-apis.md
 <!-- Where we are and what's next — one to three lines.
 This is the resume entry point; the first section an agent reads on cold start. -->
 
-Design drafted and revised after gate feedback. Next: user approval; if approved, plan tasks and implement raw first on branch `feat/raw-api-fallback`.
+Raw API fallback implementation is complete and change status is REVIEW. Next: user review/acceptance; endpoint补齐 change remains deferred for research.
 
 ## Key Files
 <!-- Files critical to understanding/continuing this change.
@@ -57,6 +57,8 @@ Obsolete items → mark [obsolete: timestamp], never silently delete. -->
 - [2026-05-10T19:10+08:00] [Decision] Successful raw calls should not require extra approval; warnings are acceptable, but stdout must remain pure JSON for `jq` parsing.
 - [2026-05-10T19:10+08:00] [Rejected] Do not rely on normal permission resource rules for raw; no schema means no trustworthy `payloadTargets` or risk classification.
 - [2026-05-10T19:36+08:00] [Constraint] User clarified raw phase should not add or continue an approval mechanism; keep raw simple with config allowlist and stderr warnings only.
+- [2026-05-10T19:48+08:00] [Gotcha] `pnpm run siyuan` prepends pnpm script text to captured stdout; use `node bin/siyuan.mjs ...` when verifying raw stdout purity.
+- [2026-05-10T20:02+08:00] [Insight] Live raw test against dev workspace: `asset.getDocAssets` with doc id `20240922152051-7dpjfpv` returned a JSON array of asset paths, while the external docs page described a `{ assets: [...] }` object; implementation correctly preserves actual kernel `data` shape.
 
 ## Milestones
 <!-- MUST append one line per session. Pure facts; new entries appended at the end.
@@ -65,3 +67,5 @@ CLI treats the last valid bullet as the latest milestone.
 
 - [2026-05-10T19:10+08:00] Created change and drafted spec/design for config-gated raw API fallback.
 - [2026-05-10T19:36+08:00] Switched to branch `feat/raw-api-fallback` and revised design to remove approval ambiguity.
+- [2026-05-10T19:48+08:00] Implemented raw behavior config, raw command, docs, and verification; full test suite still has unrelated getChildBlocks assertion failure.
+- [2026-05-10T20:02+08:00] Per user request, temporarily enabled `asset.getDocAssets` in project `.siyuan-cli.yaml`, verified raw call against dev workspace, and restored config with no diff.
