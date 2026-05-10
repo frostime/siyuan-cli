@@ -1,6 +1,6 @@
 import type { EndpointSchema } from '@/shared/schema.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<BatchSetBlockAttrsData> = {
     endpoint: '/api/attr/batchSetBlockAttrs',
     summary: 'Batch set block attributes',
     description:
@@ -54,3 +54,11 @@ export const schema: EndpointSchema = {
     },
     formatStrategy: 'transaction'
 };
+
+export type BatchSetBlockAttrsData = null;
+
+export interface BatchSetBlockAttrsResponse {
+    code: number;
+    msg: string;
+    data: BatchSetBlockAttrsData;
+}

@@ -1,6 +1,6 @@
 ---
 change: "expose-missing-kernel-endpoints"
-updated: "2026-05-10T21:36+08:00"
+updated: "2026-05-10T23:01+08:00"
 ---
 
 # Tasks
@@ -48,6 +48,14 @@ updated: "2026-05-10T21:36+08:00"
 - [x] Run `pnpm run typecheck`, `pnpm run build`, and `pnpm run test`.
 **Verification**: smoke outputs match expected shapes; `.siyuan-cli.yaml` restored with no diff; any unrelated test failure is documented.
 
+### Feedback Tasks (→ [001-add-response-guards-for-new-endpoints](./revisions/001-add-response-guards-for-new-endpoints.md))
+- [x] Update `src/shared/schema.ts` and `src/api/guard.ts` so custom `filterResponse` receives caller context.
+- [x] Add response data type declarations for all 14 newly added endpoint schemas.
+- [x] Add response-side permission filtering for resource-bearing map/array/single-object responses.
+- [x] Add tests covering new response filter behavior.
+- [x] Run `pnpm run typecheck`, `pnpm run build`, and relevant tests.
+- [x] Add custom compact formatters for `attr.batchGetBlockAttrs` and `block.getBlockKramdowns`.
+
 ---
 
 ## Progress
@@ -71,3 +79,7 @@ updated: "2026-05-10T21:36+08:00"
 - [2026-05-10T21:42+08:00] Added block info/sibling/tail/daily-note helper endpoint schemas.
 - [2026-05-10T21:44+08:00] Added filetree duplicate/full-hpath endpoints and registered all new schemas.
 - [2026-05-10T21:49+08:00] Verified typecheck/build, registry listing, dev smoke reads, batchInsert empty-anchor dry-run, and `.siyuan-cli.yaml` restore; full test suite still has unrelated `getChildBlocks` assertion failure.
+- [2026-05-10T22:53+08:00] Review feedback classified as amend; revision 001 created for response declarations and response-side guards.
+- [2026-05-10T23:01+08:00] Implemented response declarations and response-side filters; typecheck/build/endpoint-schemas tests pass; full test suite still has the pre-existing getChildBlocks assertion failure.
+- [2026-05-11T00:09+08:00] Added formatting follow-up to revision 001: custom compact outputs for batch attrs and plural Kramdown.
+- [2026-05-11T00:09+08:00] Implemented compact formatters; Kramdown multi-block output uses a system hint plus `--- id: ...` splitters, without Markdown fences.

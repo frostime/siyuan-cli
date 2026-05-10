@@ -271,7 +271,8 @@ export interface FilterSpec {
     /** Imperative fallback — called if declarative response extractor can't express the logic. */
     filterResponse?: (
         response: unknown,
-        engine: PermissionEngineLike
+        engine: PermissionEngineLike,
+        context?: { caller?: CallerContext }
     ) => unknown | Promise<unknown>;
 }
 

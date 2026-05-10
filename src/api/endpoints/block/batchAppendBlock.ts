@@ -1,4 +1,5 @@
 import type { EndpointSchema } from '@/shared/schema.js';
+import type { BlockTransaction } from './transaction.js';
 
 const batchBlockItem = {
     type: 'object' as const,
@@ -20,7 +21,7 @@ const batchBlockItem = {
     }
 };
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<BlockTransaction[]> = {
     endpoint: '/api/block/batchAppendBlock',
     summary: 'Batch append blocks to parents',
     payload: {
@@ -47,3 +48,9 @@ export const schema: EndpointSchema = {
     },
     formatStrategy: 'transaction'
 };
+
+export interface BatchAppendBlockResponse {
+    code: number;
+    msg: string;
+    data: BlockTransaction[];
+}

@@ -1,6 +1,6 @@
 import type { EndpointSchema } from '@/shared/schema.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<string> = {
     endpoint: '/api/filetree/getFullHPathByID',
     summary: 'Get full hpath by document/block ID',
     payload: {
@@ -26,3 +26,9 @@ export const schema: EndpointSchema = {
     },
     formatStrategy: 'direct'
 };
+
+export interface GetFullHPathByIDResponse {
+    code: number;
+    msg: string;
+    data: string;
+}

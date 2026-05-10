@@ -1,8 +1,9 @@
 import type { EndpointSchema } from '@/shared/schema.js';
+import type { BlockTransaction } from './transaction.js';
 
 const optionalAnchorID = '^(\\d{14}-[0-9a-z]{7})?$';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<BlockTransaction[]> = {
     endpoint: '/api/block/batchInsertBlock',
     summary: 'Batch insert blocks before, after, or as children of specified blocks',
     payload: {
@@ -61,3 +62,9 @@ export const schema: EndpointSchema = {
     },
     formatStrategy: 'transaction'
 };
+
+export interface BatchInsertBlockResponse {
+    code: number;
+    msg: string;
+    data: BlockTransaction[];
+}

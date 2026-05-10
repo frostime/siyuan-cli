@@ -1,6 +1,7 @@
+import { filterResponseObjectById } from '@/api/response-guards.js';
 import type { EndpointSchema } from '@/shared/schema.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<DocInfo | null> = {
     endpoint: '/api/block/getDocInfo',
     summary: 'Get document information by block or document ID',
     payload: {
@@ -22,7 +23,28 @@ export const schema: EndpointSchema = {
         operation: 'inspect'
     },
     guard: {
-        payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }]
+        payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }],
+        filterResponse: async (response, engine, context) =>
+            await filterResponseObjectById(response, engine, context?.caller)
     },
     formatStrategy: 'object'
 };
+
+export interface DocInfo {
+    id: string;
+    rootID?: string;
+    name?: string;
+    refCount?: number;
+    subFileCount?: number;
+    refIDs?: string[] | null;
+    ial?: Record<string, string>;
+    icon?: string;
+    attrViews?: unknown[] | null;
+    [key: string]: unknown;
+}
+
+export interface GetDocInfoResponse {
+    code: number;
+    msg: string;
+    data: DocInfo | null;
+}

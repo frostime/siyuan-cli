@@ -1,6 +1,7 @@
 import type { EndpointSchema } from '@/shared/schema.js';
+import type { BlockTransaction } from './transaction.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<BlockTransaction[]> = {
     endpoint: '/api/block/appendDailyNoteBlock',
     summary: 'Append blocks to today\'s daily note',
     payload: {
@@ -34,3 +35,9 @@ export const schema: EndpointSchema = {
     },
     formatStrategy: 'transaction'
 };
+
+export interface AppendDailyNoteBlockResponse {
+    code: number;
+    msg: string;
+    data: BlockTransaction[];
+}

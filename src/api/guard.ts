@@ -118,7 +118,7 @@ export async function applyResponseGuard(
     const guard = schema.guard;
     if (!guard) return response;
     if (guard.filterResponse) {
-        return await guard.filterResponse(response, engine);
+        return await guard.filterResponse(response, engine, { caller });
     }
     if (guard.response) {
         const { itemsAt, fieldMap } = guard.response;

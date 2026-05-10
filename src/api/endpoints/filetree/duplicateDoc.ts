@@ -1,6 +1,7 @@
+import { filterResponseObjectById } from '@/api/response-guards.js';
 import type { EndpointSchema } from '@/shared/schema.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<DuplicateDocData | null> = {
     endpoint: '/api/filetree/duplicateDoc',
     summary: 'Duplicate document',
     payload: {
@@ -22,7 +23,23 @@ export const schema: EndpointSchema = {
         operation: 'create'
     },
     guard: {
-        payloadTargets: [{ path: 'id', kind: 'id', access: 'write' }]
+        payloadTargets: [{ path: 'id', kind: 'id', access: 'write' }],
+        filterResponse: async (response, engine, context) =>
+            await filterResponseObjectById(response, engine, context?.caller)
     },
     formatStrategy: 'object'
 };
+
+export interface DuplicateDocData {
+    id: string;
+    notebook?: string;
+    path?: string;
+    hPath?: string;
+    [key: string]: unknown;
+}
+
+export interface DuplicateDocResponse {
+    code: number;
+    msg: string;
+    data: DuplicateDocData | null;
+}

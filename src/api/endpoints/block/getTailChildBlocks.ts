@@ -1,6 +1,6 @@
 import type { EndpointSchema } from '@/shared/schema.js';
 
-export const schema: EndpointSchema = {
+export const schema: EndpointSchema<TailChildBlock[]> = {
     endpoint: '/api/block/getTailChildBlocks',
     summary: 'Get tail child blocks',
     payload: {
@@ -27,7 +27,26 @@ export const schema: EndpointSchema = {
         operation: 'inspect'
     },
     guard: {
-        payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }]
+        payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }],
+        response: {
+            itemsAt: '[*]',
+            fieldMap: { id: 'id' }
+        }
     },
     formatStrategy: 'records'
 };
+
+export interface TailChildBlock {
+    id: string;
+    type?: string;
+    subType?: string;
+    content?: string;
+    markdown?: string;
+    [key: string]: unknown;
+}
+
+export interface GetTailChildBlocksResponse {
+    code: number;
+    msg: string;
+    data: TailChildBlock[];
+}

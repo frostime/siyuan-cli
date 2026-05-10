@@ -7,6 +7,9 @@ reference:
 - source: .sspec/requests/26-05-07T13-00_expose-missing-kernel-apis.md
   type: request
   note: Linked manually; covers the missing EndpointSchema half
+- source: .sspec/changes/26-05-10T19-10_expose-missing-kernel-endpoints/revisions/001-add-response-guards-for-new-endpoints.md
+  type: revision
+  note: Add response declarations and response-side permission filtering
 ---
 
 <!-- MUST follow frontmatter schema:
