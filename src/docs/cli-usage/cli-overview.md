@@ -20,6 +20,7 @@ siyuan
 ├── api          Call kernel endpoints directly
 │   ├── list     List available endpoints
 │   ├── describe Show endpoint schema
+│   ├── raw      Call a config-allowed raw kernel endpoint
 │   └── <id>     Call an endpoint (e.g. query.sql, block.getBlockKramdown)
 ├── tool         Run high-level composite tools
 │   ├── list     List available tools
@@ -63,6 +64,24 @@ siyuan api block.updateBlock -j '{"id":"...","data":"...","dataType":"markdown"}
 # From file
 siyuan api query.sql -f query.json
 ```
+
+### Raw fallback
+
+Use `api raw` only for kernel endpoints that are not registered yet. It must be enabled by config and explicitly allowlisted:
+
+```yaml
+behavior:
+  rawApi:
+    enabled: true
+    allow:
+      - "asset.getDocAssets"
+```
+
+```bash
+siyuan api raw asset.getDocAssets -j '{"id":"20240922152051-7dpjfpv"}'
+```
+
+Raw calls keep stdout as pure JSON `data` for tools like `jq`; raw warnings go to stderr. Raw has no payload schema, resource guard, response filter, or compact formatter.
 
 ### Discovery
 
@@ -123,7 +142,7 @@ APIs and tools additionally accept:
 
 | Flag | Meaning |
 |------|---------|
-| `--print compact\|json` | Choose output mode; APIs use compact formatter text or envelope JSON, tools use compact content or envelope JSON |
+| `--print compact\|json` | Choose output mode; registered APIs use compact formatter text or envelope JSON, tools use compact content or envelope JSON. `api raw` ignores this and always prints raw JSON `data`. |
 
 ## Input sources
 

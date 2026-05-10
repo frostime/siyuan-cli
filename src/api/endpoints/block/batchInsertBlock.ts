@@ -55,9 +55,9 @@ export const schema: EndpointSchema<BlockTransaction[]> = {
     cli: { allowSource: { blocks: ['literal', 'file', 'stdin'] } },
     guard: {
         payloadTargets: [
-            { path: 'blocks[*].parentID', kind: 'id', access: 'write' },
-            { path: 'blocks[*].previousID', kind: 'id', access: 'write' },
-            { path: 'blocks[*].nextID', kind: 'id', access: 'write' }
+            { path: 'blocks[*].parentID', kind: 'id', access: 'write', skipEmpty: true },
+            { path: 'blocks[*].previousID', kind: 'id', access: 'write', skipEmpty: true },
+            { path: 'blocks[*].nextID', kind: 'id', access: 'write', skipEmpty: true }
         ]
     },
     formatStrategy: 'transaction'

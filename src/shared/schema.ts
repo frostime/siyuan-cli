@@ -247,6 +247,8 @@ export interface PayloadTargetSpec {
     path: PointerPath;
     kind: ResourceKind;
     access: 'read' | 'write';
+    /** Treat empty string as intentionally absent for optional kernel anchor fields. */
+    skipEmpty?: boolean;
 }
 
 export interface FilterSpec {

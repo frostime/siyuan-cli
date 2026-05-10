@@ -251,6 +251,8 @@ The following commands cover common block operations. Always inspect with a read
 | Inspect block metadata | `siyuan tool get-block-info <id>` |
 | Get raw block info from kernel | `siyuan api block.getBlockInfo --id <id>` |
 | Get Kramdown (kernel internal format) | `siyuan api block.getBlockKramdown --id <id>` |
+| Batch get Kramdown | `siyuan api block.getBlockKramdowns --ids '["<id1>","<id2>"]'` |
+| Get document info for multiple docs | `siyuan api block.getDocsInfo --ids '["<doc-id1>","<doc-id2>"]'` |
 | Get block DOM | `siyuan api block.getBlockDOM --id <id>` |
 | Get breadcrumb path | `siyuan api block.getBlockBreadcrumb --id <id>` |
 | List child blocks | `siyuan api block.getChildBlocks --id <id>` |
@@ -274,7 +276,9 @@ The following commands cover common block operations. Always inspect with a read
 | Task | Command |
 |------|---------|
 | Get block attributes | `siyuan api attr.getBlockAttrs --id <id>` |
+| Batch get block attributes | `siyuan api attr.batchGetBlockAttrs --ids '["<id1>","<id2>"]'` |
 | Set block attributes | `siyuan api attr.setBlockAttrs --id <id> --attrs '{"custom-key":"value"}'` |
+| Batch set block attributes | `siyuan api attr.batchSetBlockAttrs --blockAttrs '[{"id":"<id>","attrs":{"custom-key":"value"}}]'` |
 
 All commands support `--help` for full parameter details. Use `--dry-run` to preview writes.
 

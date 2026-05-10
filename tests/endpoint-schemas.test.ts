@@ -67,7 +67,7 @@ test('moveBlock is normalized as content write move with three write targets', (
     assert.deepEqual(moveBlock.guard?.payloadTargets, [
         { path: 'id', kind: 'id', access: 'write' },
         { path: 'parentID', kind: 'id', access: 'write' },
-        { path: 'previousID', kind: 'id', access: 'write' }
+        { path: 'previousID', kind: 'id', access: 'write', skipEmpty: true }
     ]);
 });
 

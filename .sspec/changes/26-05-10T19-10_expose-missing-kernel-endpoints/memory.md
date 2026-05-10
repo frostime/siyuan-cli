@@ -1,6 +1,6 @@
 # Memory: expose-missing-kernel-endpoints
 
-**Updated**: 2026-05-11T00:09+08:00
+**Updated**: 2026-05-11T02:20+08:00
 
 ## Git Baseline (Immutable)
 <!-- Captured during `sspec change new` before any change files are written.
@@ -64,6 +64,8 @@ Obsolete items → mark [obsolete: timestamp], never silently delete. -->
 - [2026-05-10T21:49+08:00] [Decision] `applyPayloadGuard` now skips empty-string payload target values, so optional empty anchors like `batchInsertBlock.blocks[*].nextID` do not trigger false content permission checks.
 - [2026-05-10T23:01+08:00] [Decision] Response-side guards use declarative `guard.response` for arrays and custom `filterResponse` for ID-keyed maps/single objects/sibling ID bundles; custom filters now receive caller context for permission evaluation consistency.
 - [2026-05-11T00:09+08:00] [Decision] `block.getBlockKramdowns` compact output avoids Markdown fences and uses a leading system hint plus `--- id: <block-id>` splitters for multi-block output; single-block output remains direct Kramdown content.
+- [2026-05-11T02:20+08:00] [Decision] Empty-string payload target skipping is explicit per target via `skipEmpty`; global empty-string skipping was rejected as too broad for guarded path/notebook/workspace-path fields.
+- [2026-05-11T02:20+08:00] [Decision] Possible nullable `block.getDocsInfo` response items are not handled in this change under YAGNI; follow-up request `.sspec/requests/26-05-11T02-06_investigate-nullable-getdocsinfo-response-items.md` records the investigation.
 
 ## Milestones
 <!-- MUST append one line per session. Pure facts; new entries appended at the end.
@@ -76,3 +78,4 @@ CLI treats the last valid bullet as the latest milestone.
 - [2026-05-10T21:49+08:00] Implemented 14 missing endpoint schemas, registered them, verified representative dev calls, and moved change to REVIEW.
 - [2026-05-10T23:01+08:00] Implemented revision 001 response declarations and response-side guards, with endpoint-schemas tests passing.
 - [2026-05-11T00:09+08:00] Added custom compact formatters for batch attrs and plural Kramdown; typecheck/build/endpoint-schemas tests pass.
+- [2026-05-11T02:20+08:00] Addressed subagent review findings with explicit skipEmpty, concise docs, raw tests, and full typecheck/test/build passing.

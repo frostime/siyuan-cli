@@ -107,7 +107,7 @@ This replacement is **independent of how the workspace name was determined**. If
 
 **Design rationale**: `--workspace` expresses "use a different target right now". The project file expresses "whenever I operate from this directory, these rules apply". These are orthogonal concerns. Honoring both is the safe interpretation — switching targets should not silently disable directory-scoped guardrails.
 
-The same independence applies to `behavior` fields declared in the project file — they merge with workspace/defaults behavior at field level.
+The same independence applies to `behavior` fields declared in the project file — they merge with workspace/defaults behavior at field level. One notable exception is `behavior.rawApi`, which is resolved as a whole object (enabled + allow patterns) rather than field-by-field so that raw authorization stays explicit.
 
 ---
 
@@ -165,6 +165,15 @@ Emitted when **both**:
 The warning does not change exit code. Agents should treat it as a signal to add `--workspace` or a project file.
 
 ---
+
+## Raw API behavior note
+
+`behavior.rawApi` is an explicit opt-in gate for `siyuan api raw`.
+
+- It can be declared in project or workspace behavior, alongside normal workspace resolution.
+- It resolves as a whole object from the first layer that defines it.
+- It does not use the normal permission rule-list model; raw access is authorized by config allowlist, not by `permission.rules`.
+- Example: `behavior.rawApi.enabled: true` + `behavior.rawApi.allow: ["block.getDocInfo"]` permits `siyuan api raw block.getDocInfo`.
 
 ## Key files
 

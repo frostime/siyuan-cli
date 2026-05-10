@@ -10,6 +10,9 @@ reference:
 - source: .sspec/changes/26-05-10T19-10_expose-missing-kernel-endpoints/revisions/001-add-response-guards-for-new-endpoints.md
   type: revision
   note: Add response declarations and response-side permission filtering
+- source: .sspec/changes/26-05-10T19-10_expose-missing-kernel-endpoints/revisions/002-address-review-findings.md
+  type: revision
+  note: Address subagent review findings for skipEmpty, docs, and raw tests
 ---
 
 <!-- MUST follow frontmatter schema:

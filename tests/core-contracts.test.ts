@@ -480,6 +480,63 @@ test('array payload targets reject on any denied item', async () => {
     assert.deepEqual(seen, ['ok', 'bad']);
 });
 
+test('payload targets reject empty strings unless explicitly marked skipEmpty', async () => {
+    const seen: string[] = [];
+    const engine: PermissionEngineLike = {
+        checkEndpoint() {},
+        checkTool() {},
+        async checkContentRef(ref) {
+            seen.push(ref.value);
+        },
+        async resolveContentIds() {
+            return new Map();
+        },
+        async resolveContentId() {
+            return { notebook: 'nb', path: '/x.sy' };
+        },
+        filterItems(items) {
+            return { kept: items, removed: 0, reasons: {} };
+        }
+    };
+
+    const schema: EndpointSchema = {
+        endpoint: '/api/test/emptyRef',
+        summary: 'Empty ref',
+        payload: {
+            type: 'object',
+            properties: {
+                requiredID: { type: 'string' },
+                optionalID: { type: 'string' }
+            }
+        },
+        classification: {
+            mode: 'write',
+            surface: 'content',
+            scope: 'single',
+            operation: 'update'
+        },
+        guard: {
+            payloadTargets: [
+                { path: 'requiredID', kind: 'id', access: 'write' },
+                { path: 'optionalID', kind: 'id', access: 'write', skipEmpty: true }
+            ]
+        }
+    };
+
+    await applyPayloadGuard(
+        schema,
+        { requiredID: 'ok', optionalID: '' },
+        engine,
+        'write'
+    );
+    assert.deepEqual(seen, ['ok']);
+
+    await assert.rejects(
+        () => applyPayloadGuard(schema, { requiredID: '', optionalID: '' }, engine, 'write'),
+        /must not be empty/
+    );
+});
+
 test('preparePrintedOutput wraps json mode into a parseable envelope', () => {
     const extra = createJsonPrintExtra();
     extra.warnings.push({ warning: 'TEST_WARNING' });

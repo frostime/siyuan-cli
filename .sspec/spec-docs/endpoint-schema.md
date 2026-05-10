@@ -193,6 +193,20 @@ Code refs: `/src/api/registry.ts#validateSchema` (global-read guard requirement)
 
 `payloadTargets` describe which payload fields represent protected resources.
 
+`skipEmpty` MUST be explicit on the target when a payload field may intentionally be `""` (for example optional block-insertion/move anchor IDs). The runtime guard treats empty strings as rejected by default unless the target sets `skipEmpty: true`.
+
+Examples:
+- [`src/api/endpoints/block/batchInsertBlock.ts`](../../src/api/endpoints/block/batchInsertBlock.ts) — `blocks[*].parentID` / `previousID` / `nextID` use `skipEmpty: true`.
+- [`src/api/endpoints/block/moveBlock.ts`](../../src/api/endpoints/block/moveBlock.ts) — `previousID` uses `skipEmpty: true` because an empty string means "move to first child".
+
+```ts
+guard: {
+  payloadTargets: [
+    { path: 'blocks[*].previousID', kind: 'id', access: 'write', skipEmpty: true }
+  ]
+}
+```
+
 ```ts
 guard: {
   payloadTargets: [
@@ -212,6 +226,7 @@ Runtime effect:
 - `executeEndpoint()` resolves each declared target and checks permission before the kernel call.
 - Each target uses its own `access` (`read`/`write`) when calling `checkContentRef`.
 - `kind: workspace-path` currently checks caller/action only; path-conditional matching is reserved for a later phase.
+- `skipEmpty` is explicit per target; it is not a global permission shortcut.
 
 Code refs: `/src/api/registry.ts#validateSchema`, `/src/api/guard.ts#applyPayloadGuard`, `/src/shared/permission.ts#checkContentRef`.
 

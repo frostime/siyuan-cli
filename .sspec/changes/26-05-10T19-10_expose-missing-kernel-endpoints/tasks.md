@@ -1,6 +1,6 @@
 ---
 change: "expose-missing-kernel-endpoints"
-updated: "2026-05-10T23:01+08:00"
+updated: "2026-05-11T02:20+08:00"
 ---
 
 # Tasks
@@ -56,6 +56,13 @@ updated: "2026-05-10T23:01+08:00"
 - [x] Run `pnpm run typecheck`, `pnpm run build`, and relevant tests.
 - [x] Add custom compact formatters for `attr.batchGetBlockAttrs` and `block.getBlockKramdowns`.
 
+### Feedback Tasks (→ [002-address-review-findings](./revisions/002-address-review-findings.md))
+- [x] Change empty-string payload guard skipping from global behavior to explicit `skipEmpty` target declarations.
+- [x] Record nullable `block.getDocsInfo` response item concern as a separate request instead of changing runtime behavior now.
+- [x] Add concise docs for `api raw` and common new batch endpoint usage.
+- [x] Add limited raw API tests for endpoint normalization, allowlist behavior, and stdout/stderr contract.
+- [x] Run `pnpm run typecheck`, `pnpm run test`, and `pnpm run build`.
+
 ---
 
 ## Progress
@@ -83,3 +90,4 @@ updated: "2026-05-10T23:01+08:00"
 - [2026-05-10T23:01+08:00] Implemented response declarations and response-side filters; typecheck/build/endpoint-schemas tests pass; full test suite still has the pre-existing getChildBlocks assertion failure.
 - [2026-05-11T00:09+08:00] Added formatting follow-up to revision 001: custom compact outputs for batch attrs and plural Kramdown.
 - [2026-05-11T00:09+08:00] Implemented compact formatters; Kramdown multi-block output uses a system hint plus `--- id: ...` splitters, without Markdown fences.
+- [2026-05-11T02:20+08:00] Addressed subagent review findings: explicit `skipEmpty`, nullable getDocsInfo follow-up request, concise docs, raw tests; typecheck/test/build all pass.

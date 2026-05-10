@@ -92,7 +92,12 @@ export async function applyPayloadGuard(
                         `payload path "${target.path}" must resolve to string values`
                     );
                 }
-                if (value === '') continue;
+                if (value === '') {
+                    if (target.skipEmpty) continue;
+                    throw new ContentDeniedError(
+                        `payload path "${target.path}" must not be empty`
+                    );
+                }
                 const effect = await engine.checkContentRef(
                     { kind: target.kind, value, access: target.access },
                     caller

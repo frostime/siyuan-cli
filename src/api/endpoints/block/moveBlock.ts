@@ -44,7 +44,7 @@ export const schema: EndpointSchema = {
         payloadTargets: [
             { path: 'id', kind: 'id', access: 'write' },
             { path: 'parentID', kind: 'id', access: 'write' },
-            { path: 'previousID', kind: 'id', access: 'write' }
+            { path: 'previousID', kind: 'id', access: 'write', skipEmpty: true }
         ]
     },
     formatStrategy: 'transaction'

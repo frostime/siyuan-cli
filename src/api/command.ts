@@ -200,7 +200,7 @@ export function getEndpointHelpEntry(id: string): RegisteredEndpoint | undefined
     return registry.get(id);
 }
 
-function normalizeRawEndpoint(input: string): { id: string; endpoint: string } {
+export function normalizeRawEndpoint(input: string): { id: string; endpoint: string } {
     const msysRoot = getMsysRootWin();
     const normalizedInput = msysRoot ? normalizeMsysPath(input, msysRoot) : input;
     const pathMatch = /^\/api\/([a-zA-Z0-9_]+)\/([a-zA-Z0-9_]+)$/.exec(normalizedInput);
@@ -225,7 +225,7 @@ function normalizeRawEndpoint(input: string): { id: string; endpoint: string } {
     );
 }
 
-function checkRawApiAllowed(id: string, allow: string[]): void {
+export function checkRawApiAllowed(id: string, allow: string[]): void {
     if (allow.length === 0) {
         throw new CliError(
             ExitCode.CONFIG,
@@ -244,7 +244,7 @@ function checkRawApiAllowed(id: string, allow: string[]): void {
     }
 }
 
-async function callRawEndpoint(rawArgs: Record<string, unknown>): Promise<void> {
+export async function callRawEndpoint(rawArgs: Record<string, unknown>): Promise<void> {
     const rawEndpoint = rawArgs['endpoint'];
     if (typeof rawEndpoint !== 'string') {
         throw new CliError(
