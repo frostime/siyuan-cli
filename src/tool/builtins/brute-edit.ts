@@ -44,12 +44,15 @@ Uses global --dry-run to preview without writing.`,
     cli: {
         primary: 'id',
         allowSource: {
-            replacements: ['literal', 'stdin']
+            replacements: ['literal', 'file', 'stdin']
         },
         examples: [
             {
                 command:
                     'siyuan tool brute-edit 20241016135347-zlrn2cz --replacements \'[{"search":"old","replace":"new"}]\''
+            },
+            {
+                command: 'siyuan tool brute-edit 20241016135347-zlrn2cz --replacements @file:./replacements.json'
             },
             {
                 command: 'cat replacements.json | siyuan tool brute-edit 20241016135347-zlrn2cz --replacements @stdin'

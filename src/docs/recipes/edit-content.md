@@ -157,24 +157,18 @@ EOF
 siyuan workspace which
 siyuan tool get-block-info <doc-id>
 
-# Literal string — ok for one or two small replacements
 siyuan tool brute-edit <doc-id> \
-  --replacements '[{"search":"old text","replace":"new text"}]' \
-  --dry-run
-
-# @stdin — preferred for long or programmatically generated replacement JSON
-cat > replacements.json <<'EOF'
+  --replacements @stdin \
+  --dry-run <<'EOF'
 [
   {"search": "old heading", "replace": "new heading"},
   {"search": "deprecated term", "replace": "updated term"}
 ]
 EOF
-cat replacements.json | siyuan tool brute-edit <doc-id> \
-  --replacements @stdin \
-  --dry-run
 
+# If replacements are already in a file, one @file form is enough
 siyuan tool brute-edit <doc-id> \
-  --replacements @stdin \
+  --replacements @file:./replacements.json \
   --yes
 
 siyuan tool get-block-content <doc-id> --showId true

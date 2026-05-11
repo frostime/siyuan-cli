@@ -217,33 +217,35 @@ test('push-md: targetHpath derivation for non-root parent', () => {
     assert.equal(targetHpath, '/inbox/my-note');
 });
 
-test('brute-edit: replacements can be sourced from stdin', () => {
-    const schema: EndpointSchema = {
-        endpoint: '/api/tool/brute-edit',
-        summary: 'Brute edit',
-        payload: {
-            type: 'object',
-            required: ['id', 'replacements'],
-            additionalProperties: false,
-            properties: {
-                id: { type: 'string' },
-                replacements: { type: 'string' },
-                maxSize: { type: 'integer', default: 51200 }
-            }
-        },
-        classification: {
-            mode: 'write',
-            surface: 'content',
-            scope: 'single',
-            operation: 'update'
-        },
-        cli: {
-            primary: 'id',
-            allowSource: {
-                replacements: ['literal', 'stdin']
-            }
+const bruteEditSchemaForSourceTest: EndpointSchema = {
+    endpoint: '/api/tool/brute-edit',
+    summary: 'Brute edit',
+    payload: {
+        type: 'object',
+        required: ['id', 'replacements'],
+        additionalProperties: false,
+        properties: {
+            id: { type: 'string' },
+            replacements: { type: 'string' },
+            maxSize: { type: 'integer', default: 51200 }
         }
-    };
+    },
+    classification: {
+        mode: 'write',
+        surface: 'content',
+        scope: 'single',
+        operation: 'update'
+    },
+    cli: {
+        primary: 'id',
+        allowSource: {
+            replacements: ['literal', 'file', 'stdin']
+        }
+    }
+};
+
+test('brute-edit: replacements can be sourced from stdin', () => {
+    const schema = bruteEditSchemaForSourceTest;
 
     const dir = mkdtempSync(join(tmpdir(), 'siyuan-cli-stdin-'));
     const stdinFile = join(dir, 'stdin.txt');
@@ -274,6 +276,28 @@ test('brute-edit: replacements can be sourced from stdin', () => {
         else delete (process.stdin as { isTTY?: boolean }).isTTY;
         if (originalFd) Object.defineProperty(process.stdin, 'fd', originalFd);
         else delete (process.stdin as { fd?: number }).fd;
+        rmSync(dir, { recursive: true, force: true });
+    }
+});
+
+test('brute-edit: replacements can be sourced from file', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'siyuan-cli-file-'));
+    const replacementsFile = join(dir, 'replacements.json');
+    writeFileSync(replacementsFile, '[{"search":"foo","replace":"bar"}]', 'utf8');
+
+    try {
+        const payload = parsePayload({
+            schema: bruteEditSchemaForSourceTest,
+            args: {
+                id: '20260507131852-5604q2q',
+                replacements: `@file:${replacementsFile}`
+            }
+        });
+
+        assert.equal(payload.id, '20260507131852-5604q2q');
+        assert.equal(payload.replacements, '[{"search":"foo","replace":"bar"}]');
+        assert.equal(payload.maxSize, 51200);
+    } finally {
         rmSync(dir, { recursive: true, force: true });
     }
 });
