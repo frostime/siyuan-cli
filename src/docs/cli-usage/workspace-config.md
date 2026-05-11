@@ -100,6 +100,8 @@ Optional `behavior` section controls how the CLI handles approval-gated writes. 
 | `allowYes` | boolean | `true` | When `false`, `--yes` flag is ignored; approval flow is mandatory |
 | `approval.timeout` | number (seconds) | `60` | How long the CLI waits for an approval decision |
 | `approval.autoOpen` | boolean | `true` | Whether to auto-open the Approval Center in the browser |
+| `rawApi.enabled` | boolean | `false` | Enables the raw kernel API fallback command |
+| `rawApi.allow` | string[] | `[]` | Endpoint-id glob patterns allowed through `siyuan api raw` |
 
 All fields are optional. Omitted fields inherit from the next level in the cascade.
 
@@ -107,7 +109,39 @@ All fields are optional. Omitted fields inherit from the next level in the casca
 
 Project > Workspace > Defaults > Built-in.
 
-Merge is field-level: a project setting only `allowYes` still inherits `approval.timeout` from workspace or defaults.
+Merge is field-level for `allowYes` and `approval`. `rawApi` resolves as a whole object from the first level that declares it: Project > Workspace > Defaults > Built-in. This avoids accidentally combining `enabled: true` from one scope with broad allow patterns from another.
+
+### Raw API fallback
+
+Raw API is disabled by default. To use `siyuan api raw`, configure both `enabled: true` and at least one allowed endpoint pattern:
+
+```yaml
+behavior:
+  rawApi:
+    enabled: true
+    allow:
+      - "attr.batch*"
+      - "block.getDocInfo"
+      - "filetree.getFullHPathByID"
+```
+
+Allowing all raw endpoints is supported but must be explicit:
+
+```yaml
+behavior:
+  rawApi:
+    enabled: true
+    allow:
+      - "*"
+```
+
+Example call:
+
+```bash
+siyuan api raw block.getDocInfo -j '{"id":"20230315180000-abcdefg"}'
+```
+
+Raw output is always pure JSON on stdout so it can be piped to `jq`. Raw safety warnings are written to stderr.
 
 ### CI / agent usage
 
@@ -138,6 +172,9 @@ behavior:                    # optional; merged with workspace/defaults behavior
   allowYes: false            # enforce approval flow for this project
   approval:
     timeout: 30
+  # rawApi:                  # optional; project-level raw fallback opt-in
+  #   enabled: true
+  #   allow: ["block.getDocInfo"]
 # permission:                # optional; see permission.md for full reference
 #   default: allow
 #   rules:

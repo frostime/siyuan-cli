@@ -92,6 +92,12 @@ export async function applyPayloadGuard(
                         `payload path "${target.path}" must resolve to string values`
                     );
                 }
+                if (value === '') {
+                    if (target.skipEmpty) continue;
+                    throw new ContentDeniedError(
+                        `payload path "${target.path}" must not be empty`
+                    );
+                }
                 const effect = await engine.checkContentRef(
                     { kind: target.kind, value, access: target.access },
                     caller
@@ -117,7 +123,10 @@ export async function applyResponseGuard(
     const guard = schema.guard;
     if (!guard) return response;
     if (guard.filterResponse) {
-        return await guard.filterResponse(response, engine);
+        return await guard.filterResponse(response, engine, {
+            caller,
+            emitWarning: (warning) => emitWarning(jsonExtra, warning)
+        });
     }
     if (guard.response) {
         const { itemsAt, fieldMap } = guard.response;

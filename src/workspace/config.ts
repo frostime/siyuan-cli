@@ -20,7 +20,9 @@ import {
     validateBehaviorRaw,
     type BehaviorConfig,
     type PermissionConfig,
-    type ResolvedBehaviorConfig
+    type RawApiBehaviorConfig,
+    type ResolvedBehaviorConfig,
+    type ResolvedRawApiBehaviorConfig
 } from '../shared/schema.js';
 export type { BehaviorConfig, PermissionConfig, ResolvedBehaviorConfig };
 
@@ -61,13 +63,26 @@ const SCHEMA_VERSION = 1;
 
 const BUILT_IN_BEHAVIOR: ResolvedBehaviorConfig = {
     allowYes: true,
-    approval: { timeout: 60, autoOpen: true }
+    approval: { timeout: 60, autoOpen: true },
+    rawApi: { enabled: false, allow: [] }
 };
 
 /**
  * Resolve effective behavior by merging Project > Workspace > Defaults > Built-in.
  * All three inputs are optional; missing fields fall through to the next source.
  */
+function resolveEffectiveRawApiBehavior(
+    defaults: RawApiBehaviorConfig | undefined,
+    workspace: RawApiBehaviorConfig | undefined,
+    project: RawApiBehaviorConfig | undefined
+): ResolvedRawApiBehaviorConfig {
+    const rawApi = project ?? workspace ?? defaults;
+    return {
+        enabled: rawApi?.enabled ?? BUILT_IN_BEHAVIOR.rawApi.enabled,
+        allow: rawApi?.allow ?? BUILT_IN_BEHAVIOR.rawApi.allow
+    };
+}
+
 export function resolveEffectiveBehavior(
     defaults: BehaviorConfig | undefined,
     workspace: BehaviorConfig | undefined,
@@ -90,7 +105,12 @@ export function resolveEffectiveBehavior(
                 workspace?.approval?.autoOpen ??
                 defaults?.approval?.autoOpen ??
                 BUILT_IN_BEHAVIOR.approval.autoOpen
-        }
+        },
+        rawApi: resolveEffectiveRawApiBehavior(
+            defaults?.rawApi,
+            workspace?.rawApi,
+            project?.rawApi
+        )
     };
 }
 
@@ -127,6 +147,14 @@ function normalizePermission(permission?: PermissionConfig): PermissionConfig {
     };
 }
 
+function normalizeRawApiBehavior(rawApi?: RawApiBehaviorConfig): RawApiBehaviorConfig | undefined {
+    if (!rawApi) return undefined;
+    return {
+        ...(rawApi.enabled !== undefined ? { enabled: rawApi.enabled } : {}),
+        ...(rawApi.allow !== undefined ? { allow: rawApi.allow } : {})
+    };
+}
+
 function normalizeBehavior(behavior?: BehaviorConfig): BehaviorConfig | undefined {
     if (!behavior) return undefined;
     return {
@@ -142,6 +170,9 @@ function normalizeBehavior(behavior?: BehaviorConfig): BehaviorConfig | undefine
                           : {})
                   }
               }
+            : {}),
+        ...(behavior.rawApi
+            ? { rawApi: normalizeRawApiBehavior(behavior.rawApi) }
             : {})
     };
 }
@@ -184,6 +215,7 @@ function renderConfigYaml(config: AppConfig): string {
         '# - behavior.allowYes: true (--yes bypasses approval)',
         '# - behavior.approval.timeout: 60 (seconds)',
         '# - behavior.approval.autoOpen: true (open browser on approval)',
+        '# - behavior.rawApi.enabled: false (raw kernel API fallback is opt-in)',
         '# - token and tokenSource are global-only and should stay out of project files',
         ''
     ].join('\n');

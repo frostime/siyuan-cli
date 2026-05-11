@@ -177,6 +177,12 @@ guard: {
 
 **Without `guard.payloadTargets`**, a user rule like `notebook: "xxx"` cannot match the endpoint — the permission engine has nothing to resolve.
 
+### Response filtering warnings
+
+When response filtering removes or masks content, the CLI emits `CONTENT_FILTERED` on stderr, or in `extra.warnings` for `--print json` output.
+
+For agents, this means the returned data is **valid but incomplete under current permission rules**. Do not conclude that a missing key, `null` object, or empty sibling field proves the content does not exist; report it as not visible in the current permission context.
+
 ### `guard.response` → response filtering
 
 Global read endpoints (`mode: "read"`, `scope: "global"`) MUST declare a response guard so the CLI can filter out items from disallowed notebooks/paths:
@@ -200,6 +206,30 @@ When writing a custom endpoint or tool, consider:
 3. Is it a global read? If so, you MUST declare `guard.response` or `guard.filterResponse`.
 
 See `extension.md` for the full authoring guide.
+
+## Raw API fallback boundary
+
+`siyuan api raw <endpoint>` is controlled by `behavior.rawApi`, not by endpoint schemas. Raw calls still use normal workspace resolution and token handling, but they do not have an `EndpointSchema`.
+
+Consequences:
+
+- no payload schema validation;
+- no `guard.payloadTargets`, so notebook/path/resource-scoped permission cannot be enforced;
+- no response filtering;
+- no compact endpoint formatter.
+
+Configure raw access explicitly in `workspace-config.md`:
+
+```yaml
+behavior:
+  rawApi:
+    enabled: true
+    allow:
+      - "block.getDocInfo"
+      - "attr.batch*"
+```
+
+Use `allow: ["*"]` only when you intentionally allow all raw kernel APIs.
 
 ## Permission cascade
 

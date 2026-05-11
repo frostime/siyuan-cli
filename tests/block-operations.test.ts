@@ -91,7 +91,7 @@ test('insertBlock uses three optional write payload targets', () => {
     assert.equal(entry.meta.classification.operation, 'create');
 });
 
-test('getChildBlocks uses batch content read with declarative root-array response filtering', () => {
+test('getChildBlocks uses payload guard only because children belong to the guarded parent document', () => {
     const entry = registerOne(blockGetChildBlocks);
     assert.deepEqual(entry.meta.classification, {
         mode: 'read',
@@ -99,10 +99,10 @@ test('getChildBlocks uses batch content read with declarative root-array respons
         scope: 'batch',
         operation: 'inspect'
     });
-    assert.deepEqual(blockGetChildBlocks.guard?.response, {
-        itemsAt: '[*]',
-        fieldMap: { id: 'id', path: 'path', notebook: 'box' }
-    });
+    assert.deepEqual(blockGetChildBlocks.guard?.payloadTargets, [
+        { path: 'id', kind: 'id', access: 'read' }
+    ]);
+    assert.equal(blockGetChildBlocks.guard?.response, undefined);
 });
 
 test('insertBlock denies optional write refs independently', async () => {

@@ -1,8 +1,8 @@
 import type { EndpointSchema } from '@/shared/schema.js';
 
-export const schema: EndpointSchema = {
-    endpoint: '/api/block/getChildBlocks',
-    summary: 'Get child block list',
+export const schema: EndpointSchema<string> = {
+    endpoint: '/api/filetree/getFullHPathByID',
+    summary: 'Get full hpath by document/block ID',
     payload: {
         type: 'object',
         required: ['id'],
@@ -10,7 +10,7 @@ export const schema: EndpointSchema = {
         properties: {
             id: {
                 type: 'string',
-                description: 'Parent block ID',
+                description: 'Document or block ID',
                 pattern: '^\\d{14}-[0-9a-z]{7}$'
             }
         }
@@ -18,29 +18,17 @@ export const schema: EndpointSchema = {
     classification: {
         mode: 'read',
         surface: 'content',
-        scope: 'batch',
+        scope: 'single',
         operation: 'inspect'
     },
     guard: {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }]
     },
-    formatStrategy: 'records'
+    formatStrategy: 'direct'
 };
 
-/**
- * Child block info
- */
-export interface ChildBlockInfo {
-    id: string;
-    type: string;
-    subType?: string;
-}
-
-/**
- * Response data type for getChildBlocks
- */
-export interface GetChildBlocksResponse {
+export interface GetFullHPathByIDResponse {
     code: number;
     msg: string;
-    data: ChildBlockInfo[];
+    data: string;
 }

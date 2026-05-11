@@ -1,11 +1,10 @@
 ---
 name: expose-missing-kernel-apis
-created: 2026-05-07T13:00:54
-status: OPEN
-attach-change: null
-tldr: "补充暴露有 Agent 价值的内核 API，并提供 raw API 透传调用方案"
+created: 2026-05-07 13:00:54
+status: DOING
+attach-change: .sspec/changes/26-05-10T19-10_raw-api-fallback/spec.md
+tldr: 补充暴露有 Agent 价值的内核 API，并提供 raw API 透传调用方案
 ---
-
 <!-- MUST follow frontmatter schema:
 status: OPEN | DOING | DONE | CLOSED
 tldr: One-sentence summary for list views — fill this! -->
@@ -66,6 +65,8 @@ CLI 当前已注册约 60 个端点，内核实际提供约 200+。
 **路径 B：raw API 透传命令**
 
 提供一个不需要预注册的 fallback 通道，直接透传到内核 API：
+
+类似这样:
 
 ```
 siyuan api invoke-raw <endpoint> [-j <json>] [-f <json-file>]

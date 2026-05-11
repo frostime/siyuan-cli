@@ -11,6 +11,7 @@ import {
     cascadePermission
 } from '../src/shared/permission.ts';
 import { executeEndpoint } from '../src/api/guard.ts';
+import { createJsonPrintExtra } from '../src/shared/output.ts';
 import type { AppConfig, PermissionConfig } from '../src/workspace/config.ts';
 import { schema as moveBlock } from '../src/api/endpoints/block/moveBlock.ts';
 import { schema as getBlockKramdown } from '../src/api/endpoints/block/getBlockKramdown.ts';
@@ -20,6 +21,13 @@ import { schema as filePutFile } from '../src/api/endpoints/file/putFile.ts';
 import { schema as systemExit } from '../src/api/endpoints/system/exit.ts';
 import { schema as notificationPushMsg } from '../src/api/endpoints/notification/pushMsg.ts';
 import { schema as importImportStdMd } from '../src/api/endpoints/import/importStdMd.ts';
+import { schema as attrBatchGetBlockAttrs } from '../src/api/endpoints/attr/batchGetBlockAttrs.ts';
+import { schema as blockGetBlockKramdowns } from '../src/api/endpoints/block/getBlockKramdowns.ts';
+import { schema as blockGetDocInfo } from '../src/api/endpoints/block/getDocInfo.ts';
+import { schema as blockGetDocsInfo } from '../src/api/endpoints/block/getDocsInfo.ts';
+import { schema as blockGetTailChildBlocks } from '../src/api/endpoints/block/getTailChildBlocks.ts';
+import { schema as blockGetBlockSiblingID } from '../src/api/endpoints/block/getBlockSiblingID.ts';
+import { schema as filetreeDuplicateDoc } from '../src/api/endpoints/filetree/duplicateDoc.ts';
 
 function makeConfig(permission?: PermissionConfig): AppConfig {
     return {
@@ -60,7 +68,7 @@ test('moveBlock is normalized as content write move with three write targets', (
     assert.deepEqual(moveBlock.guard?.payloadTargets, [
         { path: 'id', kind: 'id', access: 'write' },
         { path: 'parentID', kind: 'id', access: 'write' },
-        { path: 'previousID', kind: 'id', access: 'write' }
+        { path: 'previousID', kind: 'id', access: 'write', skipEmpty: true }
     ]);
 });
 
@@ -321,5 +329,151 @@ test('importStdMd is write/content/single/create with notebook payload target', 
     assert.equal(entry.meta.risk, 'elevated');
     assert.deepEqual(importImportStdMd.guard?.payloadTargets, [
         { path: 'notebook', kind: 'notebook', access: 'write' }
+    ]);
+});
+
+test('new map response endpoints filter denied content entries', async () => {
+    const client = {
+        call: async (endpoint: string) => {
+            if (endpoint === '/api/query/sql') {
+                return [
+                    { id: 'ok-id', box: 'nb', path: '/allowed/doc.sy' },
+                    { id: 'deny-id', box: 'nb', path: '/denied/doc.sy' }
+                ];
+            }
+            return {
+                'ok-id': endpoint.endsWith('/getBlockKramdowns') ? 'ok' : { id: 'ok-id' },
+                'deny-id': endpoint.endsWith('/getBlockKramdowns') ? 'deny' : { id: 'deny-id' }
+            };
+        },
+        upload: async () => ({ ok: true })
+    } as any;
+    const { config, engine } = makeEngine(client, {
+        rules: [{ action: 'read', path: '/denied/**', effect: 'deny' }]
+    });
+
+    const attrsExtra = createJsonPrintExtra();
+    const attrs = await executeEndpoint({
+        entry: registerOne(attrBatchGetBlockAttrs),
+        payload: { ids: ['ok-id'] },
+        client,
+        engine,
+        config,
+        jsonExtra: attrsExtra
+    });
+    assert.deepEqual(attrs, { 'ok-id': { id: 'ok-id' } });
+    assert.deepEqual(attrsExtra.warnings, [
+        { warning: 'CONTENT_FILTERED', removed: 1, reasons: '1x: rule #0' }
+    ]);
+
+    const kramdownsExtra = createJsonPrintExtra();
+    const kramdowns = await executeEndpoint({
+        entry: registerOne(blockGetBlockKramdowns),
+        payload: { ids: ['ok-id'] },
+        client,
+        engine,
+        config,
+        jsonExtra: kramdownsExtra
+    });
+    assert.deepEqual(kramdowns, { 'ok-id': 'ok' });
+    assert.deepEqual(kramdownsExtra.warnings, [
+        { warning: 'CONTENT_FILTERED', removed: 1, reasons: '1x: rule #0' }
+    ]);
+});
+
+test('new array response endpoints use declarative response filtering', async () => {
+    const client = {
+        call: async (endpoint: string) => {
+            if (endpoint === '/api/query/sql') {
+                return [
+                    { id: 'ok-id', box: 'nb', path: '/allowed/doc.sy' },
+                    { id: 'root-id', box: 'nb', path: '/allowed/root.sy' },
+                    { id: 'deny-id', box: 'nb', path: '/denied/doc.sy' }
+                ];
+            }
+            return [
+                { id: 'ok-id', name: 'ok' },
+                { id: 'deny-id', name: 'deny' }
+            ];
+        },
+        upload: async () => ({ ok: true })
+    } as any;
+    const { config, engine } = makeEngine(client, {
+        rules: [{ action: 'read', path: '/denied/**', effect: 'deny' }]
+    });
+
+    for (const schema of [blockGetDocsInfo, blockGetTailChildBlocks]) {
+        const result = await executeEndpoint({
+            entry: registerOne(schema),
+            payload: schema === blockGetDocsInfo ? { ids: ['ok-id'] } : { id: 'root-id' },
+            client,
+            engine,
+            config
+        });
+        assert.deepEqual(result, [{ id: 'ok-id', name: 'ok' }]);
+    }
+});
+
+test('new single-object and sibling response filters hide denied IDs', async () => {
+    const client = {
+        call: async (endpoint: string) => {
+            if (endpoint === '/api/query/sql') {
+                return [
+                    { id: 'ok-id', box: 'nb', path: '/allowed/doc.sy' },
+                    { id: 'deny-id', box: 'nb', path: '/denied/doc.sy' }
+                ];
+            }
+            if (endpoint.endsWith('/getBlockSiblingID')) {
+                return { parent: 'ok-id', previous: 'deny-id', next: '' };
+            }
+            return { id: 'deny-id', name: 'hidden' };
+        },
+        upload: async () => ({ ok: true })
+    } as any;
+    const { config, engine } = makeEngine(client, {
+        rules: [{ action: 'read', path: '/denied/**', effect: 'deny' }]
+    });
+
+    const docInfoExtra = createJsonPrintExtra();
+    const docInfo = await executeEndpoint({
+        entry: registerOne(blockGetDocInfo),
+        payload: { id: 'ok-id' },
+        client,
+        engine,
+        config,
+        jsonExtra: docInfoExtra
+    });
+    assert.equal(docInfo, null);
+    assert.deepEqual(docInfoExtra.warnings, [
+        { warning: 'CONTENT_FILTERED', removed: 1, reasons: '1x: rule #0' }
+    ]);
+
+    const duplicateExtra = createJsonPrintExtra();
+    const duplicate = await executeEndpoint({
+        entry: registerOne(filetreeDuplicateDoc),
+        payload: { id: 'ok-id' },
+        client,
+        engine,
+        config,
+        yes: true,
+        jsonExtra: duplicateExtra
+    });
+    assert.equal(duplicate, null);
+    assert.deepEqual(duplicateExtra.warnings, [
+        { warning: 'CONTENT_FILTERED', removed: 1, reasons: '1x: rule #0' }
+    ]);
+
+    const siblingsExtra = createJsonPrintExtra();
+    const siblings = await executeEndpoint({
+        entry: registerOne(blockGetBlockSiblingID),
+        payload: { id: 'ok-id' },
+        client,
+        engine,
+        config,
+        jsonExtra: siblingsExtra
+    });
+    assert.deepEqual(siblings, { parent: 'ok-id', previous: '', next: '' });
+    assert.deepEqual(siblingsExtra.warnings, [
+        { warning: 'CONTENT_FILTERED', removed: 1, reasons: '1x: rule #0' }
     ]);
 });

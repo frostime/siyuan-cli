@@ -3,15 +3,16 @@
  */
 import { defineCommand } from 'citty';
 import { colors } from 'consola/utils';
+import micromatch from 'micromatch';
 import { join } from 'pathe';
 import { registry } from './registry.js';
-import { loadConfig, materializeWorkspace, resolveEffectiveWorkspace } from '../workspace/config.js';
+import { loadConfig, materializeWorkspace, resolveEffectiveBehavior, resolveEffectiveWorkspace } from '../workspace/config.js';
 import { SiyuanClient } from '../shared/client.js';
 import { createPermissionEngine } from '../shared/permission.js';
 import { executeEndpoint } from './guard.js';
-import { parsePayload } from '../shared/argv.js';
-import { normalizePayloadPaths } from './msys-path.js';
-import { applyFormatStrategy, createJsonPrintExtra, preparePrintedOutput } from '../shared/output.js';
+import { parseJsonPayload, parsePayload } from '../shared/argv.js';
+import { getMsysRootWin, normalizeMsysPath, normalizePayloadPaths } from './msys-path.js';
+import { applyFormatStrategy, createJsonPrintExtra, jsonStringify, preparePrintedOutput } from '../shared/output.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
 import { getExtensionDir } from '../workspace/paths.js';
 import {
@@ -197,6 +198,99 @@ export function describeEndpoint(id: string): void {
 export function getEndpointHelpEntry(id: string): RegisteredEndpoint | undefined {
     ensureEndpointDiscovery();
     return registry.get(id);
+}
+
+export function normalizeRawEndpoint(input: string): { id: string; endpoint: string } {
+    const msysRoot = getMsysRootWin();
+    const normalizedInput = msysRoot ? normalizeMsysPath(input, msysRoot) : input;
+    const pathMatch = /^\/api\/([a-zA-Z0-9_]+)\/([a-zA-Z0-9_]+)$/.exec(normalizedInput);
+    if (pathMatch) {
+        const group = pathMatch[1]!;
+        const name = pathMatch[2]!;
+        return { id: `${group}.${name}`, endpoint: `/api/${group}/${name}` };
+    }
+
+    const idMatch = /^([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)$/.exec(normalizedInput);
+    if (idMatch) {
+        const group = idMatch[1]!;
+        const name = idMatch[2]!;
+        return { id: `${group}.${name}`, endpoint: `/api/${group}/${name}` };
+    }
+
+    throw new CliError(
+        ExitCode.GENERAL,
+        'RAW_API_INVALID_ENDPOINT',
+        `Invalid raw endpoint "${input}".`,
+        'Use an endpoint id like block.getDocInfo or a kernel path like /api/block/getDocInfo.'
+    );
+}
+
+export function checkRawApiAllowed(id: string, allow: string[]): void {
+    if (allow.length === 0) {
+        throw new CliError(
+            ExitCode.CONFIG,
+            'RAW_API_ALLOW_REQUIRED',
+            'Raw API is enabled but behavior.rawApi.allow is empty.',
+            'Add at least one endpoint pattern; use "*" only if you intend to allow all raw APIs.'
+        );
+    }
+    if (!micromatch.isMatch(id, allow)) {
+        throw new CliError(
+            ExitCode.PERMISSION,
+            'RAW_API_ENDPOINT_DENIED',
+            `Raw endpoint "${id}" is not allowed by behavior.rawApi.allow.`,
+            `Allowed patterns: ${allow.join(', ')}`
+        );
+    }
+}
+
+export async function callRawEndpoint(rawArgs: Record<string, unknown>): Promise<void> {
+    const rawEndpoint = rawArgs['endpoint'];
+    if (typeof rawEndpoint !== 'string') {
+        throw new CliError(
+            ExitCode.GENERAL,
+            'RAW_API_INVALID_ENDPOINT',
+            'Raw endpoint is required.',
+            'Use `siyuan api raw <endpoint> -j <json>`.'
+        );
+    }
+
+    const target = normalizeRawEndpoint(rawEndpoint);
+    const payload = parseJsonPayload({ args: rawArgs });
+    const config = loadConfig(rawArgs['config'] as string | undefined);
+    const workspace = resolveEffectiveWorkspace(config, {
+        workspace: rawArgs['workspace'] as string | undefined,
+        baseUrl: rawArgs['baseUrl'] as string | undefined,
+        token: rawArgs['token'] as string | undefined
+    });
+    const behavior = resolveEffectiveBehavior(
+        config.defaults?.behavior,
+        workspace.behavior,
+        workspace.effectiveBehavior
+    );
+
+    if (!behavior.rawApi.enabled) {
+        throw new CliError(
+            ExitCode.PERMISSION,
+            'RAW_API_DISABLED',
+            'Raw API is disabled for the effective workspace.',
+            'Set behavior.rawApi.enabled: true and behavior.rawApi.allow: ["block.getDocInfo"] in config.yaml or .siyuan-cli.yaml.'
+        );
+    }
+    checkRawApiAllowed(target.id, behavior.rawApi.allow);
+
+    process.stderr.write(
+        JSON.stringify({
+            warning: 'RAW_API_NO_SCHEMA_GUARD',
+            endpoint: target.id,
+            hint: 'No payload schema, resource guard, or response filter is applied.'
+        }) + '\n'
+    );
+
+    const materialized = await materializeWorkspace(workspace);
+    const client = new SiyuanClient(materialized);
+    const result = await client.call(target.endpoint, payload);
+    process.stdout.write(jsonStringify(result) + '\n');
 }
 
 async function callEndpoint(
@@ -386,6 +480,52 @@ const describeCommand = defineCommand({
     run: ({ args }) => describeEndpoint(args.id)
 });
 
+const rawCommand = defineCommand({
+    meta: {
+        name: 'raw',
+        description: 'Call a config-allowed raw kernel API endpoint.'
+    },
+    args: {
+        workspace: {
+            type: 'string',
+            description: 'Workspace to use',
+            alias: 'w'
+        },
+        config: {
+            type: 'string',
+            description: 'Config file path'
+        },
+        baseUrl: {
+            type: 'string',
+            description: 'Ad-hoc kernel base URL'
+        },
+        token: {
+            type: 'string',
+            description: 'Ad-hoc API token'
+        },
+        json: {
+            type: 'string',
+            description: 'Pass JSON payload inline',
+            alias: 'j'
+        },
+        file: {
+            type: 'string',
+            description: 'Load JSON payload from file (- = stdin)',
+            alias: 'f'
+        },
+        endpoint: {
+            type: 'positional',
+            description: 'Endpoint id or path (e.g. block.getDocInfo or /api/block/getDocInfo)',
+            required: true
+        }
+    },
+    run: async ({ args }) => {
+        await callRawEndpoint(args as Record<string, unknown>).catch((e) =>
+            fatalError(toCliError(e))
+        );
+    }
+});
+
 // ————— Grouped help renderer —————
 
 export function renderGroupedApiHelp(version?: string): string {
@@ -414,7 +554,8 @@ export function renderGroupedApiHelp(version?: string): string {
 
     printGroup('META', [
         { id: 'list', description: 'List all registered API endpoints.' },
-        { id: 'describe', description: 'Show full EndpointSchema for an endpoint.' }
+        { id: 'describe', description: 'Show full EndpointSchema for an endpoint.' },
+        { id: 'raw', description: 'Call a config-allowed raw kernel API endpoint.' }
     ]);
     printGroup('BUILT-IN', builtins.map((e) => ({ id: e.id, description: e.schema.summary })));
     printGroup('USER EXTENSIONS', extensions.map((e) => ({ id: e.id, description: e.schema.summary })));
@@ -436,6 +577,7 @@ export const apiCommand = defineCommand({
         return {
             list: listCommand,
             describe: describeCommand,
+            raw: rawCommand,
             ...Object.fromEntries(
                 registry.list().map((entry) => [entry.id, buildEndpointSubCommand(entry)])
             )

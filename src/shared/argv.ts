@@ -112,25 +112,16 @@ function resolveInputSource(
 
 // ─── Payload assembly ─────────────────────────────────────────────────────────
 
-export interface ParsePayloadOptions {
-    schema: EndpointSchema;
-    /** Raw argv after command name. Already parsed by citty into args object. */
+export interface ParseJsonPayloadOptions {
     args: Record<string, unknown>;
-    /** Positional argument value (if any). */
-    positional?: string;
-    /** Validate with ajv before returning. */
-    validate?: boolean;
 }
 
-export function parsePayload(
-    opts: ParsePayloadOptions
-): Record<string, unknown> {
-    const { schema, args, positional, validate = true } = opts;
-    stdinConsumed = false; // reset per invocation
+export function parseJsonPayload(opts: ParseJsonPayloadOptions): Record<string, unknown> {
+    const { args } = opts;
+    stdinConsumed = false;
 
     let base: Record<string, unknown> = {};
 
-    // 1. --json / -j: base payload from inline JSON string
     const jsonArg = (args['json'] ?? args['j']) as string | undefined;
     if (jsonArg) {
         try {
@@ -144,7 +135,6 @@ export function parsePayload(
         }
     }
 
-    // 2. --file / -f: base payload from JSON file (or stdin via "-")
     const fileArg = (args['file'] ?? args['f']) as string | undefined;
     if (fileArg) {
         let content: string;
@@ -171,6 +161,25 @@ export function parsePayload(
             );
         }
     }
+
+    return base;
+}
+
+export interface ParsePayloadOptions {
+    schema: EndpointSchema;
+    /** Raw argv after command name. Already parsed by citty into args object. */
+    args: Record<string, unknown>;
+    /** Positional argument value (if any). */
+    positional?: string;
+    /** Validate with ajv before returning. */
+    validate?: boolean;
+}
+
+export function parsePayload(
+    opts: ParsePayloadOptions
+): Record<string, unknown> {
+    const { schema, args, positional, validate = true } = opts;
+    let base = parseJsonPayload({ args });
 
     // 3. Positional argument → schema.cli.primary field
     if (positional !== undefined && schema.cli?.primary) {
