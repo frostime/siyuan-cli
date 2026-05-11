@@ -13,6 +13,9 @@ reference:
 - source: .sspec/changes/26-05-10T19-10_expose-missing-kernel-endpoints/revisions/002-address-review-findings.md
   type: revision
   note: Address subagent review findings for skipEmpty, docs, and raw tests
+- source: .sspec/changes/26-05-10T19-10_expose-missing-kernel-endpoints/revisions/003-emit-warnings-for-custom-response-filters.md
+  type: revision
+  note: Emit CONTENT_FILTERED warnings from custom response filters
 ---
 
 <!-- MUST follow frontmatter schema:

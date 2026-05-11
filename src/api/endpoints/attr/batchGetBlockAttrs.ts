@@ -41,7 +41,7 @@ export const schema: EndpointSchema<BatchGetBlockAttrsData> = {
             await filterIdKeyedMap(
                 response as BatchGetBlockAttrsData,
                 engine,
-                context?.caller
+                context
             )
     },
     format: ({ responseData }) => formatBatchGetBlockAttrs(responseData)

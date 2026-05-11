@@ -25,7 +25,7 @@ export const schema: EndpointSchema<DuplicateDocData | null> = {
     guard: {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'write' }],
         filterResponse: async (response, engine, context) =>
-            await filterResponseObjectById(response, engine, context?.caller)
+            await filterResponseObjectById(response, engine, context)
     },
     formatStrategy: 'object'
 };

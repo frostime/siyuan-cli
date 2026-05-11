@@ -25,7 +25,7 @@ export const schema: EndpointSchema<BlockSiblingIDs> = {
     guard: {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }],
         filterResponse: async (response, engine, context) =>
-            await filterSiblingIdFields(response, engine, context?.caller)
+            await filterSiblingIdFields(response, engine, context)
     },
     formatStrategy: 'object'
 };

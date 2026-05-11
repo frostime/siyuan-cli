@@ -46,7 +46,7 @@ export const schema: EndpointSchema<GetBlockKramdownsData> = {
             await filterIdKeyedMap(
                 response as GetBlockKramdownsData,
                 engine,
-                context?.caller
+                context
             )
     },
     format: ({ responseData }) => formatGetBlockKramdowns(responseData)

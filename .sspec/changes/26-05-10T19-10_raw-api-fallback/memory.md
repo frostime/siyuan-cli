@@ -69,3 +69,4 @@ CLI treats the last valid bullet as the latest milestone.
 - [2026-05-10T19:36+08:00] Switched to branch `feat/raw-api-fallback` and revised design to remove approval ambiguity.
 - [2026-05-10T19:48+08:00] Implemented raw behavior config, raw command, docs, and verification; full test suite still has unrelated getChildBlocks assertion failure.
 - [2026-05-10T20:02+08:00] Per user request, temporarily enabled `asset.getDocAssets` in project `.siyuan-cli.yaml`, verified raw call against dev workspace, and restored config with no diff.
+- [2026-05-11T17:32+08:00] Merge-readiness review rechecked raw API fallback; config-gated behavior and whole-object rawApi precedence match spec/docs, with typecheck/test/build passing.

@@ -63,6 +63,12 @@ updated: "2026-05-11T02:20+08:00"
 - [x] Add limited raw API tests for endpoint normalization, allowlist behavior, and stdout/stderr contract.
 - [x] Run `pnpm run typecheck`, `pnpm run test`, and `pnpm run build`.
 
+### Feedback Tasks (→ [003-emit-warnings-for-custom-response-filters](./revisions/003-emit-warnings-for-custom-response-filters.md))
+- [x] Extend custom `filterResponse` context with a filtering-warning emitter.
+- [x] Update custom response-guard helpers to emit `CONTENT_FILTERED` when entries/fields are removed.
+- [x] Add tests covering warnings for custom map/object/sibling filters.
+- [x] Run `pnpm run typecheck`, `pnpm run test`, and `pnpm run build`.
+
 ---
 
 ## Progress
@@ -91,3 +97,4 @@ updated: "2026-05-11T02:20+08:00"
 - [2026-05-11T00:09+08:00] Added formatting follow-up to revision 001: custom compact outputs for batch attrs and plural Kramdown.
 - [2026-05-11T00:09+08:00] Implemented compact formatters; Kramdown multi-block output uses a system hint plus `--- id: ...` splitters, without Markdown fences.
 - [2026-05-11T02:20+08:00] Addressed subagent review findings: explicit `skipEmpty`, nullable getDocsInfo follow-up request, concise docs, raw tests; typecheck/test/build all pass.
+- [2026-05-11T17:45+08:00] Implemented revision 003: custom response filters now emit `CONTENT_FILTERED`; typecheck/test/build all pass.

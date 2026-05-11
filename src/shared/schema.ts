@@ -251,6 +251,11 @@ export interface PayloadTargetSpec {
     skipEmpty?: boolean;
 }
 
+export interface ResponseFilterContext {
+    caller?: CallerContext;
+    emitWarning?: (warning: Record<string, unknown>) => void;
+}
+
 export interface FilterSpec {
     /** Payload resource filter contract. */
     payloadTargets?: PayloadTargetSpec[];
@@ -274,7 +279,7 @@ export interface FilterSpec {
     filterResponse?: (
         response: unknown,
         engine: PermissionEngineLike,
-        context?: { caller?: CallerContext }
+        context?: ResponseFilterContext
     ) => unknown | Promise<unknown>;
 }
 

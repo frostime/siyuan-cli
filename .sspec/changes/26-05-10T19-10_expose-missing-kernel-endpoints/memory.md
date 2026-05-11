@@ -23,7 +23,7 @@ MM .sspec/requests/26-05-07T13-00_expose-missing-kernel-apis.md
 <!-- Where we are and what's next — one to three lines.
 This is the resume entry point; the first section an agent reads on cold start. -->
 
-Revision 001 response-guard feedback implemented and change status is REVIEW. Next: user review/acceptance; one unrelated pre-existing test failure remains documented.
+Revision 003 custom response-filter warning feedback implemented and change status is REVIEW. Next: user review/acceptance; typecheck/test/build pass.
 
 ## Key Files
 <!-- Files critical to understanding/continuing this change.
@@ -66,6 +66,7 @@ Obsolete items → mark [obsolete: timestamp], never silently delete. -->
 - [2026-05-11T00:09+08:00] [Decision] `block.getBlockKramdowns` compact output avoids Markdown fences and uses a leading system hint plus `--- id: <block-id>` splitters for multi-block output; single-block output remains direct Kramdown content.
 - [2026-05-11T02:20+08:00] [Decision] Empty-string payload target skipping is explicit per target via `skipEmpty`; global empty-string skipping was rejected as too broad for guarded path/notebook/workspace-path fields.
 - [2026-05-11T02:20+08:00] [Decision] Possible nullable `block.getDocsInfo` response items are not handled in this change under YAGNI; follow-up request `.sspec/requests/26-05-11T02-06_investigate-nullable-getdocsinfo-response-items.md` records the investigation.
+- [2026-05-11T17:45+08:00] [Decision] Custom response filters now emit `CONTENT_FILTERED` through the same warning channel as declarative response guards; filtered map entries, single objects, and sibling fields are no longer silent.
 
 ## Milestones
 <!-- MUST append one line per session. Pure facts; new entries appended at the end.
@@ -79,3 +80,5 @@ CLI treats the last valid bullet as the latest milestone.
 - [2026-05-10T23:01+08:00] Implemented revision 001 response declarations and response-side guards, with endpoint-schemas tests passing.
 - [2026-05-11T00:09+08:00] Added custom compact formatters for batch attrs and plural Kramdown; typecheck/build/endpoint-schemas tests pass.
 - [2026-05-11T02:20+08:00] Addressed subagent review findings with explicit skipEmpty, concise docs, raw tests, and full typecheck/test/build passing.
+- [2026-05-11T17:32+08:00] Merge-readiness review passed typecheck/test/build and found no critical blockers; remaining warnings are nullable getDocsInfo follow-up risk and silent custom response-filter warnings.
+- [2026-05-11T17:45+08:00] Fixed silent custom response-filter warnings via revision 003; typecheck/test/build pass.

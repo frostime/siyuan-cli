@@ -11,6 +11,7 @@ import {
     cascadePermission
 } from '../src/shared/permission.ts';
 import { executeEndpoint } from '../src/api/guard.ts';
+import { createJsonPrintExtra } from '../src/shared/output.ts';
 import type { AppConfig, PermissionConfig } from '../src/workspace/config.ts';
 import { schema as moveBlock } from '../src/api/endpoints/block/moveBlock.ts';
 import { schema as getBlockKramdown } from '../src/api/endpoints/block/getBlockKramdown.ts';
@@ -351,23 +352,33 @@ test('new map response endpoints filter denied content entries', async () => {
         rules: [{ action: 'read', path: '/denied/**', effect: 'deny' }]
     });
 
+    const attrsExtra = createJsonPrintExtra();
     const attrs = await executeEndpoint({
         entry: registerOne(attrBatchGetBlockAttrs),
         payload: { ids: ['ok-id'] },
         client,
         engine,
-        config
+        config,
+        jsonExtra: attrsExtra
     });
     assert.deepEqual(attrs, { 'ok-id': { id: 'ok-id' } });
+    assert.deepEqual(attrsExtra.warnings, [
+        { warning: 'CONTENT_FILTERED', removed: 1, reasons: '1x: rule #0' }
+    ]);
 
+    const kramdownsExtra = createJsonPrintExtra();
     const kramdowns = await executeEndpoint({
         entry: registerOne(blockGetBlockKramdowns),
         payload: { ids: ['ok-id'] },
         client,
         engine,
-        config
+        config,
+        jsonExtra: kramdownsExtra
     });
     assert.deepEqual(kramdowns, { 'ok-id': 'ok' });
+    assert.deepEqual(kramdownsExtra.warnings, [
+        { warning: 'CONTENT_FILTERED', removed: 1, reasons: '1x: rule #0' }
+    ]);
 });
 
 test('new array response endpoints use declarative response filtering', async () => {
@@ -423,31 +434,46 @@ test('new single-object and sibling response filters hide denied IDs', async () 
         rules: [{ action: 'read', path: '/denied/**', effect: 'deny' }]
     });
 
+    const docInfoExtra = createJsonPrintExtra();
     const docInfo = await executeEndpoint({
         entry: registerOne(blockGetDocInfo),
         payload: { id: 'ok-id' },
         client,
         engine,
-        config
+        config,
+        jsonExtra: docInfoExtra
     });
     assert.equal(docInfo, null);
+    assert.deepEqual(docInfoExtra.warnings, [
+        { warning: 'CONTENT_FILTERED', removed: 1, reasons: '1x: rule #0' }
+    ]);
 
+    const duplicateExtra = createJsonPrintExtra();
     const duplicate = await executeEndpoint({
         entry: registerOne(filetreeDuplicateDoc),
         payload: { id: 'ok-id' },
         client,
         engine,
         config,
-        yes: true
+        yes: true,
+        jsonExtra: duplicateExtra
     });
     assert.equal(duplicate, null);
+    assert.deepEqual(duplicateExtra.warnings, [
+        { warning: 'CONTENT_FILTERED', removed: 1, reasons: '1x: rule #0' }
+    ]);
 
+    const siblingsExtra = createJsonPrintExtra();
     const siblings = await executeEndpoint({
         entry: registerOne(blockGetBlockSiblingID),
         payload: { id: 'ok-id' },
         client,
         engine,
-        config
+        config,
+        jsonExtra: siblingsExtra
     });
     assert.deepEqual(siblings, { parent: 'ok-id', previous: '', next: '' });
+    assert.deepEqual(siblingsExtra.warnings, [
+        { warning: 'CONTENT_FILTERED', removed: 1, reasons: '1x: rule #0' }
+    ]);
 });

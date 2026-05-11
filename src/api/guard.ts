@@ -123,7 +123,10 @@ export async function applyResponseGuard(
     const guard = schema.guard;
     if (!guard) return response;
     if (guard.filterResponse) {
-        return await guard.filterResponse(response, engine, { caller });
+        return await guard.filterResponse(response, engine, {
+            caller,
+            emitWarning: (warning) => emitWarning(jsonExtra, warning)
+        });
     }
     if (guard.response) {
         const { itemsAt, fieldMap } = guard.response;
