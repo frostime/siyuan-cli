@@ -10,11 +10,11 @@ tldr: "Investigate whether block.getDocsInfo can return null array entries under
 
 ## Background
 
-During review of `.sspec/changes/26-05-10T19-10_expose-missing-kernel-endpoints/`, a subagent flagged a possible robustness issue: `block.getDocsInfo` uses declarative response filtering over a root array, while the archived external contract report says source may set unreadable entries to `nil` in readonly-filtered cases.
+During review of `.sspec/changes/archive/26-05-10T19-10_expose-missing-kernel-endpoints/`, a subagent flagged a possible robustness issue: `block.getDocsInfo` uses declarative response filtering over a root array, while the archived external contract report says source may set unreadable entries to `nil` in readonly-filtered cases.
 
 Relevant references:
 
-- `.sspec/changes/26-05-10T19-10_expose-missing-kernel-endpoints/reference/missing-kernel-api-contracts.md`
+- `.sspec/changes/archive/26-05-10T19-10_expose-missing-kernel-endpoints/reference/missing-kernel-api-contracts.md`
 - `src/api/endpoints/block/getDocsInfo.ts`
 - `src/api/guard.ts` (`applyResponseGuard` declarative response filtering)
 
@@ -39,7 +39,7 @@ Do not change runtime behavior yet. First perform focused research:
 ## Relational Context
 
 - YAGNI decision on 2026-05-11: do not modify response guard null handling until this behavior is verified.
-- Related change: `.sspec/changes/26-05-10T19-10_expose-missing-kernel-endpoints/`.
+- Related change: `.sspec/changes/archive/26-05-10T19-10_expose-missing-kernel-endpoints/`.
 
 ---
 
