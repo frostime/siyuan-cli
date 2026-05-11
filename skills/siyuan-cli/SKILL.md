@@ -34,6 +34,8 @@ Doc paths referenced in this SKILL (e.g. `recipes/find-target.md`) are not relat
 
 Do not try to resolve doc paths under the SKILL directory.
 
+WARN: If AGENT is working on VFS like WSL, Msys etc, paths may not resolve as expected.
+
 ## First response rules
 
 - **Content tasks**: use the installed `siyuan` CLI. Do not inspect this repository's source code unless the user asks to modify siyuan-cli internals. For extension authoring, read `cli-usage/extension.md`.
