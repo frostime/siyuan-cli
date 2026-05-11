@@ -124,3 +124,4 @@ Prune entries that become outdated or graduate to Conventions/spec-docs. -->
 - 2026-04-26: approval 模块是独立的 HTTP broker 进程，通过 localhost 端口与 CLI 主进程通信；browser UI 在 approval-center.html
 - 2026-04-26: src/api/msys-path.ts 处理 MSYS/Git Bash 环境下的路径转换问题
 - 2026-04-29: EndpointSchema 的跨字段约束已沉淀到 `.sspec/spec-docs/endpoint-schema.md`；built-in 与 API extension 都应遵守同一套 registry-level 校验
+- 2026-05-11: `README.md` 是给人看的项目介绍页，不应改成 Agent 路由页；Agent 路由应主要留在 `skills/siyuan-cli/SKILL.md` 和 `src/docs/README.md`

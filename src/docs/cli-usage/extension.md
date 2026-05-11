@@ -15,6 +15,16 @@ summary: Write custom API endpoints and workflow tools for siyuan-cli.
 
 Extensions are written in TypeScript, loaded via `jiti` at execution time, and cached as `*.schema.json` for fast discovery.
 
+## Extension or downstream SKILL?
+
+| You need... | Build... | Why |
+|-------------|----------|-----|
+| A reusable endpoint contract with schema, classification, guards, help, and formatting | API extension (`apis/*.ts`) | It becomes a CLI endpoint and participates in validation/permission behavior. |
+| A reusable multi-call operation that should run as one CLI command | Tool extension (`tools/*.ts`) | It lives in the CLI runtime and is discoverable through `siyuan tool list/describe`. |
+| User-specific workflow policy, notebook defaults, templates, naming rules, or review cadence | Downstream Agent SKILL | It is guidance for an agent, not reusable CLI runtime code. |
+
+If the reusable part is **code**, use an extension. If the reusable part is **decisions about when/where/how to use the CLI**, use a downstream Agent SKILL.
+
 ## Directory Layout
 
 ```
@@ -176,7 +186,7 @@ Use `callEndpoint` when the endpoint is already wrapped by siyuan-cli (built-in 
 
 ```ts
 async run(ctx, input) {
-  const docs = await ctx.callEndpoint('filetree.searchDocs', { keyword: input.query });
+  const docs = await ctx.callEndpoint('filetree.searchDocs', { k: input.query });
   return { content: `Found ${docs.length} documents` };
 }
 ```
@@ -191,6 +201,8 @@ async run(ctx, input) {
 ```
 
 For repeated use, or when you need payload schema validation, permission guards, approval behavior, response filtering, compact formatting, or discoverable help, write an API extension instead of continuing to use raw calls.
+
+For workflow policy or user-specific conventions, use a downstream Agent SKILL instead; see "Extension or downstream SKILL?" above.
 
 For the full list of kernel APIs, inspect the upstream source:
 https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go

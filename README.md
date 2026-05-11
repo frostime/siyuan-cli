@@ -75,6 +75,12 @@ Say to your agent:
 
 The README is a human-facing overview. Detailed operational guidance lives in the installed SKILL and built-in docs exposed by `siyuan doc list`.
 
+## How to think about siyuan-cli
+
+`siyuan-cli` is a **substrate** for agents: it provides reliable access to SiYuan through workspace resolution, permission checks, approval, response filtering, and built-in docs. It is not meant to encode every personal workflow.
+
+For repeated workflows such as literature ingestion, daily review, project knowledge-base maintenance, or publication cleanup, create a task-specific Agent SKILL on top of this CLI. Use TypeScript extensions when you need reusable CLI runtime code; use downstream skills when you need reusable workflow policy.
+
 ---
 
 ## Calling Kernel APIs
