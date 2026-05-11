@@ -1,6 +1,6 @@
 # Memory: raw-api-fallback
 
-**Updated**: 2026-05-10T20:02+08:00
+**Updated**: 2026-05-11T17:58+08:00
 
 ## Git Baseline (Immutable)
 <!-- Captured during `sspec change new` before any change files are written.
@@ -22,7 +22,7 @@ M  .sspec/requests/26-05-07T13-00_expose-missing-kernel-apis.md
 <!-- Where we are and what's next — one to three lines.
 This is the resume entry point; the first section an agent reads on cold start. -->
 
-Raw API fallback implementation is complete and change status is REVIEW. Next: user review/acceptance; endpoint补齐 change remains deferred for research.
+User accepted the raw API fallback change; status is DONE. Implementation and docs were already verified in prior milestones.
 
 ## Key Files
 <!-- Files critical to understanding/continuing this change.
@@ -70,3 +70,4 @@ CLI treats the last valid bullet as the latest milestone.
 - [2026-05-10T19:48+08:00] Implemented raw behavior config, raw command, docs, and verification; full test suite still has unrelated getChildBlocks assertion failure.
 - [2026-05-10T20:02+08:00] Per user request, temporarily enabled `asset.getDocAssets` in project `.siyuan-cli.yaml`, verified raw call against dev workspace, and restored config with no diff.
 - [2026-05-11T17:32+08:00] Merge-readiness review rechecked raw API fallback; config-gated behavior and whole-object rawApi precedence match spec/docs, with typecheck/test/build passing.
+- [2026-05-11T17:58+08:00] User accepted the change; marked status DONE before merge to main.

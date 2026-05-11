@@ -262,11 +262,14 @@ The following commands cover common block operations. Always inspect with a read
 | Task | Command |
 |------|---------|
 | Update block content | `siyuan api block.updateBlock --id <id> --data "## New heading" --dataType markdown` |
-| Append child blocks | `siyuan api block.appendBlock --parentId <id> --data "paragraph" --dataType markdown` |
-| Prepend child blocks | `siyuan api block.prependBlock --parentId <id> --data "paragraph" --dataType markdown` |
-| Insert before/after/child | `siyuan api block.insertBlock --previousId <id> --data "..." --dataType markdown` |
+| Append child blocks | `siyuan api block.appendBlock --parentID <id> --data "paragraph" --dataType markdown` |
+| Batch append child blocks | `siyuan api block.batchAppendBlock --blocks @file:./blocks.json` |
+| Prepend child blocks | `siyuan api block.prependBlock --parentID <id> --data "paragraph" --dataType markdown` |
+| Batch prepend child blocks | `siyuan api block.batchPrependBlock --blocks @file:./blocks.json` |
+| Insert before/after/child | `siyuan api block.insertBlock --previousID <id> --data "..." --dataType markdown` |
+| Batch insert blocks | `siyuan api block.batchInsertBlock --blocks @file:./blocks.json` |
 | Delete block | `siyuan api block.deleteBlock --id <id>` |
-| Move block | `siyuan api block.moveBlock --id <id> --previousId <target-id>` |
+| Move block | `siyuan api block.moveBlock --id <id> --previousID <target-id> --parentID <parent-id>` |
 | Transfer block ref | `siyuan api block.transferBlockRef --id <id> --fromID <source> --toID <target>` |
 
 > ⚠️ **`transferBlockRef` warning**: this operation rewrites all references from one block to another and triggers a full kernel reindex cycle. Avoid using it as a step inside an automated operation chain. Only use it as a deliberate, standalone action.
@@ -280,7 +283,7 @@ The following commands cover common block operations. Always inspect with a read
 | Set block attributes | `siyuan api attr.setBlockAttrs --id <id> --attrs '{"custom-key":"value"}'` |
 | Batch set block attributes | `siyuan api attr.batchSetBlockAttrs --blockAttrs '[{"id":"<id>","attrs":{"custom-key":"value"}}]'` |
 
-All commands support `--help` for full parameter details. Use `--dry-run` to preview writes.
+For multiple known IDs, prefer batch endpoints (`*.batch*`, `getBlockKramdowns`, `getDocsInfo`) over per-id loops. All commands support `--help` for full parameter details. Use `--dry-run` to preview writes.
 
 ## 8. One-sentence summary
 

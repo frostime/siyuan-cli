@@ -69,6 +69,13 @@ updated: "2026-05-11T02:20+08:00"
 - [x] Add tests covering warnings for custom map/object/sibling filters.
 - [x] Run `pnpm run typecheck`, `pnpm run test`, and `pnpm run build`.
 
+### Feedback Tasks (→ [004-update-agent-docs-for-batch-and-filtering-guidance](./revisions/004-update-agent-docs-for-batch-and-filtering-guidance.md))
+- [x] Update `skills/siyuan-cli/SKILL.md` with batch endpoint recommendations, filtered-result semantics, and registered/raw/extension choice strategy.
+- [x] Fix `src/docs/siyuan-guide/siyuan-block.md` command flag casing and add batch endpoint guidance.
+- [x] Update `src/docs/cli-usage/permission.md` / `cli-overview.md` with `CONTENT_FILTERED` interpretation.
+- [x] Fix `src/docs/cli-usage/extension.md` raw helper return-shape example and raw-vs-extension strategy.
+- [x] Verify docs with targeted grep and run `pnpm run typecheck`.
+
 ---
 
 ## Progress
@@ -98,3 +105,4 @@ updated: "2026-05-11T02:20+08:00"
 - [2026-05-11T00:09+08:00] Implemented compact formatters; Kramdown multi-block output uses a system hint plus `--- id: ...` splitters, without Markdown fences.
 - [2026-05-11T02:20+08:00] Addressed subagent review findings: explicit `skipEmpty`, nullable getDocsInfo follow-up request, concise docs, raw tests; typecheck/test/build all pass.
 - [2026-05-11T17:45+08:00] Implemented revision 003: custom response filters now emit `CONTENT_FILTERED`; typecheck/test/build all pass.
+- [2026-05-11T17:55+08:00] Implemented revision 004: updated bundled SKILL/docs for batch endpoint strategy, filtered-result semantics, flag casing, and extension raw helper return shape; targeted grep and typecheck pass.

@@ -1,6 +1,6 @@
 ---
 name: expose-missing-kernel-endpoints
-status: REVIEW
+status: DONE
 change-type: single
 created: 2026-05-10 19:10:17
 reference:
@@ -16,6 +16,9 @@ reference:
 - source: .sspec/changes/26-05-10T19-10_expose-missing-kernel-endpoints/revisions/003-emit-warnings-for-custom-response-filters.md
   type: revision
   note: Emit CONTENT_FILTERED warnings from custom response filters
+- source: .sspec/changes/26-05-10T19-10_expose-missing-kernel-endpoints/revisions/004-update-agent-docs-for-batch-and-filtering-guidance.md
+  type: revision
+  note: Update bundled agent guidance for batch endpoints and filtered results
 ---
 
 <!-- MUST follow frontmatter schema:

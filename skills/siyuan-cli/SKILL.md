@@ -51,6 +51,9 @@ Run `siyuan workspace which` before writes.
 - block info: `siyuan tool get-block-info <id>`
 - content: `siyuan tool get-block-content <id> [--showId true] [--slice "0:30"]`
 - exact block source: `siyuan api block.getBlockKramdown --id <id>`
+- batch block source: `siyuan api block.getBlockKramdowns --ids '["<id1>","<id2>"]'`
+- batch attrs/doc info: `siyuan api attr.batchGetBlockAttrs --ids '["<id1>"]'`; `siyuan api block.getDocsInfo --ids '["<doc-id1>"]'`
+- sibling/full hpath: `siyuan api block.getBlockSiblingID --id <id>`; `siyuan api filetree.getFullHPathByID --id <id>`
 - keyword search: `siyuan api search.fullTextSearchBlock "keyword"`
 - create doc: `siyuan api filetree.createDocWithMd --notebook <id> --path "/path/doc" --markdown @stdin`
 - import md: `siyuan tool push-md ./note.md --notebook <id> --toPath /parent`
@@ -78,6 +81,7 @@ Run `siyuan workspace which` before writes.
 6. Verify with `get-block-content ... --showId true`.
 
 Rules:
+- When handling multiple known block/doc IDs, prefer batch endpoints over per-id loops to reduce round trips.
 - `dataType: "markdown"` by default; use `dom` only for DOM-level edits.
 - Updating a document block replaces its child tree; treat as high risk.
 - `brute-edit` regenerates child block ids; use only when child refs/attributes are not important.
@@ -121,6 +125,8 @@ When shortcuts are insufficient, run `siyuan doc list`, then read the relevant d
 
 - Windows Git Bash / MSYS may rewrite leading `/` virtual paths. Use `MSYS_NO_PATHCONV=1 ...` or `//path` when needed.
 - stdout is result data; stderr carries JSON errors/warnings. In `--print json` mode, approval-pending and auto-open diagnostics stay on stderr so stdout remains a single JSON envelope.
+- `CONTENT_FILTERED` means the result is valid but incomplete under current permission rules; do not infer that missing items/siblings/attrs do not exist.
+- Endpoint choice: registered built-in/API extension > `api raw` for one-off missing kernel APIs > create an extension for repeated use or guard/format needs. Avoid long-lived `rawApi.allow: ["*"]`.
 - Exit codes: 0 OK, 1 general, 2 config, 3 network, 4 auth, 5 permission.
 - Permission/approval behavior is workspace/project config dependent. Inspect with `siyuan workspace which`.
 

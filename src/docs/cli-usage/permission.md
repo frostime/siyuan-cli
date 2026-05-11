@@ -177,6 +177,12 @@ guard: {
 
 **Without `guard.payloadTargets`**, a user rule like `notebook: "xxx"` cannot match the endpoint — the permission engine has nothing to resolve.
 
+### Response filtering warnings
+
+When response filtering removes or masks content, the CLI emits `CONTENT_FILTERED` on stderr, or in `extra.warnings` for `--print json` output.
+
+For agents, this means the returned data is **valid but incomplete under current permission rules**. Do not conclude that a missing key, `null` object, or empty sibling field proves the content does not exist; report it as not visible in the current permission context.
+
 ### `guard.response` → response filtering
 
 Global read endpoints (`mode: "read"`, `scope: "global"`) MUST declare a response guard so the CLI can filter out items from disallowed notebooks/paths:

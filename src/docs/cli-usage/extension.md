@@ -181,14 +181,16 @@ async run(ctx, input) {
 }
 ```
 
-Use `callEndpointRaw` when SiYuan's kernel has an API that siyuan-cli doesn't wrap yet:
+Use `callEndpointRaw` only for one-off internal probes when SiYuan's kernel has an API that siyuan-cli doesn't wrap yet. It returns the unwrapped kernel `data` value and bypasses schema validation, permission checks, approval, response filtering, dry-run, and debug output:
 
 ```ts
 async run(ctx, input) {
-  const result = await ctx.callEndpointRaw('/api/asset/getUnusedAssets', {});
-  return { content: `Found ${result.data.length} unused assets` };
+  const assets = await ctx.callEndpointRaw<string[]>('/api/asset/getUnusedAssets', {});
+  return { content: `Found ${assets.length} unused assets` };
 }
 ```
+
+For repeated use, or when you need payload schema validation, permission guards, approval behavior, response filtering, compact formatting, or discoverable help, write an API extension instead of continuing to use raw calls.
 
 For the full list of kernel APIs, inspect the upstream source:
 https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go

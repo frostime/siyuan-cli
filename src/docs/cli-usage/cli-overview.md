@@ -207,7 +207,7 @@ pnpm run siyuan tool push-md ./note.md --notebook <id> --toPath //
 
 ## Error handling
 
-Errors are written to stderr as single-line JSON, stdout remains clean:
+Warnings and errors are written to stderr as single-line JSON, stdout remains clean:
 
 ```json
 {"error":"WORKSPACE_NOT_FOUND","message":"...","hint":"Run `siyuan workspace list`..."}
@@ -223,6 +223,14 @@ Errors are written to stderr as single-line JSON, stdout remains clean:
 | 3 | Network | connection refused, timeout |
 | 4 | Auth | 401 from kernel |
 | 5 | Permission | endpoint or content denied by policy |
+
+### Common warning codes
+
+| `warning` field | Meaning | Agent action |
+|-----------------|---------|--------------|
+| `CONTENT_FILTERED` | Some response items or fields were removed by permission rules | Treat stdout as a valid but incomplete view; do not infer missing content does not exist |
+| `IMPLICIT_WORKSPACE` | A risky operation used `config.current` instead of an explicit workspace/project anchor | Confirm workspace before proceeding |
+| `RAW_API_NO_SCHEMA_GUARD` | `api raw` bypassed schema validation, resource guard, and response filtering | Use only for intended one-off raw calls; prefer registered endpoints/extensions when possible |
 
 ### Common error codes
 
