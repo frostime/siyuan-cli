@@ -159,13 +159,19 @@ If results are noisy, switch to SQL with notebook or document constraints.
 
 ## User asks for a daily note
 
-Use the daily note tools/model instead of guessing the path.
+Daily notes have dedicated tools. Do not guess the path from the date; use the daily note model.
 
 ```bash
+# Find today's or a specific date's daily note
 siyuan tool list-dailynote --atDate yyyy-MM-dd [--notebookId <id>]
+
+# Append content to today's daily note (targetType=dailynote, targetId=notebook)
+siyuan tool append-content --targetId <notebook-id> --targetType dailynote --markdown @stdin <<'EOF'
+Content to append.
+EOF
 ```
 
-Read `siyuan-guide/dailynote-model.md` when date range or notebook behavior is unclear.
+Read `siyuan-guide/dailynote-model.md` for the full daily note model: path templates, attribute markers, date-range queries, and per-notebook behavior.
 
 # Success checks
 
