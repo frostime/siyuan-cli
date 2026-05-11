@@ -173,6 +173,20 @@ EOF
 
 Read `siyuan-guide/dailynote-model.md` for the full daily note model: path templates, attribute markers, date-range queries, and per-notebook behavior.
 
+## Document Has Ref Links About User's Instructions
+
+Siyuan supports block references/links (see `siyuan-guide/siyuan-block.md`). You can read the document using a given reference link ID.
+
+```bash
+# Last
+siyuan tool get-block-content <candidate-root-or-doc-id>
+# Output with ((<CitedBlockId> "anchor text")) or [anchor text](siyuan://blocks/<CitedBlockId>)
+# User says "read topic about anchor"
+
+# Read the block by ID
+siyuan tool get-block-content <CitedBlockId>
+```
+
 # Success checks
 
 - You have a stable id for the document/block that will be read or written.
