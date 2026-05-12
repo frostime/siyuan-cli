@@ -142,7 +142,8 @@ OUTPUT
 
 ```bash
 siyuan tool list                                    # 查看所有可用 tool
-siyuan tool get-block-content <doc-id> --slice "0:30" # 读文档内容，按块分页
+siyuan tool get-block-content <doc-id> --range children --limit 30  # 读文档内容（有界分块）
+siyuan tool locate-block "%关键词%" --id <doc-id>                  # 按模式搜索块
 siyuan tool push-md ./article.md --notebook <id> --toPath "/inbox"  # 导入本地 md
 ```
 

@@ -27,10 +27,10 @@ Before any write, confirm the workspace and inspect the target.
 ```bash
 siyuan workspace which
 siyuan tool get-block-info <block-or-doc-id>
-siyuan tool get-block-content <block-or-doc-id> --showId true
+siyuan tool get-block-content <block-or-doc-id> --range context --limit 7 --showId true
 ```
 
-Use `--showId true` when you need to edit a specific child block.
+Use `--showId true` when you need to edit a specific child block. The injected `@@id@@type` markers are not source text; do not use annotated output as `brute-edit` search text.
 
 # Strategy selector
 
@@ -91,7 +91,7 @@ Use `--targetType block` for block targets and `--targetType dailynote` when `--
 
 ```bash
 siyuan workspace which
-siyuan tool get-block-content <doc-id> --showId true
+siyuan tool get-block-content <doc-id> --range children --limit 30 --showId true
 
 siyuan api block.updateBlock \
   --id <block-id> \
@@ -101,7 +101,7 @@ siyuan api block.updateBlock \
 Replacement markdown content here.
 EOF
 
-siyuan tool get-block-content <doc-id> --showId true
+siyuan tool get-block-content <doc-id> --range children --limit 30 --showId true
 ```
 
 Use `@file:./content.md` instead of `@stdin` when content already lives in a file.
@@ -110,7 +110,7 @@ Use `@file:./content.md` instead of `@stdin` when content already lives in a fil
 
 ```bash
 siyuan workspace which
-siyuan tool get-block-content <doc-id> --showId true
+siyuan tool get-block-content <doc-id> --range children --limit 30 --showId true
 
 cat > blocks.json <<'EOF'
 [
@@ -122,7 +122,7 @@ EOF
 siyuan api block.batchUpdateBlock --blocks @file:./blocks.json --dry-run
 siyuan api block.batchUpdateBlock --blocks @file:./blocks.json --yes
 
-siyuan tool get-block-content <doc-id> --showId true
+siyuan tool get-block-content <doc-id> --range children --limit 30 --showId true
 ```
 
 Default to `dataType: "markdown"`. Use `dom` only when DOM-level editing is explicitly required.
@@ -171,7 +171,7 @@ siyuan tool brute-edit <doc-id> \
   --replacements @file:./replacements.json \
   --yes
 
-siyuan tool get-block-content <doc-id> --showId true
+siyuan tool get-block-content <doc-id> --range children --limit 30 --showId true
 ```
 
 Only use this when regenerating child block ids is acceptable.
@@ -214,7 +214,7 @@ siyuan tool resolve-path --id <doc-id>   # verify new hpath
 After writing:
 
 ```bash
-siyuan tool get-block-content <doc-or-block-id> --showId true
+siyuan tool get-block-content <doc-or-block-id> --range context --limit 7 --showId true
 ```
 
 Check that:
@@ -230,7 +230,7 @@ Check that:
 
 - re-run `siyuan workspace which`
 - re-run `siyuan tool get-block-info <id>`
-- read content with `--showId true`
+- read content with `--range context --limit 7 --showId true`
 - narrow to a stable block id before retrying
 
 ## Write denied or approval required

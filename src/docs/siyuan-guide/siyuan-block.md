@@ -246,8 +246,9 @@ The following commands cover common block operations. Always inspect with a read
 
 | Task | Command |
 |------|---------|
-| Read block markdown (full fidelity) | `siyuan tool get-block-content <id>` |
-| Read block markdown with id annotations | `siyuan tool get-block-content <id> --showId true` |
+| Read anchor content (bounded for documents/containers) | `siyuan tool get-block-content <id>` |
+| Read nearby sibling context | `siyuan tool get-block-content <id> --range context --limit 7` |
+| Read with id annotations for targeting | `siyuan tool get-block-content <id> --range context --limit 7 --showId true` |
 | Inspect block metadata | `siyuan tool get-block-info <id>` |
 | Get raw block info from kernel | `siyuan api block.getBlockInfo --id <id>` |
 | Get Kramdown (kernel internal format) | `siyuan api block.getBlockKramdown --id <id>` |

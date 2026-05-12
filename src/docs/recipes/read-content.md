@@ -24,14 +24,17 @@ Use this when the user wants to:
 Choose the smallest read that satisfies the task.
 
 ```text
-known id → inspect metadata → choose content/source/tree/slice → report partiality if filtered
+known id → inspect metadata → choose bounded range → read body after header fence → report partiality if filtered/truncated
 ```
+
+`get-block-content` output starts with a header. Treat text after `--- BEGIN ... ---` as the content body. If `showId=true`, the body contains injected `@@id@@type` markers for targeting; those markers are not SiYuan source text.
 
 # Inputs
 
 - document id or block id
 - optional known scope: notebook, hpath, title, date, or parent document
-- optional slice range for large documents
+- optional read range: `self`, `children`, `context`, `before`, or `after`
+- optional `--limit` for bounded multi-block reads
 
 # Default flow
 
@@ -49,12 +52,28 @@ Check type, path/hpath, notebook, parent/root relation, and whether the id is a 
 siyuan tool get-block-content <block-or-doc-id>
 ```
 
-Use this for normal review, summary, or extraction.
+Default behavior is bounded:
 
-## 3. Show ids before precise follow-up work
+- leaf blocks return their own raw Markdown
+- document/heading/container blocks return child blocks up to the default limit
+- the header says `truncated: true` when more content exists
+
+## 3. Read a specific range
 
 ```bash
-siyuan tool get-block-content <block-or-doc-id> --showId true
+siyuan tool get-block-content <block-id> --range self
+siyuan tool get-block-content <block-id> --range context --limit 7
+siyuan tool get-block-content <block-id> --range before --limit 5
+siyuan tool get-block-content <block-id> --range after --limit 10
+siyuan tool get-block-content <doc-or-heading-id> --range children --limit 30
+```
+
+Use `context` after `locate-block` to inspect nearby sibling blocks without loading a whole document.
+
+## 4. Show ids before precise follow-up work
+
+```bash
+siyuan tool get-block-content <block-or-doc-id> --range context --limit 7 --showId true
 ```
 
 Use `--showId true` when:
@@ -62,15 +81,9 @@ Use `--showId true` when:
 - the next step may edit a child block
 - the user asks about a section inside a document
 - you need to cite or compare block-level structure
-- search results pointed to a child block but you need surrounding context
+- search results pointed to a child block and you need surrounding context
 
-## 4. Bound large reads
-
-```bash
-siyuan tool get-block-content <block-or-doc-id> --slice "0:30"
-```
-
-Use `--slice` for large documents or when only the first part is needed. Continue with additional slices only when the task requires it.
+Warning: `--showId true` injects `@@id@@type` markers into the body. Do not copy those markers into `brute-edit` search strings or replacement content unless you intentionally want literal marker text.
 
 ## 5. Read exact source when needed
 
@@ -87,24 +100,24 @@ Use Kramdown/source reads when the user needs exact markup, block refs, attribut
 
 1. Locate target with `recipes/find-target.md`.
 2. `siyuan tool get-block-info <doc-id>`.
-3. `siyuan tool get-block-content <doc-id> --slice "0:50"` for a bounded first pass.
-4. Continue only if the summary requires later sections.
+3. `siyuan tool get-block-content <doc-id> --range children --limit 50` for a bounded first pass.
+4. Continue only if the summary requires later sections; use the `next:` command from the header when present.
 
 ## User asks to edit a paragraph or section
 
 1. Locate the document or candidate block.
-2. Read with ids:
+2. Prefer `locate-block` for phrase-based block discovery.
+3. Read target context with ids:
    ```bash
-   siyuan tool get-block-content <doc-id> --showId true
+   siyuan tool get-block-content <matched-block-id> --range context --limit 7 --showId true
    ```
-3. Identify the exact child block id.
-4. Continue with `recipes/edit-content.md`.
+4. Continue with `recipes/edit-content.md` using the exact child block id.
 
 ## User gives a block id
 
 ```bash
 siyuan tool get-block-info <block-id>
-siyuan tool get-block-content <block-id> --showId true
+siyuan tool get-block-content <block-id> --range self
 ```
 
 If the task needs the containing document, use metadata from `get-block-info` to move from child block to root/document context.
@@ -128,8 +141,9 @@ Prefer batch reads instead of looping single calls.
 # Output rules
 
 - If `CONTENT_FILTERED` appears, tell the user the result is a partial view under current permission rules.
-- Do not say "there are no more items" unless the command returned an unfiltered bounded result that supports that claim.
-- For large documents, state the slice or scope read.
+- If the header says `truncated: true`, say the result is bounded and continue only when needed.
+- Treat content after `--- BEGIN BLOCK CONTENT ---` as raw Markdown.
+- Treat content after `--- BEGIN ANNOTATED BLOCK CONTENT ---` as annotated Markdown for targeting only.
 - For edit preparation, include the relevant stable ids in your working notes or response when useful.
 
 # Success checks
@@ -137,7 +151,7 @@ Prefer batch reads instead of looping single calls.
 - The returned content matches the intended target.
 - The read scope is bounded enough for the task.
 - Block ids are visible when precise follow-up targeting is needed.
-- The user can tell whether the answer came from a complete or partial view.
+- The user can tell whether the answer came from a complete, bounded, truncated, or filtered view.
 
 # Recovery
 
@@ -149,7 +163,8 @@ Prefer batch reads instead of looping single calls.
 
 ## Content too large
 
-- switch to `--slice`
+- reduce `--limit`
+- use `--range context`, `before`, or `after` around a known block
 - read the tree or table of contents first via `get-block-info`
 - ask the user for the relevant section when the document is too large and the task is broad
 

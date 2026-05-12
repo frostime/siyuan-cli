@@ -196,10 +196,12 @@ siyuan tool list-doc-tree --entry <notebook-id> --depth 2
 # Daily notes by date range
 siyuan tool list-dailynote --afterDate 2026-04-01
 
-# Read document content with pagination
-siyuan tool get-block-content <doc-id> --slice "0:30" --showId true
-# Continue from where you left off
-siyuan tool get-block-content <doc-id> --slice "<last-block-id>:+20"
+# Bounded document content read
+siyuan tool get-block-content <doc-id> --range children --limit 30
+# Context read around a specific block
+siyuan tool get-block-content <block-id> --range context --limit 7 --showId true
+# Grep blocks by pattern
+siyuan tool locate-block "%keyword%" --id <doc-id>
 
 # Block metadata inspection (includes TOC for document blocks)
 siyuan tool get-block-info <block-id>

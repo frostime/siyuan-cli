@@ -96,7 +96,7 @@ Rules:
 
 ```bash
 siyuan tool get-block-info <candidate-id>
-siyuan tool get-block-content <candidate-id> --showId true --slice "0:30"
+siyuan tool get-block-content <candidate-id> --limit 30 --showId true
 ```
 
 Confirm:
@@ -152,7 +152,7 @@ siyuan tool get-block-info <resolved-id>
 ```bash
 siyuan api search.fullTextSearchBlock "approval broker lifecycle"
 siyuan tool get-block-info <candidate-block-id>
-siyuan tool get-block-content <candidate-root-or-doc-id> --showId true --slice "0:30"
+siyuan tool get-block-content <candidate-block-id> --range context --limit 7 --showId true
 ```
 
 If results are noisy, switch to SQL with notebook or document constraints.

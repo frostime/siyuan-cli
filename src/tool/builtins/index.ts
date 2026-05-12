@@ -7,8 +7,19 @@ import { tool as getBlockInfo } from './get-block-info.js';
 import { tool as getBlockContent } from './get-block-content.js';
 import { tool as bruteEdit } from './brute-edit.js';
 import { tool as pushMd } from './push-md.js';
+import { tool as locateBlock } from './locate-block.js';
 
-const tools = [listDocTree, listDailynote, appendContent, resolvePath, getBlockInfo, getBlockContent, bruteEdit, pushMd];
+const tools = [
+    listDocTree,
+    listDailynote,
+    appendContent,
+    resolvePath,
+    getBlockInfo,
+    getBlockContent,
+    bruteEdit,
+    pushMd,
+    locateBlock
+];
 for (const tool of tools) {
     toolRegistry.register(tool);
 }

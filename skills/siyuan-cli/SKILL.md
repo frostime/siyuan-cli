@@ -105,14 +105,14 @@ For locate/read/write commands, follow the recipes in "Task start points" above.
 
 ## Safe write protocol
 
-Before any write: confirm workspace, stabilize target to a stable id, inspect with `get-block-info` and `get-block-content --showId true`, then follow the strategy selector in `recipes/edit-content.md`.
+Before any write: confirm workspace, stabilize target to a stable id, inspect with `get-block-info` and a bounded `get-block-content` read (usually `--range context --limit 7 --showId true`), then follow the strategy selector in `recipes/edit-content.md`.
 
 Rules:
 - Prefer append over replace when the user's goal allows it.
 - Prefer batch endpoints over per-id loops when handling multiple known block/doc IDs.
 - `dataType: "markdown"` by default; use `dom` only for DOM-level edits.
 - Updating a document block replaces its child tree; treat as high risk.
-- `brute-edit` regenerates child block ids; use only when child refs/attributes are not important.
+- `brute-edit` regenerates child block ids; use only when child refs/attributes are not important. Do not use `get-block-content --showId true` marker lines (`@@id@@type`) as brute-edit search text.
 - Use `--dry-run` when supported; use `--yes` only when intended and allowed.
 
 ## Domain rules
