@@ -244,19 +244,16 @@ The following commands cover common block operations. Always inspect with a read
 
 #### Read
 
-| Task | Command |
-|------|---------|
-| Read anchor content (bounded for documents/containers) | `siyuan tool get-block-content <id>` |
-| Read nearby sibling context | `siyuan tool get-block-content <id> --range context --limit 7` |
-| Read with id annotations for targeting | `siyuan tool get-block-content <id> --range context --limit 7 --showId true` |
-| Inspect block metadata | `siyuan tool get-block-info <id>` |
-| Get raw block info from kernel | `siyuan api block.getBlockInfo --id <id>` |
-| Get Kramdown (kernel internal format) | `siyuan api block.getBlockKramdown --id <id>` |
-| Batch get Kramdown | `siyuan api block.getBlockKramdowns --ids '["<id1>","<id2>"]'` |
-| Get document info for multiple docs | `siyuan api block.getDocsInfo --ids '["<doc-id1>","<doc-id2>"]'` |
-| Get block DOM | `siyuan api block.getBlockDOM --id <id>` |
-| Get breadcrumb path | `siyuan api block.getBlockBreadcrumb --id <id>` |
-| List child blocks | `siyuan api block.getChildBlocks --id <id>` |
+| Task | Tool | Raw API fallback |
+|------|------|------------------|
+| Block Markdown | `siyuan tool get-block-content <id>` | — |
+| Block metadata | `siyuan tool get-block-info <id>` | `block.getBlockInfo` |
+| Search by pattern | `siyuan tool locate-block "%p%"` | `search.fullTextSearchBlock` |
+| Exact Kramdown (update prep) | — | `siyuan api block.getBlockKramdown --id <id>` |
+| Batch Kramdown / doc info | — | `block.getBlockKramdowns` / `block.getDocsInfo` |
+| Block DOM | — | `block.getBlockDOM` |
+
+Prefer using `tool` for reading; it is usually unnecessary to access kramdown, and you SHOULD NOT read BlockDOM.
 
 #### Write
 
