@@ -22,7 +22,7 @@ This recipe is not a block-type handbook. For the SiYuan data model, read `siyua
 
 # Pre-flight
 
-Before any write, confirm the workspace and inspect the target.
+Before any write, confirm the workspace and inspect the target. Before destructive or ID-changing document operations, create a `checkpoint-doc` recovery package.
 
 ```bash
 siyuan workspace which
@@ -41,7 +41,7 @@ Use `--showId true` when you need to edit a specific child block. The injected `
 | Replace multiple known blocks | `siyuan api block.batchUpdateBlock` | Atomic multi-block update |
 | Insert before/after a known block | `siyuan api block.insertBlock --nextID/--previousID` | Use `--parentID` when the parent is known |
 | Append/prepend under a parent block | `siyuan api block.appendBlock` / `block.prependBlock` | Creates new child blocks |
-| Whole-document search-and-replace | `siyuan tool brute-edit` | High-risk path; use only when ID churn is acceptable |
+| Whole-document search-and-replace | `siyuan tool brute-edit --check` → `--dry-run` → `--yes` | Efficient path when safety checks pass; fallback to block updates when rejected |
 | Move a block to a new position | `siyuan api block.moveBlock` | Block id is preserved; `--previousID` anchors position, `--parentID` is the container |
 | Move a document to another parent | `siyuan api filetree.moveDocsByID` | hpath changes; `id` and content are preserved |
 | Delete a document | `siyuan api filetree.removeDocByID` | Prefer over deleting a document block |
@@ -56,7 +56,7 @@ Use `--showId true` when you need to edit a specific child block. The injected `
 | `insertBlock` / `appendBlock` / `prependBlock` | Existing ids remain; new content gets new ids | Insert position must be correct |
 | `moveBlock` | Moved block id remains | Document structure changes |
 | `filetree.moveDocsByID` | All block ids remain | `hpath` changes; any hardcoded hpath references become stale |
-| `brute-edit` | Child block ids are regenerated | Unsafe for documents whose child blocks are referenced or attributed |
+| `brute-edit` | Child block ids are regenerated | Tool refuses documents with child custom attrs, inbound refs, or excessive size |
 
 # Commands
 
@@ -165,6 +165,14 @@ EOF
 siyuan workspace which
 siyuan tool get-block-info <doc-id>
 
+# Required first step: check whether this document is safe for brute-edit.
+siyuan tool brute-edit <doc-id> --check true --print json
+
+# Optional but recommended before high-risk writes: create a recovery checkpoint.
+siyuan tool checkpoint-doc <doc-id>
+
+# Preview concrete replacements. Unlike most API dry-runs, brute-edit dry-run
+# performs local safety checks and returns an edit plan.
 siyuan tool brute-edit <doc-id> \
   --replacements @stdin \
   --dry-run <<'EOF'
@@ -179,10 +187,10 @@ siyuan tool brute-edit <doc-id> \
   --replacements @file:./replacements.json \
   --yes
 
-siyuan tool get-block-content <doc-id> --range children --limit 30 --showId true
+siyuan tool get-block-content <doc-id> --range children --limit=-1
 ```
 
-Only use this when regenerating child block ids is acceptable.
+If `--check` or `--dry-run` rejects the edit, use `locate-block` + `get-block-content --showId true` to identify specific block ids, then update those blocks with `block.updateBlock` / `block.batchUpdateBlock`.
 
 ## Move a block
 

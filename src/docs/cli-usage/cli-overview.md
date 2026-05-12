@@ -110,6 +110,7 @@ Tools compose multiple endpoint calls into a single workflow.
 siyuan tool list
 siyuan tool list-doc-tree --entry <notebook-or-doc-id> --depth 2
 siyuan tool get-block-content <block-or-doc-id> --range context --limit 7 --showId true
+siyuan tool checkpoint-doc <doc-id>
 ```
 
 ### Output modes
@@ -132,7 +133,7 @@ All `siyuan api <id>` and `siyuan tool <id>` commands accept:
 | `--baseUrl` | | Ad-hoc kernel URL (skips workspace resolution entirely) |
 | `--token` | | Override authentication token |
 | `--config` | | Override config file path |
-| `--dry-run` | | Preview write operations without calling kernel |
+| `--dry-run` | | Preview write operations without calling kernel. For workflow tools such as `brute-edit`, dry-run may also perform local read/planning checks and return an edit plan. |
 | `--yes` | `-y` | Execute approval-gated writes immediately without opening the Approval Center. Ignored when `behavior.allowYes` is `false` |
 | `--debug` | | Print intended request (curl-equivalent) to stderr |
 | `--json` | `-j` | Entire payload as inline JSON |

@@ -12,7 +12,7 @@ Agent-first CLI for SiYuan Note. This SKILL is the operational router; detailed 
 ## Bootstrap
 
 1. If `siyuan` is missing: `npm install -g @frostime/siyuan-cli`.
-2. If `<THIS_SKILL_FILE>.metadata.version != siyuan --version`: `siyuan skill install` for update, then `siyuan skill read` to refresh.
+2. Run `siyuan --help`, if `<THIS_SKILL_FILE>.metadata.version != siyuan cli version`: `siyuan skill install` for update, then `siyuan skill read` to refresh.
 3. Discover CLI + docs:
    ```bash
    siyuan --help      # command tree + docs root
@@ -111,9 +111,11 @@ Rules:
 - Prefer append over replace when the user's goal allows it (`block.appendBlock` for known parent ids, `block.appendDailyNoteBlock` for daily notes).
 - Prefer batch endpoints over per-id loops when handling multiple known block/doc IDs.
 - `dataType: "markdown"` by default; use `dom` only for DOM-level edits.
-- Updating a document block replaces its child tree; treat as high risk.
-- `brute-edit` regenerates child block ids; use only when child refs/attributes are not important. Do not use `get-block-content --showId true` marker lines (`@@id@@type`) as brute-edit search text.
-- Use `--dry-run` when supported; use `--yes` only when intended and allowed.
+- Updating a document block replaces its child tree; treat as high risk. Create `checkpoint-doc <doc-id>` first when recovery matters.
+- For document-level text replacement, run `brute-edit <doc-id> --check true` first, then `--dry-run`, then `--yes` only if the plan is intended. If rejected, fall back to block-level `updateBlock`.
+- `brute-edit` regenerates child block ids. Do not use `get-block-content --showId true` marker lines (`@@id@@type`) as brute-edit search text.
+- Use `--dry-run` when supported; note that `brute-edit --dry-run` performs substantive local checks, while most API dry-runs only preview payload/approval.
+- If temporary files are needed for `@file:` or `cat ... | @stdin`, prefer the system temp directory (`$TMPDIR`/`/tmp`/`%TEMP%`, or `mktemp -d`) over the current project directory, and delete those files after the command completes.
 
 ## Domain rules
 

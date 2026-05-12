@@ -21,7 +21,7 @@ Uses global --dry-run to preview without writing.`,
     tags: ['write'],
     input: {
         type: 'object',
-        required: ['id', 'replacements'],
+        required: ['id'],
         additionalProperties: false,
         properties: {
             id: {
@@ -32,7 +32,12 @@ Uses global --dry-run to preview without writing.`,
             replacements: {
                 type: 'string',
                 description:
-                    'JSON array of {search, replace} pairs. E.g.: \'[{"search":"old","replace":"new"}]\''
+                    'JSON array of {search, replace} pairs. Required unless --check true. E.g.: \'[{"search":"old","replace":"new"}]\''
+            },
+            check: {
+                type: 'boolean',
+                description: 'Only check whether the document is safe for brute-edit; does not require replacements.',
+                default: false
             },
             maxSize: {
                 type: 'integer',
@@ -59,33 +64,38 @@ Uses global --dry-run to preview without writing.`,
             },
             {
                 command: 'siyuan tool brute-edit 20241016135347-zlrn2cz --replacements \'[...]\' --maxSize 102400'
+            },
+            {
+                command: 'siyuan tool brute-edit 20241016135347-zlrn2cz --check true'
             }
         ]
     },
 
     async run(ctx, input) {
-        const { id, maxSize, replacements } = input as { id: string; maxSize?: number; replacements: string };
+        const { id, maxSize, replacements, check } = input as { id: string; maxSize?: number; replacements?: string; check?: boolean };
         const dryRun = ctx.args.dryRun;
         const maxBytes = maxSize ?? 51200;
+        const checkOnly = check ?? false;
 
-        // Parse replacements
-        let pairs: Array<{ search: string; replace: string }>;
-        try {
-            const raw = replacements;
-            pairs = JSON.parse(raw);
-            if (!Array.isArray(pairs) || pairs.length === 0) {
-                throw new Error('replacements must be a non-empty JSON array.');
-            }
-            for (const p of pairs) {
-                if (typeof p.search !== 'string' || typeof p.replace !== 'string') {
-                    throw new Error('Each replacement must have string "search" and "replace".');
+        let pairs: Array<{ search: string; replace: string }> = [];
+        if (!checkOnly) {
+            if (!replacements) throw new Error('replacements is required unless --check true.');
+            try {
+                pairs = JSON.parse(replacements);
+                if (!Array.isArray(pairs) || pairs.length === 0) {
+                    throw new Error('replacements must be a non-empty JSON array.');
                 }
+                for (const p of pairs) {
+                    if (typeof p.search !== 'string' || typeof p.replace !== 'string') {
+                        throw new Error('Each replacement must have string "search" and "replace".');
+                    }
+                }
+            } catch (e: unknown) {
+                if (e instanceof SyntaxError) {
+                    throw new Error(`Invalid replacements JSON: ${(e as Error).message}`);
+                }
+                throw e;
             }
-        } catch (e: unknown) {
-            if (e instanceof SyntaxError) {
-                throw new Error(`Invalid replacements JSON: ${(e as Error).message}`);
-            }
-            throw e;
         }
 
         // STEP 1: Verify document
@@ -114,29 +124,16 @@ Uses global --dry-run to preview without writing.`,
             stmt: `SELECT a.block_id AS id, a.name, a.value FROM attributes a
                     JOIN blocks b ON a.block_id = b.id
                     WHERE b.root_id = '${escapeSqliteLiteral(id)}' AND b.type != 'd' AND a.name LIKE 'custom-%'
-                    LIMIT 5`
+                    LIMIT 1000`
         });
-        if (customRows.length > 0) {
-            return errorResult('custom-attrs', 'SAFETY CHECK FAILED — child blocks have custom attributes', {
-                blocks: customRows,
-                hint: 'Remove these attributes first.'
-            });
-        }
 
         // STEP 3: Safety — inbound refs
         const refRows = await ctx.callEndpoint<Array<{ def_block_id: string }>>('query.sql', {
-            stmt: `SELECT r.def_block_id FROM refs r
+            stmt: `SELECT DISTINCT r.def_block_id FROM refs r
                     WHERE r.def_block_id IN (
                       SELECT id FROM blocks WHERE root_id = '${escapeSqliteLiteral(id)}' AND type != 'd'
-                    ) LIMIT 1`
+                    ) LIMIT 1000`
         });
-        if (refRows.length > 0) {
-            return errorResult(
-                'inbound-refs',
-                'SAFETY CHECK FAILED — child blocks have inbound references',
-                { refs: refRows, hint: 'Use a non-destructive approach (block.updateBlock on individual blocks).' }
-            );
-        }
 
         // STEP 4: Read markdown + size check
         const children = await ctx.callEndpoint<
@@ -144,8 +141,51 @@ Uses global --dry-run to preview without writing.`,
         >('block.getChildBlocks', { id });
         const markdown = children.map((c) => c.markdown ?? '').join('\n\n');
         const byteLength = Buffer.byteLength(markdown, 'utf8');
+        const blockingReasons = [
+            ...(customRows.length > 0 ? ['custom-attrs'] : []),
+            ...(refRows.length > 0 ? ['inbound-refs'] : []),
+            ...(byteLength > maxBytes ? ['size-limit'] : [])
+        ];
+        const safety = {
+            safeForBruteEdit: blockingReasons.length === 0,
+            blockingReasons,
+            customAttrBlocks: customRows,
+            inboundRefBlocks: refRows,
+            doc: {
+                id,
+                childBlockCount: children.length,
+                byteLength,
+                maxSize: maxBytes
+            }
+        };
+
+        if (checkOnly) {
+            return {
+                content: safety.safeForBruteEdit
+                    ? `SAFE: document ${id} can use brute-edit (${byteLength} bytes, ${children.length} child blocks)`
+                    : `UNSAFE: document ${id} should not use brute-edit (${blockingReasons.join(', ')})`,
+                details: safety
+            };
+        }
+
+        if (customRows.length > 0) {
+            return errorResult('custom-attrs', 'SAFETY CHECK FAILED — child blocks have custom attributes', {
+                canApply: false,
+                ...safety,
+                hint: 'Use a non-destructive approach (block.updateBlock on individual blocks), or checkpoint and restore attributes deliberately.'
+            });
+        }
+        if (refRows.length > 0) {
+            return errorResult('inbound-refs', 'SAFETY CHECK FAILED — child blocks have inbound references', {
+                canApply: false,
+                ...safety,
+                hint: 'Use a non-destructive approach (block.updateBlock on individual blocks), or checkpoint and transfer refs deliberately.'
+            });
+        }
         if (byteLength > maxBytes) {
             return errorResult('size-limit', `SIZE LIMIT EXCEEDED: ${byteLength} bytes (max: ${maxBytes})`, {
+                canApply: false,
+                ...safety,
                 actual: byteLength,
                 max: maxBytes
             });
@@ -164,6 +204,8 @@ Uses global --dry-run to preview without writing.`,
             const first = markdown.indexOf(search);
             if (first === -1) {
                 return errorResult('search-not-found', `PRE-CHECK FAILED: Search string not found`, {
+                    canApply: false,
+                    ...safety,
                     reason: 'search-not-found',
                     search,
                     hint: 'Check spelling or use a broader search.'
@@ -182,6 +224,8 @@ Uses global --dry-run to preview without writing.`,
                     'search-ambiguous',
                     `PRE-CHECK FAILED: Search string matches ${count} times`,
                     {
+                        canApply: false,
+                        ...safety,
                         reason: 'search-ambiguous',
                         search,
                         matchCount: count,
@@ -200,6 +244,8 @@ Uses global --dry-run to preview without writing.`,
                     'overlapping-replacements',
                     'PRE-CHECK FAILED: Replacement ranges overlap in original document',
                     {
+                        canApply: false,
+                        ...safety,
                         reason: 'overlapping-replacements',
                         conflicts: [
                             { search: sorted[i - 1]!.search, range: [sorted[i - 1]!.start, sorted[i - 1]!.end] },
@@ -218,14 +264,24 @@ Uses global --dry-run to preview without writing.`,
             result = result.slice(0, start) + replace + result.slice(end);
         }
 
+        const plannedWithContext = planned.map((item) => ({
+            search: item.search,
+            replace: item.replace,
+            start: item.start,
+            end: item.end,
+            beforeContext: markdown.slice(Math.max(0, item.start - 80), item.start),
+            afterContext: markdown.slice(item.end, Math.min(markdown.length, item.end + 80))
+        }));
+
         // STEP 7: dryRun check
         if (dryRun) {
             return {
                 content: `DRY RUN: ${planned.length} replacements would be applied to document ${id} (${byteLength} bytes)`,
                 details: {
-                    id,
+                    canApply: true,
+                    ...safety,
+                    replacements: plannedWithContext,
                     replacementCount: planned.length,
-                    byteLength,
                     dryRun: true
                 }
             };
@@ -242,6 +298,7 @@ Uses global --dry-run to preview without writing.`,
         return {
             content: `Replaced in document ${id}: ${planned.length} replacements, ${newByteLength} bytes`,
             details: {
+                canApply: true,
                 docId: id,
                 replacementCount: planned.length,
                 byteLength: newByteLength

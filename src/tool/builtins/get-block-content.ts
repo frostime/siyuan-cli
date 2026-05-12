@@ -39,10 +39,18 @@ function isRangeMode(value: unknown): value is RangeMode {
 
 function normalizeLimit(raw: unknown, fallback: number): number {
     const value = raw === undefined ? fallback : Number(raw);
-    if (!Number.isInteger(value) || value < 1) {
-        throw new Error('--limit must be a positive integer.');
+    if (!Number.isInteger(value) || Object.is(value, -0) || value === 0) {
+        throw new Error('--limit must be a nonzero integer. Use a negative value for unlimited reads.');
     }
     return value;
+}
+
+function isUnlimited(limit: number): boolean {
+    return limit < 0;
+}
+
+function displayLimit(limit: number): string {
+    return isUnlimited(limit) ? 'unlimited' : String(limit);
 }
 
 function renderBlock(block: ContentBlock, showId: boolean): string {
@@ -51,6 +59,7 @@ function renderBlock(block: ContentBlock, showId: boolean): string {
 }
 
 function trimChildren(children: ContentBlock[], limit: number): { blocks: ContentBlock[]; truncated: boolean } {
+    if (isUnlimited(limit)) return { blocks: children, truncated: false };
     return {
         blocks: children.slice(0, limit),
         truncated: children.length > limit
@@ -68,6 +77,7 @@ Default behavior:
 - Leaf blocks return their own raw Markdown.
 - Document, heading, and container blocks return their first child blocks with a hidden safety limit.
 - Multi-block reads are bounded by --limit to avoid accidental full-document dumps.
+- Use --limit=-1 for an explicit unlimited/full read.
 
 Range modes:
 - self: only the anchor block itself.
@@ -96,7 +106,7 @@ Output contract:
             },
             limit: {
                 type: 'integer',
-                description: `Maximum returned blocks for multi-block ranges. Defaults: ${DEFAULT_LIMIT} for children/before/after, ${DEFAULT_CONTEXT_LIMIT} for context.`
+                description: `Maximum returned blocks for multi-block ranges. Use any negative value for unlimited/full read; prefer --limit=-1 so shells do not parse -1 as a flag. Defaults: ${DEFAULT_LIMIT} for children/before/after, ${DEFAULT_CONTEXT_LIMIT} for context.`
             },
             showId: {
                 type: 'boolean',
@@ -110,7 +120,8 @@ Output contract:
             { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz' },
             { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range context --limit 7' },
             { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range before --limit 5' },
-            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range children --limit 30 --showId true' }
+            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range children --limit 30 --showId true' },
+            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range children --limit=-1' }
         ]
     },
     async run(ctx, input) {
@@ -182,23 +193,25 @@ Output contract:
             const parentId = root.parent_id || root.root_id || root.id;
             const comparison = range === 'before' ? '<' : '>';
             const order = range === 'before' ? 'DESC' : 'ASC';
-            const fetchLimit = range === 'context' ? Math.max(1, Math.floor((limit - 1) / 2)) : limit;
+            const unlimited = isUnlimited(limit);
+            const fetchLimit = unlimited ? -1 : range === 'context' ? Math.max(1, Math.floor((limit - 1) / 2)) : limit;
 
             const fetchSiblings = async (direction: 'before' | 'after', count: number): Promise<ContentBlock[]> => {
-                if (count < 1) return [];
+                if (count === 0) return [];
                 const op = direction === 'before' ? '<' : '>';
                 const sortOrder = direction === 'before' ? 'DESC' : 'ASC';
+                const limitClause = count < 0 ? '' : `\n                        LIMIT ${count + 1}`;
                 const rows = await ctx.callEndpoint<RootRow[]>('query.sql', {
                     stmt: `SELECT rowid, id, parent_id, root_id, box, type, subtype, markdown, content
                         FROM blocks
                         WHERE parent_id = '${escapeSqliteLiteral(parentId)}'
                           AND id != '${escapeSqliteLiteral(root.id)}'
                           AND rowid ${op} ${root.rowid}
-                        ORDER BY rowid ${sortOrder}
-                        LIMIT ${count + 1}`
+                        ORDER BY rowid ${sortOrder}${limitClause}`
                 });
-                if (rows.length > count) truncated = true;
-                const selected = rows.slice(0, count).map((r) => ({
+                if (count >= 0 && rows.length > count) truncated = true;
+                const selectedRows = count < 0 ? rows : rows.slice(0, count);
+                const selected = selectedRows.map((r) => ({
                     rowid: r.rowid,
                     id: r.id,
                     type: blockType(r.type, r.subtype),
@@ -209,7 +222,7 @@ Output contract:
 
             if (range === 'context') {
                 const beforeCount = fetchLimit;
-                const afterCount = Math.max(0, limit - beforeCount - 1);
+                const afterCount = unlimited ? -1 : Math.max(0, limit - beforeCount - 1);
                 const before = await fetchSiblings('before', beforeCount);
                 const after = await fetchSiblings('after', afterCount);
                 blocks = [
@@ -224,17 +237,17 @@ Output contract:
                     ...after
                 ];
             } else {
+                const limitClause = unlimited ? '' : `\n                        LIMIT ${limit + 1}`;
                 const rows = await ctx.callEndpoint<RootRow[]>('query.sql', {
                     stmt: `SELECT rowid, id, parent_id, root_id, box, type, subtype, markdown, content
                         FROM blocks
                         WHERE parent_id = '${escapeSqliteLiteral(parentId)}'
                           AND id != '${escapeSqliteLiteral(root.id)}'
                           AND rowid ${comparison} ${root.rowid}
-                        ORDER BY rowid ${order}
-                        LIMIT ${limit + 1}`
+                        ORDER BY rowid ${order}${limitClause}`
                 });
-                truncated = rows.length > limit;
-                blocks = rows.slice(0, limit).map((r) => ({
+                truncated = unlimited ? false : rows.length > limit;
+                blocks = (unlimited ? rows : rows.slice(0, limit)).map((r) => ({
                     rowid: r.rowid,
                     id: r.id,
                     type: blockType(r.type, r.subtype),
@@ -255,7 +268,7 @@ Output contract:
         header.push(`parent: ${root.parent_id || ''}`);
         header.push(`root: ${root.root_id}`);
         header.push(`range: ${range}`);
-        header.push(`limit: ${limit}`);
+        header.push(`limit: ${displayLimit(limit)}`);
         header.push(`returned: ${blocks.length}`);
         if (totalAvailable !== undefined) header.push(`available: ${totalAvailable}`);
         header.push(`truncated: ${truncated}`);
@@ -267,10 +280,10 @@ Output contract:
         if (truncated && blocks.length > 0) {
             if (range === 'before') {
                 const firstId = blocks[0]!.id;
-                header.push(`next: siyuan tool get-block-content ${firstId} --range before --limit ${limit}${showId ? ' --showId true' : ''}`);
+                header.push(`next: siyuan tool get-block-content ${firstId} --range before --limit ${displayLimit(limit)}${showId ? ' --showId true' : ''}`);
             } else if (range === 'children' || range === 'after') {
                 const lastId = blocks[blocks.length - 1]!.id;
-                header.push(`next: siyuan tool get-block-content ${lastId} --range after --limit ${limit}${showId ? ' --showId true' : ''}`);
+                header.push(`next: siyuan tool get-block-content ${lastId} --range after --limit ${displayLimit(limit)}${showId ? ' --showId true' : ''}`);
             } else if (range === 'context') {
                 header.push(`hint: context truncated; increase --limit if more neighboring blocks are needed.`);
             }
@@ -287,6 +300,7 @@ Output contract:
                 blockType: root.type,
                 range,
                 limit,
+                unlimited: isUnlimited(limit),
                 returned: blocks.length,
                 truncated,
                 showId,

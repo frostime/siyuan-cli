@@ -34,7 +34,7 @@ known id → inspect metadata → choose bounded range → read body after heade
 - document id or block id
 - optional known scope: notebook, hpath, title, date, or parent document
 - optional read range: `self`, `children`, `context`, `before`, or `after`
-- optional `--limit` for bounded multi-block reads
+- optional `--limit` for bounded multi-block reads; use `--limit=-1` for explicit full reads
 
 # Default flow
 
@@ -66,9 +66,10 @@ siyuan tool get-block-content <block-id> --range context --limit 7
 siyuan tool get-block-content <block-id> --range before --limit 5
 siyuan tool get-block-content <block-id> --range after --limit 10
 siyuan tool get-block-content <doc-or-heading-id> --range children --limit 30
+siyuan tool get-block-content <doc-or-heading-id> --range children --limit=-1  # full read
 ```
 
-Use `context` after `locate-block` to inspect nearby sibling blocks without loading a whole document.
+Use `context` after `locate-block` to inspect nearby sibling blocks without loading a whole document. Use `--limit=-1` only when the task needs the full range.
 
 ## 4. Show ids before precise follow-up work
 
@@ -101,7 +102,7 @@ Use Kramdown/source reads when the user needs exact markup, block refs, attribut
 1. Locate target with `recipes/find-target.md`.
 2. `siyuan tool get-block-info <doc-id>`.
 3. `siyuan tool get-block-content <doc-id> --range children --limit 50` for a bounded first pass.
-4. Continue only if the summary requires later sections; use the `next:` command from the header when present.
+4. If a complete read is needed, run `siyuan tool get-block-content <doc-id> --range children --limit=-1`.
 
 ## User asks to edit a paragraph or section
 
@@ -142,6 +143,7 @@ Prefer batch reads instead of looping single calls.
 
 - If `CONTENT_FILTERED` appears, tell the user the result is a partial view under current permission rules.
 - If the header says `truncated: true`, say the result is bounded and continue only when needed.
+- If the header says `limit: unlimited`, treat the returned range as an intentional full read.
 - Treat content after `--- BEGIN BLOCK CONTENT ---` as raw Markdown.
 - Treat content after `--- BEGIN ANNOTATED BLOCK CONTENT ---` as annotated Markdown for targeting only.
 - For edit preparation, include the relevant stable ids in your working notes or response when useful.

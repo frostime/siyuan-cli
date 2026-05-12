@@ -143,7 +143,9 @@ Inspect with a read command before writing.
 | Block Markdown | `siyuan tool get-block-content <id>` | — |
 | Block metadata | `siyuan tool get-block-info <id>` | `block.getBlockInfo` |
 | Search by pattern | `siyuan tool locate-block "%p%"` | `search.fullTextSearchBlock` |
-| Exact Kramdown (update prep) | — | `siyuan api block.getBlockKramdown --id <id>` |
+| Full document read | `siyuan tool get-block-content <doc-id> --range children --limit=-1` | — |
+| Document recovery checkpoint | `siyuan tool checkpoint-doc <doc-id>` | — |
+| Exact Kramdown (source/recovery prep) | — | `siyuan api block.getBlockKramdown --id <id>` |
 | Batch Kramdown / doc info | — | `block.getBlockKramdowns` / `block.getDocsInfo` |
 | Block DOM | — | `block.getBlockDOM` |
 
@@ -162,6 +164,7 @@ Prefer `tool` for reading; accessing Kramdown is usually unnecessary. SHOULD NOT
 | Batch insert | `siyuan api block.batchInsertBlock --blocks @file:./blocks.json` |
 | Delete block | `siyuan api block.deleteBlock --id <id>` |
 | Move block | `siyuan api block.moveBlock --id <id> --previousID <target-id> --parentID <parent-id>` |
+| Whole-document text replace | `siyuan tool brute-edit <doc-id> --check true`, then `--dry-run`, then `--yes` | 
 | Transfer block ref | `siyuan api block.transferBlockRef --id <id> --fromID <source> --toID <target>` |
 
 > ⚠️ `transferBlockRef` rewrites all references from one block to another and triggers a full kernel reindex. Use only as a deliberate standalone action.
