@@ -117,12 +117,30 @@ Rules:
 
 ## Domain rules
 
+### Data model
+
 - Block is the primary entity; document = container block (`type='d'`).
-- `id` is stable. Prefer it for writes. `hpath` is human-readable and rename-sensitive.
-- `parent_id` = block hierarchy; `root_id` = owning document; `box` = notebook id.
-- Non-document `path`/`hpath` describe the containing document.
-- `content` = plain text for search; `markdown`/Kramdown = source representation.
+- `content` = plain text (search/match); `markdown`/Kramdown = source (edit/export).
 - Block ref syntax: `((<BlockId> "anchor"))`. Custom attributes use `custom-` prefix.
+
+### Addressing
+
+- `id` is stable. Prefer it for all programmatic use. `hpath` is human-readable, rename-sensitive — display only.
+- Stable addressing priority: `id` > `root_id` > `path`. Never use `hpath` or title as a stable key.
+- For user-facing output: show `hpath` + title/content + block link when needed.
+
+### Hierarchy & scope
+
+- `parent_id` = direct block parent-child. Use for tree traversal. Do **not** infer hierarchy from `path`.
+- `root_id` = owning document. Use for document-scope filtering.
+- `box` = notebook id. Use for notebook-scope filtering.
+- Non-document blocks' `path`/`hpath` describe the **containing document**, not the block itself.
+
+### Query discipline
+
+- Narrow scope first: constrain with `root_id`/`box`/`type` before fuzzy `LIKE`.
+- Field selection: `content` for search, `markdown` for edit, `parent_id` for tree, `root_id` for doc scope.
+- Always specify `LIMIT`. Prefer batch endpoints over per-id loops for multiple known IDs.
 
 ## Gotchas
 

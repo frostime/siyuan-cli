@@ -1,60 +1,55 @@
 ---
 title: Document Tree and Path Semantics
 slug: document-tree-and-paths
-summary: Explain id, parent_id, root_id, notebook id, path vs hpath, and how SiYuan block hierarchy differs from document file layout.
+summary: id, parent_id, root_id, box, path vs hpath — how the block tree maps to document paths.
 ---
 
 # Document Tree and Path Semantics
 
-The focus of this page is not the filesystem itself, but **how the block tree maps to document paths**.
+How the block tree maps to document paths. For agent rules on addressing priority and hierarchy reasoning, see SKILL `## Domain rules`.
 
-## 1. Distinguish three different relationships first
+## 1. Three relationships
 
-### Block tree relationship
+| Relationship | Fields | Answers |
+|-------------|--------|---------|
+| Block tree | `id`, `parent_id`, `root_id` | Parent-child hierarchy, document ownership |
+| Document ownership | `box`, `root_id` | Which notebook, which document |
+| Document path | `path`, `hpath` | How to locate the containing document |
 
-These fields describe the block hierarchy:
+## 2. `path` and `hpath` semantics
 
-- `id`: the current block
-- `parent_id`: the direct parent block
-- `root_id`: the document block that owns this block
+**Rule:** `path` and `hpath` on any block describe the **containing document**, not the block itself.
 
-### Document ownership relationship
+- Multiple blocks share the same `path`/`hpath` (they live in the same document).
+- Block hierarchy is determined by `parent_id`, not `path`.
+- Document membership is determined by `root_id`.
 
-These fields describe document ownership:
+## 3. `path` vs `hpath`
 
-- `box`: the notebook ID
-- `root_id`: the owning document block ID
+| | `path` | `hpath` |
+|---|--------|---------|
+| Format | ID-based (`/20260107143325-zbrtqup/20260107143334-l5eqs5i.sy`) | Title-based (`/SiYuan Development/Document Structure`) |
+| Stability | Stable within notebook | Changes on rename or duplicate titles |
+| Use for | Automation, permissions, caching | User-facing display |
+| As unique key | ✓ | ✗ |
 
-### Document path relationship
+## 4. `parent_id` vs `root_id`
 
-These fields describe document-level paths:
+| | `parent_id` | `root_id` |
+|---|-------------|-----------|
+| Answers | Direct parent/children of a block | Which document owns the block |
+| Use for | Tree traversal, expand/collapse | Document-scope filtering, ownership |
 
-- `path`: the ID-based path of the document
-- `hpath`: the human-readable path of the document
+## 5. Example: document block
 
-## 2. One important clarification
-
-**`path` and `hpath` are not fields exclusive to document blocks, and they are not standalone paths for individual blocks.**
-
-More precisely:
-
-- many block records may carry `path` and `hpath`
-- both fields describe the path of the **document that contains the block**
-- the hierarchy of a block is determined by `parent_id`
-- document membership is determined by `root_id`
-
-So, do not use `path` to infer parent-child relationships between blocks.
-
-## 3. Example: document block
-
-Example filesystem path:
+Filesystem path:
 
 ```text
 /data/20260101215354-j0c5gvk/20260107143325-zbrtqup/20260107143334-l5eqs5i.sy
      └── notebook id ──┘          └── parent doc id ──┘           └── doc id ──┘
 ```
 
-Example document block record:
+Block record:
 
 ```json
 {
@@ -68,93 +63,11 @@ Example document block record:
 }
 ```
 
-### Properties of a document block
+Document block properties: `type='d'`, `root_id = id`, `parent_id` empty, `path` points to its `.sy` file.
 
-- `type = 'd'`
-- `root_id = id`
-- `parent_id` is empty
-- `path` points to the `.sy` file for that document
+## 6. CLI tool & API mapping
 
-## 4. How to understand paths for non-document blocks
-
-For ordinary blocks such as paragraphs, headings, and list items:
-
-- `id`: the block's own ID
-- `parent_id`: its direct parent block
-- `root_id`: the document block that contains it
-- `path`: the file path of the containing document
-- `hpath`: the human-readable path of the containing document
-
-In other words:
-
-- a paragraph block has its own `id`
-- but it does not correspond to an independent `.sy` file
-- it inherits the `path` and `hpath` of its containing document
-
-## 5. `path` vs `hpath`
-
-### `path`
-
-- an ID-based document path
-- stable within a notebook
-- better for automation, permissions, caching, and programmatic use
-
-### `hpath`
-
-- a human-readable path
-- better for user-facing output
-- may change because of renaming or duplicate titles
-- should not be treated as a unique stable key
-
-## 6. `parent_id` vs `root_id`
-
-### `parent_id`
-
-Use `parent_id` to determine:
-
-- the direct parent of a block
-- the direct children of a block
-- how the block tree should be expanded
-
-### `root_id`
-
-Use `root_id` to determine:
-
-- which document a block belongs to
-- which blocks belong to a given document
-- how to limit query scope to a document context
-
-## 7. Agent rules
-
-### For stable addressing
-
-Recommended priority:
-
-1. `id`
-2. `root_id`
-3. `path`
-
-### For user-facing output
-
-Prefer to show:
-
-- `hpath`
-- the document title
-- a block link when needed
-
-### For tree-structure reasoning
-
-- use `parent_id`
-- do not use `path`
-
-### For document-scope filtering
-
-- use `root_id`
-- do not rely on `hpath` alone
-
-### 7.5 CLI tool & API mapping
-
-#### Path resolution
+### Path resolution
 
 | Task | Command |
 |------|---------|
@@ -165,7 +78,7 @@ Prefer to show:
 | Get ids by hpath | `siyuan api filetree.getIDsByHPath --hpath "/private/diary"` |
 | Get storage path by id | `siyuan api filetree.getPathByID --id <id>` |
 
-#### Document tree navigation
+### Document tree navigation
 
 | Task | Command |
 |------|---------|
@@ -174,7 +87,7 @@ Prefer to show:
 | List docs by path | `siyuan api filetree.listDocsByPath --notebook <id> --path "/..."` |
 | Search documents | `siyuan api filetree.searchDocs --k "..."` |
 
-#### Notebook management
+### Notebook management
 
 | Task | Command |
 |------|---------|
@@ -183,22 +96,14 @@ Prefer to show:
 | Rename notebook | `siyuan api notebook.renameNotebook --notebook <id> --name "New"` |
 | Remove notebook | `siyuan api notebook.removeNotebook --notebook <id>` |
 
-#### Document CRUD
+### Document CRUD
 
 | Task | Command |
 |------|---------|
-| Create document with markdown | `siyuan api filetree.createDocWithMd --notebook <id> --path "/foo/bar" --markdown "# Title"` |
-| Rename document by ID | `siyuan api filetree.renameDocByID --id <id> --title "New Title"` |
+| Create doc with markdown | `siyuan api filetree.createDocWithMd --notebook <id> --path "/foo/bar" --markdown "# Title"` |
+| Rename doc by ID | `siyuan api filetree.renameDocByID --id <id> --title "New Title"` |
 | Rename by path | `siyuan api filetree.renameDoc --notebook <id> --path "/..." --title "..."` |
-| Move document by ID | `siyuan api filetree.moveDocsByID --fromIDs '["<id>"]' --toID <target-id>` |
-| Remove document by ID | `siyuan api filetree.removeDocByID --id <id>` |
+| Move doc by ID | `siyuan api filetree.moveDocsByID --fromIDs '["<id>"]' --toID <target-id>` |
+| Remove doc by ID | `siyuan api filetree.removeDocByID --id <id>` |
 
-All commands support `--help` for full parameter details. Use `--dry-run` to preview destructive writes.
-
-## 8. One-sentence summary
-
-- `parent_id` answers **parent-child block relationships**
-- `root_id` answers **which document a block belongs to**
-- `path` and `hpath` answer **how to locate the containing document**
-
-These three concerns should not be mixed.
+All commands support `--help`. Use `--dry-run` to preview destructive writes.

@@ -248,35 +248,15 @@ WHERE root_id = '<document-id>'
 LIMIT 64
 ```
 
-## 7. Query strategy recommendations
+## 7. Anti-pattern
 
-### Narrow the scope first
-
-Prefer to narrow scope with:
-
-- `root_id`
-- `box`
-- `type`
-- `updated`
-- `parent_id`
-
-### Field selection guidance
-
-- for text search: prefer `content`
-- for format preservation: use `markdown`
-- for tree structure: use `parent_id`
-- for document scope: use `root_id`
-- for user-facing output: combine `hpath` and `content`
-
-### Avoid this pattern
-
-Do not start with:
+Do not:
 
 ```sql
 SELECT * FROM blocks WHERE content LIKE '%foo%'
 ```
 
-A better approach is:
+Do:
 
 ```sql
 SELECT * FROM blocks
@@ -286,17 +266,9 @@ WHERE box = '<notebook-id>'
 LIMIT 32
 ```
 
-## 8. Practical rules for agents
+For field selection and scope narrowing rules, see SKILL `## Domain rules`.
 
-1. identify the query target first: document, block, attribute, asset, or inline element
-2. narrow scope before fuzzy matching
-3. return `id` when stable referencing is required
-4. return `root_id`, `path`, and `hpath` when document context matters
-5. include `markdown` when format fidelity matters
-6. prefer `refs` for backlink or reference analysis
-7. prefer `attributes` for metadata filtering
-
-## 9. One-sentence summary
+## 8. One-sentence summary
 
 - `blocks`: primary content
 - `refs`: reference relationships
