@@ -71,12 +71,12 @@ Document block properties: `type='d'`, `root_id = id`, `parent_id` empty, `path`
 
 | Task | Command |
 |------|---------|
-| Resolve hpath → stable path/id | `siyuan tool resolve-path --hpath "/private/diary"` |
-| Resolve id → full path info | `siyuan tool resolve-path --id <id>` |
-| Get hpath by id | `siyuan api filetree.getHPathByID --id <id>` |
-| Get hpath by path | `siyuan api filetree.getHPathByPath --path "/..."` |
-| Get ids by hpath | `siyuan api filetree.getIDsByHPath --hpath "/private/diary"` |
-| Get storage path by id | `siyuan api filetree.getPathByID --id <id>` |
+| Resolve hpath → ids (notebook-scoped) | `siyuan api filetree.getIDsByHPath --notebook <id> --path "/private/diary"` |
+| Resolve id → storage path | `siyuan api filetree.getPathByID --id <id>` |
+| Resolve id → hpath | `siyuan api filetree.getHPathByID --id <id>` |
+| Resolve path → hpath | `siyuan api filetree.getHPathByPath --notebook <id> --path "/..."` |
+| Resolve hpath globally (fallback) | `siyuan api query.sql "SELECT id, box, path, hpath FROM blocks WHERE type='d' AND hpath='/private/diary' LIMIT 10"` |
+| Resolve id → full info | `siyuan api filetree.getPathByID --id <id>` + `siyuan api filetree.getHPathByID --id <id>` |
 
 ### Document tree navigation
 

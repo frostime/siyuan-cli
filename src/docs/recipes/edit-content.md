@@ -36,7 +36,7 @@ Use `--showId true` when you need to edit a specific child block. The injected `
 
 | Goal | Prefer | Notes |
 |------|--------|-------|
-| Append content to a known document/block/daily note | `siyuan tool append-content` | Safest path when existing content should remain unchanged |
+| Append content to a known document/block/daily note | `siyuan api block.appendBlock` / `block.appendDailyNoteBlock` | Use `appendDailyNoteBlock` for notebook daily notes; use `appendBlock` for known document/block IDs |
 | Replace one known block | `siyuan api block.updateBlock` | Use a block id, not a title or fuzzy match |
 | Replace multiple known blocks | `siyuan api block.batchUpdateBlock` | Atomic multi-block update |
 | Insert before/after a known block | `siyuan api block.insertBlock --nextID/--previousID` | Use `--parentID` when the parent is known |
@@ -64,28 +64,36 @@ Use `--showId true` when you need to edit a specific child block. The injected `
 
 ```bash
 siyuan workspace which
-siyuan tool append-content \
-  --targetId <doc-or-block-id> \
-  --targetType document \
-  --markdown @stdin \
+
+# Append under a known document/block id
+siyuan api block.appendBlock \
+  --parentID <doc-or-block-id> \
+  --data @stdin \
   --dry-run <<'EOF'
 ## New section
 
 Paragraph content here.
 EOF
 
-siyuan tool append-content \
-  --targetId <doc-or-block-id> \
-  --targetType document \
-  --markdown @stdin \
+siyuan api block.appendBlock \
+  --parentID <doc-or-block-id> \
+  --data @stdin \
   --yes <<'EOF'
 ## New section
 
 Paragraph content here.
 EOF
+
+# Append to today's daily note in a notebook
+siyuan api block.appendDailyNoteBlock \
+  --notebook <notebook-id> \
+  --data @stdin \
+  --yes <<'EOF'
+Appended into today's daily note.
+EOF
 ```
 
-Use `--targetType block` for block targets and `--targetType dailynote` when `--targetId` is a notebook id.
+For append endpoints, `dataType` is optional and defaults to `markdown`. Set `--dataType dom` only when DOM-level input is explicitly required.
 
 ## Replace one block
 
@@ -204,7 +212,8 @@ siyuan api filetree.moveDocsByID \
   --fromIDs '["<doc-id>"]' \
   --toID <target-parent-doc-or-notebook-id>
 
-siyuan tool resolve-path --id <doc-id>   # verify new hpath
+siyuan api filetree.getPathByID --id <doc-id>    # verify storage path
+siyuan api filetree.getHPathByID --id <doc-id>   # verify display hpath
 ```
 
 `--toID` accepts either a document id (move inside that document) or a notebook id (move to notebook root). The block id and all content are preserved; only `hpath` and `path` change.

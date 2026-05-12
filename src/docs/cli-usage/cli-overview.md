@@ -25,7 +25,7 @@ siyuan
 ├── tool         Run high-level composite tools
 │   ├── list     List available tools
 │   ├── describe Show tool schema
-│   └── <id>     Run a tool (e.g. list-doc-tree, append-content)
+│   └── <id>     Run a tool (e.g. list-doc-tree, get-block-content)
 ├── doc          Discover shipped docs
 │   ├── list     List built-in docs with real file paths
 │   └── read     Read a built-in doc by path or unique basename
@@ -108,8 +108,8 @@ Tools compose multiple endpoint calls into a single workflow.
 
 ```bash
 siyuan tool list
-siyuan tool resolve-path --hpath "/diary/2025-01"
-siyuan tool append-content --targetId <id> --targetType document --markdown @file:./note.md
+siyuan tool list-doc-tree --entry <notebook-or-doc-id> --depth 2
+siyuan tool get-block-content <block-or-doc-id> --range context --limit 7 --showId true
 ```
 
 ### Output modes
@@ -176,11 +176,13 @@ WHERE type = 'd' AND content LIKE '%keyword%'
 LIMIT 10
 EOF
 
-siyuan tool append-content --targetId <id> --targetType document --markdown @stdin <<'EOF'
+siyuan api block.appendBlock --parentID <id> --data @stdin <<'EOF'
 ## New section
 
 Paragraph content here.
 EOF
+
+# append endpoints default `dataType` to `markdown`; pass `--dataType dom` only when needed.
 
 # multiple long inputs in one command — use @file: for each
 siyuan api block.updateBlock --id <id> --data @file:./content.md --dataType markdown
@@ -188,19 +190,19 @@ siyuan api block.updateBlock --id <id> --data @file:./content.md --dataType mark
 
 ## Git Bash / MSYS path conversion
 
-On Windows Git Bash / MSYS shells, arguments starting with `/` may be rewritten into Windows paths before the CLI receives them. This affects SiYuan virtual paths such as `--hpath "/TestDoc"` or `--toPath "/inbox"`.
+On Windows Git Bash / MSYS shells, arguments starting with `/` may be rewritten into Windows paths before the CLI receives them. This affects SiYuan virtual paths such as `--path "/TestDoc"` or `--toPath "/inbox"`.
 
 Prefer disabling shell-side conversion for the command:
 
 ```bash
-MSYS_NO_PATHCONV=1 pnpm run siyuan tool resolve-path --hpath "/TestDoc"
+MSYS_NO_PATHCONV=1 pnpm run siyuan api filetree.getIDsByHPath --notebook <id> --path "/TestDoc"
 MSYS_NO_PATHCONV=1 pnpm run siyuan tool push-md ./note.md --notebook <id> --toPath /inbox
 ```
 
 A Git Bash / MSYS-specific escape also works: write the leading slash as `//` so the CLI receives `/...`.
 
 ```bash
-pnpm run siyuan tool resolve-path --hpath //TestDoc
+pnpm run siyuan api filetree.getIDsByHPath --notebook <id> --path //TestDoc
 pnpm run siyuan tool push-md ./note.md --notebook <id> --toPath //inbox
 pnpm run siyuan tool push-md ./note.md --notebook <id> --toPath //
 ```

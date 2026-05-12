@@ -108,7 +108,7 @@ For locate/read/write commands, follow the recipes in "Task start points" above.
 Before any write: confirm workspace, stabilize target to a stable id, inspect with `get-block-info` and a bounded `get-block-content` read (usually `--range context --limit 7 --showId true`), then follow the strategy selector in `recipes/edit-content.md`.
 
 Rules:
-- Prefer append over replace when the user's goal allows it.
+- Prefer append over replace when the user's goal allows it (`block.appendBlock` for known parent ids, `block.appendDailyNoteBlock` for daily notes).
 - Prefer batch endpoints over per-id loops when handling multiple known block/doc IDs.
 - `dataType: "markdown"` by default; use `dom` only for DOM-level edits.
 - Updating a document block replaces its child tree; treat as high risk.

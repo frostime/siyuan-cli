@@ -72,9 +72,9 @@ Before operating on a daily note:
 | List daily notes by date range | `siyuan tool list-dailynote --afterDate 2025-01-01 --beforeDate 2025-01-31` |
 | List today's daily note | `siyuan tool list-dailynote --atDate 2025-01-15` |
 | Filter by notebook | `siyuan tool list-dailynote --notebookId <id> --atDate 2025-01-15` |
-| Append content to today's daily note | `siyuan tool append-content --targetId <notebook-id> --targetType dailynote --markdown "..."` |
+| Append content to today's daily note | `siyuan api block.appendDailyNoteBlock --notebook <id> --data "..."` |
 
-Use `siyuan tool describe list-dailynote` / `siyuan tool describe append-content` for full parameter details.
+Use `siyuan tool describe list-dailynote` / `siyuan api block.appendDailyNoteBlock --help` for full parameter details. `dataType` is optional and defaults to `markdown`.
 
 ### Low-level APIs
 

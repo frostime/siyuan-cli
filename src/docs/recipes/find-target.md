@@ -137,8 +137,12 @@ Confirm:
 ```
 
 ```bash
-siyuan tool resolve-path --hpath "/Research/Papers/Transformer"
+# If notebook is known (recommended)
+siyuan api filetree.getIDsByHPath --notebook <notebook-id> --path "/Research/Papers/Transformer"
 siyuan tool get-block-info <resolved-id>
+
+# If notebook is unknown, use SQL as a global fallback
+siyuan api query.sql "SELECT id, box, path, hpath FROM blocks WHERE type='d' AND hpath = '/Research/Papers/Transformer' LIMIT 10"
 ```
 
 `hpath` is human-readable and rename-sensitive. Convert it to id before writes.
@@ -165,8 +169,8 @@ Daily notes have dedicated tools. Do not guess the path from the date; use the d
 # Find today's or a specific date's daily note
 siyuan tool list-dailynote --atDate yyyy-MM-dd [--notebookId <id>]
 
-# Append content to today's daily note (targetType=dailynote, targetId=notebook)
-siyuan tool append-content --targetId <notebook-id> --targetType dailynote --markdown @stdin <<'EOF'
+# Append content to today's daily note
+siyuan api block.appendDailyNoteBlock --notebook <notebook-id> --data @stdin <<'EOF'
 Content to append.
 EOF
 ```

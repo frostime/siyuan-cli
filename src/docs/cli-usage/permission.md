@@ -28,7 +28,7 @@ permission:
       action: read
       effect: allow
 
-    - tool: "append-content"
+    - endpoint: "block.append*"
       notebook: "20260101215354-j0c5gvk"
       effect: allow
 
@@ -102,7 +102,7 @@ rules:
 
 # Pattern B: specific allow + broad deny
 rules:
-  - tool: "append-content"
+  - endpoint: "block.append*"
     notebook: "A"
     effect: allow        # ① specific exception
   - action: write
@@ -281,8 +281,8 @@ workspaces:
     tokenSource: { type: env, value: SIYUAN_TOKEN }
     permission:
       rules:
-        # notebook A: read OK, writes only via append-content tool
-        - tool: "append-content"
+        # notebook A: read OK, writes only via block.append* endpoints
+        - endpoint: "block.append*"
           notebook: "20260101215354-aaa"
           effect: allow
         - notebook: "20260101215354-aaa"

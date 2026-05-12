@@ -154,7 +154,7 @@ Prefer `tool` for reading; accessing Kramdown is usually unnecessary. SHOULD NOT
 | Task | Command |
 |------|---------|
 | Update block | `siyuan api block.updateBlock --id <id> --data "## New heading" --dataType markdown` |
-| Append children | `siyuan api block.appendBlock --parentID <id> --data "paragraph" --dataType markdown` |
+| Append children | `siyuan api block.appendBlock --parentID <id> --data "paragraph"` |
 | Batch append | `siyuan api block.batchAppendBlock --blocks @file:./blocks.json` |
 | Prepend children | `siyuan api block.prependBlock --parentID <id> --data "paragraph" --dataType markdown` |
 | Batch prepend | `siyuan api block.batchPrependBlock --blocks @file:./blocks.json` |
