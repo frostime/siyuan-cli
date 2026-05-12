@@ -197,15 +197,15 @@ Prefer disabling shell-side conversion for the command:
 
 ```bash
 MSYS_NO_PATHCONV=1 pnpm run siyuan api filetree.getIDsByHPath --notebook <id> --path "/TestDoc"
-MSYS_NO_PATHCONV=1 pnpm run siyuan tool push-md ./note.md --notebook <id> --toPath /inbox
+MSYS_NO_PATHCONV=1 pnpm run siyuan api filetree.createDocWithMd --notebook <id> --path "/inbox/note" --markdown @file:./note.md
 ```
 
 A Git Bash / MSYS-specific escape also works: write the leading slash as `//` so the CLI receives `/...`.
 
 ```bash
 pnpm run siyuan api filetree.getIDsByHPath --notebook <id> --path //TestDoc
-pnpm run siyuan tool push-md ./note.md --notebook <id> --toPath //inbox
-pnpm run siyuan tool push-md ./note.md --notebook <id> --toPath //
+pnpm run siyuan api filetree.createDocWithMd --notebook <id> --path //inbox/note --markdown @file:./note.md
+pnpm run siyuan api filetree.createDocWithMd --notebook <id> --path //note --markdown @file:./note.md
 ```
 
 ## Error handling

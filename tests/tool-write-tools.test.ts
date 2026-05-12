@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, openSync, closeSync, writeFileSync, unlinkSync, rmSync } from 'node:fs';
+import { mkdtempSync, openSync, closeSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -172,61 +172,18 @@ test('brute-edit: replacement introduces text that looks like a search string bu
     assert.equal(res.result, 'baz qux');
 });
 
-// ————— push-md: hpath normalization logic —————
-
-// Extract the normalize function for test by duplicating it.
-// In production, push-md.ts inlines this. If it changes, update here too.
-function normalizeParentHPath(hPath: string): string {
-    let normalized = hPath.replace(/\\/g, '/').replace(/\/+$/, '');
-    if (!normalized.startsWith('/')) normalized = '/' + normalized;
-    if (normalized !== '/' && normalized.endsWith('/')) {
-        normalized = normalized.slice(0, -1);
-    }
-    return normalized === '' ? '/' : normalized;
-}
-
-test('push-md: normalizeParentHPath handles root', () => {
-    assert.equal(normalizeParentHPath('/'), '/');
-    assert.equal(normalizeParentHPath(''), '/');
-    assert.equal(normalizeParentHPath('///'), '/');
-});
-
-test('push-md: normalizeParentHPath handles typical paths', () => {
-    assert.equal(normalizeParentHPath('/inbox'), '/inbox');
-    assert.equal(normalizeParentHPath('inbox'), '/inbox');
-    assert.equal(normalizeParentHPath('/inbox/'), '/inbox');
-    assert.equal(normalizeParentHPath('inbox/'), '/inbox');
-});
-
-test('push-md: normalizeParentHPath handles nested paths', () => {
-    assert.equal(normalizeParentHPath('/inbox/sub'), '/inbox/sub');
-    assert.equal(normalizeParentHPath('/inbox/sub/'), '/inbox/sub');
-});
-
-test('push-md: targetHpath derivation does not produce double-slash for root parent', () => {
-    const normalizedToPath = normalizeParentHPath('/');
-    const sanitized = 'my-note';
-    const targetHpath = normalizedToPath === '/' ? '/' + sanitized : normalizedToPath + '/' + sanitized;
-    assert.equal(targetHpath, '/my-note');
-});
-
-test('push-md: targetHpath derivation for non-root parent', () => {
-    const normalizedToPath = normalizeParentHPath('/inbox');
-    const sanitized = 'my-note';
-    const targetHpath = normalizedToPath === '/' ? '/' + sanitized : normalizedToPath + '/' + sanitized;
-    assert.equal(targetHpath, '/inbox/my-note');
-});
-
 const bruteEditSchemaForSourceTest: EndpointSchema = {
     endpoint: '/api/tool/brute-edit',
     summary: 'Brute edit',
     payload: {
         type: 'object',
-        required: ['id', 'replacements'],
+        required: ['id'],
         additionalProperties: false,
         properties: {
             id: { type: 'string' },
             replacements: { type: 'string' },
+            overwrite: { type: 'string' },
+            check: { type: 'boolean', default: false },
             maxSize: { type: 'integer', default: 51200 }
         }
     },
@@ -239,7 +196,8 @@ const bruteEditSchemaForSourceTest: EndpointSchema = {
     cli: {
         primary: 'id',
         allowSource: {
-            replacements: ['literal', 'file', 'stdin']
+            replacements: ['literal', 'file', 'stdin'],
+            overwrite: ['literal', 'file', 'stdin']
         }
     }
 };
@@ -301,3 +259,27 @@ test('brute-edit: replacements can be sourced from file', () => {
         rmSync(dir, { recursive: true, force: true });
     }
 });
+
+test('brute-edit: overwrite can be sourced from file', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'siyuan-cli-overwrite-file-'));
+    const markdownFile = join(dir, 'doc.md');
+    writeFileSync(markdownFile, '# Title\n\nBody', 'utf8');
+
+    try {
+        const payload = parsePayload({
+            schema: bruteEditSchemaForSourceTest,
+            args: {
+                id: '20260507131852-5604q2q',
+                overwrite: `@file:${markdownFile}`
+            }
+        });
+
+        assert.equal(payload.id, '20260507131852-5604q2q');
+        assert.equal(payload.overwrite, '# Title\n\nBody');
+        assert.equal(payload.check, false);
+        assert.equal(payload.maxSize, 51200);
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+});
+

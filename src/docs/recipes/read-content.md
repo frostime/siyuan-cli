@@ -27,7 +27,7 @@ Choose the smallest read that satisfies the task.
 known id → inspect metadata → choose bounded range → read body after header fence → report partiality if filtered/truncated
 ```
 
-`get-block-content` output starts with a header. Treat text after `--- BEGIN ... ---` as the content body. If `showId=true`, the body contains injected `@@id@@type` markers for targeting; those markers are not SiYuan source text.
+`get-block-content` output starts with a header. Treat text after `--- BEGIN ... ---` as the content body. Use `--bodyOnly true` only when you need clean Markdown stdout for piping or local file round-trips. If `showId=true`, the body contains injected `@@id@@type` markers for targeting; those markers are not SiYuan source text.
 
 # Inputs
 
@@ -67,6 +67,7 @@ siyuan tool get-block-content <block-id> --range before --limit 5
 siyuan tool get-block-content <block-id> --range after --limit 10
 siyuan tool get-block-content <doc-or-heading-id> --range children --limit 30
 siyuan tool get-block-content <doc-or-heading-id> --range children --limit=-1  # full read
+siyuan tool get-block-content <doc-id> --range children --limit=-1 --bodyOnly true > /tmp/doc.md  # clean body only
 ```
 
 Use `context` after `locate-block` to inspect nearby sibling blocks without loading a whole document. Use `--limit=-1` only when the task needs the full range.
@@ -146,6 +147,7 @@ Prefer batch reads instead of looping single calls.
 - If the header says `limit: unlimited`, treat the returned range as an intentional full read.
 - Treat content after `--- BEGIN BLOCK CONTENT ---` as raw Markdown.
 - Treat content after `--- BEGIN ANNOTATED BLOCK CONTENT ---` as annotated Markdown for targeting only.
+- `--bodyOnly true` removes the header and BEGIN marker; use it for clean Markdown export to a local file, not for partiality diagnostics.
 - For edit preparation, include the relevant stable ids in your working notes or response when useful.
 
 # Success checks

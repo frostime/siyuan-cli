@@ -32,6 +32,23 @@ siyuan tool get-block-content <block-or-doc-id> --range context --limit 7 --show
 
 Use `--showId true` when you need to edit a specific child block. The injected `@@id@@type` markers are not source text; do not use annotated output as `brute-edit` search text.
 
+# Smallest Safe Edit Surface
+
+Choose the smallest edit surface that safely expresses the intended change.
+
+```text
+Small localized edit with known block ids
+  → block.updateBlock / block.batchUpdateBlock
+
+Broad, complex, or text-level edit where block-level updates are fragile or inefficient
+  → consider brute-edit
+    → run brute-edit <doc-id> --check true first
+      SAFE   → --dry-run → --yes
+      UNSAFE → checkpoint-doc <doc-id> → fallback to block-level APIs
+```
+
+`checkpoint-doc` creates recovery material. It does not make an unsafe document safe for `brute-edit`.
+
 # Strategy selector
 
 | Goal | Prefer | Notes |
@@ -41,7 +58,8 @@ Use `--showId true` when you need to edit a specific child block. The injected `
 | Replace multiple known blocks | `siyuan api block.batchUpdateBlock` | Atomic multi-block update |
 | Insert before/after a known block | `siyuan api block.insertBlock --nextID/--previousID` | Use `--parentID` when the parent is known |
 | Append/prepend under a parent block | `siyuan api block.appendBlock` / `block.prependBlock` | Creates new child blocks |
-| Whole-document search-and-replace | `siyuan tool brute-edit --check` → `--dry-run` → `--yes` | Efficient path when safety checks pass; fallback to block updates when rejected |
+| Broad/complex document-level text rewrite | `brute-edit --check` → if SAFE: `--dry-run` → `--yes`; if UNSAFE: `checkpoint-doc` → block-level fallback | Use only when block-level edits are fragile or inefficient |
+| Whole-document overwrite from local Markdown | `brute-edit --check` → if SAFE: `get-block-content --bodyOnly true` → local edit → `brute-edit --overwrite @file:<path>` | Preserves document id; regenerates child block ids; same safety checks as brute-edit |
 | Move a block to a new position | `siyuan api block.moveBlock` | Block id is preserved; `--previousID` anchors position, `--parentID` is the container |
 | Move a document to another parent | `siyuan api filetree.moveDocsByID` | hpath changes; `id` and content are preserved |
 | Delete a document | `siyuan api filetree.removeDocByID` | Prefer over deleting a document block |
@@ -159,7 +177,7 @@ Inserted after the target block.
 EOF
 ```
 
-## Whole-document search-and-replace
+## Broad or complex document-level text rewrite
 
 ```bash
 siyuan workspace which
@@ -168,8 +186,11 @@ siyuan tool get-block-info <doc-id>
 # Required first step: check whether this document is safe for brute-edit.
 siyuan tool brute-edit <doc-id> --check true --print json
 
-# Optional but recommended before high-risk writes: create a recovery checkpoint.
+# If UNSAFE: create recovery material, then do NOT use brute-edit.
+# Fall back to locate-block + block.updateBlock / block.batchUpdateBlock.
 siyuan tool checkpoint-doc <doc-id>
+
+# If SAFE and the document is high-value, checkpoint is still recommended.
 
 # Preview concrete replacements. Unlike most API dry-runs, brute-edit dry-run
 # performs local safety checks and returns an edit plan.
@@ -190,7 +211,38 @@ siyuan tool brute-edit <doc-id> \
 siyuan tool get-block-content <doc-id> --range children --limit=-1
 ```
 
-If `--check` or `--dry-run` rejects the edit, use `locate-block` + `get-block-content --showId true` to identify specific block ids, then update those blocks with `block.updateBlock` / `block.batchUpdateBlock`.
+If `--check` reports UNSAFE or `--dry-run` rejects the edit, use `checkpoint-doc`, then `locate-block` + `get-block-content --showId true` to identify specific block ids, then update those blocks with `block.updateBlock` / `block.batchUpdateBlock`.
+
+## Whole-document overwrite from local Markdown
+
+Use this when the Agent needs a local file workflow: read the document body, edit it with normal file tools, then write the whole body back while preserving the document id.
+
+```bash
+siyuan workspace which
+siyuan tool get-block-info <doc-id>
+siyuan tool brute-edit <doc-id> --check true --print json
+
+# If UNSAFE: checkpoint, then fall back to block-level APIs instead of brute-edit.
+# If SAFE and the document is high-value: checkpoint is still recommended.
+siyuan tool checkpoint-doc <doc-id>
+
+siyuan tool get-block-content <doc-id> \
+  --range children \
+  --limit=-1 \
+  --bodyOnly true > /tmp/doc.md
+
+# Edit /tmp/doc.md with local tools.
+
+siyuan tool brute-edit <doc-id> \
+  --overwrite @file:/tmp/doc.md \
+  --dry-run
+
+siyuan tool brute-edit <doc-id> \
+  --overwrite @file:/tmp/doc.md \
+  --yes
+```
+
+`--overwrite` uses `block.updateBlock` on the document block. The document id is preserved, but existing child block ids are regenerated. Use it only after `brute-edit --check true` reports SAFE. Do not overwrite from `get-block-content --showId true` output unless you intentionally want literal `@@id@@type` marker text in the document.
 
 ## Move a block
 

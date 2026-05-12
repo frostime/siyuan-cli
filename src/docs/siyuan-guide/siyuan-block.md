@@ -164,7 +164,7 @@ Prefer `tool` for reading; accessing Kramdown is usually unnecessary. SHOULD NOT
 | Batch insert | `siyuan api block.batchInsertBlock --blocks @file:./blocks.json` |
 | Delete block | `siyuan api block.deleteBlock --id <id>` |
 | Move block | `siyuan api block.moveBlock --id <id> --previousID <target-id> --parentID <parent-id>` |
-| Whole-document text replace | `siyuan tool brute-edit <doc-id> --check true`, then `--dry-run`, then `--yes` | 
+| Broad/complex document-level rewrite | Prefer block-level APIs for small localized edits. If block-level edits are fragile or inefficient: `brute-edit <doc-id> --check true`; if SAFE, `--dry-run` then `--yes`; if UNSAFE, `checkpoint-doc` then block-level fallback |
 | Transfer block ref | `siyuan api block.transferBlockRef --id <id> --fromID <source> --toID <target>` |
 
 > ⚠️ `transferBlockRef` rewrites all references from one block to another and triggers a full kernel reindex. Use only as a deliberate standalone action.

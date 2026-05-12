@@ -107,13 +107,22 @@ For locate/read/write commands, follow the recipes in "Task start points" above.
 
 Before any write: confirm workspace, stabilize target to a stable id, inspect with `get-block-info` and a bounded `get-block-content` read (usually `--range context --limit 7 --showId true`), then follow the strategy selector in `recipes/edit-content.md`.
 
+### Smallest Safe Edit Surface
+
+Choose the smallest edit surface that safely expresses the intended change.
+
+- Small, localized edits with known block ids: prefer `block.updateBlock` / `block.batchUpdateBlock`.
+- Broad, complex, or text-level edits where block-level updates are fragile or inefficient: consider `brute-edit` as a guarded escalation path.
+- Before any `brute-edit --replacements` or `--overwrite`, run `brute-edit <doc-id> --check true`.
+- If SAFE: use `--dry-run`, inspect the plan, then `--yes`.
+- If UNSAFE: run `checkpoint-doc <doc-id>`, then fall back to stable child block ids + `block.updateBlock` / `block.batchUpdateBlock`. `checkpoint-doc` is recovery material, not permission to bypass an unsafe check.
+
 Rules:
 - Prefer append over replace when the user's goal allows it (`block.appendBlock` for known parent ids, `block.appendDailyNoteBlock` for daily notes).
 - Prefer batch endpoints over per-id loops when handling multiple known block/doc IDs.
 - `dataType: "markdown"` by default; use `dom` only for DOM-level edits.
 - Updating a document block replaces its child tree; treat as high risk. Create `checkpoint-doc <doc-id>` first when recovery matters.
-- For document-level text replacement, run `brute-edit <doc-id> --check true` first, then `--dry-run`, then `--yes` only if the plan is intended. If rejected, fall back to block-level `updateBlock`.
-- `brute-edit` regenerates child block ids. Do not use `get-block-content --showId true` marker lines (`@@id@@type`) as brute-edit search text.
+- `brute-edit` regenerates child block ids. Do not use `get-block-content --showId true` marker lines (`@@id@@type`) as brute-edit search text or overwrite content.
 - Use `--dry-run` when supported; note that `brute-edit --dry-run` performs substantive local checks, while most API dry-runs only preview payload/approval.
 - If temporary files are needed for `@file:` or `cat ... | @stdin`, prefer the system temp directory (`$TMPDIR`/`/tmp`/`%TEMP%`, or `mktemp -d`) over the current project directory, and delete those files after the command completes.
 

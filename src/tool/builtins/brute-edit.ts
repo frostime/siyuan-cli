@@ -4,9 +4,14 @@ import { escapeSqliteLiteral } from '@/shared/sql.js';
 export const tool: ToolSchema = {
     id: 'brute-edit',
     summary:
-        'Full-document text search-and-replace (rewrites document, regenerates child block IDs)',
-    description: `Reads a document's entire Markdown content, applies multiple search→replace
-operations against the ORIGINAL text positions, then writes back via block.updateBlock.
+        'Full-document text edit or overwrite (rewrites document, regenerates child block IDs)',
+    description: `Reads a document's entire Markdown content, then either applies multiple
+search→replace operations against the ORIGINAL text positions or overwrites the
+entire document body. Writes back via block.updateBlock.
+
+Use this as a guarded document-level escalation path. For small localized edits
+with known block IDs, prefer block.updateBlock / block.batchUpdateBlock.
+Always run --check true before --replacements or --overwrite.
 
 ⚠️ Child block IDs ARE regenerated. Only safe when:
   1. No child block has custom-* attributes
@@ -32,7 +37,12 @@ Uses global --dry-run to preview without writing.`,
             replacements: {
                 type: 'string',
                 description:
-                    'JSON array of {search, replace} pairs. Required unless --check true. E.g.: \'[{"search":"old","replace":"new"}]\''
+                    'JSON array of {search, replace} pairs. Mutually exclusive with --overwrite. Required unless --check true or --overwrite is used. E.g.: \'[{"search":"old","replace":"new"}]\''
+            },
+            overwrite: {
+                type: 'string',
+                description:
+                    'Full replacement Markdown for the document body. Mutually exclusive with --replacements. Supports literal, @file:, and @stdin sources.'
             },
             check: {
                 type: 'boolean',
@@ -49,37 +59,56 @@ Uses global --dry-run to preview without writing.`,
     cli: {
         primary: 'id',
         allowSource: {
-            replacements: ['literal', 'file', 'stdin']
+            replacements: ['literal', 'file', 'stdin'],
+            overwrite: ['literal', 'file', 'stdin']
         },
         examples: [
             {
-                command:
-                    'siyuan tool brute-edit 20241016135347-zlrn2cz --replacements \'[{"search":"old","replace":"new"}]\''
-            },
-            {
-                command: 'siyuan tool brute-edit 20241016135347-zlrn2cz --replacements @file:./replacements.json'
-            },
-            {
-                command: 'cat replacements.json | siyuan tool brute-edit 20241016135347-zlrn2cz --replacements @stdin'
-            },
-            {
-                command: 'siyuan tool brute-edit 20241016135347-zlrn2cz --replacements \'[...]\' --maxSize 102400'
-            },
-            {
                 command: 'siyuan tool brute-edit 20241016135347-zlrn2cz --check true'
+            },
+            {
+                command:
+                    'siyuan tool brute-edit 20241016135347-zlrn2cz --replacements \'[{"search":"old","replace":"new"}]\' --dry-run',
+                description: 'Run only after --check true reports SAFE.'
+            },
+            {
+                command: 'siyuan tool brute-edit 20241016135347-zlrn2cz --replacements @file:./replacements.json --dry-run',
+                description: 'Run only after --check true reports SAFE.'
+            },
+            {
+                command: 'cat replacements.json | siyuan tool brute-edit 20241016135347-zlrn2cz --replacements @stdin --dry-run',
+                description: 'Run only after --check true reports SAFE.'
+            },
+            {
+                command: 'siyuan tool brute-edit 20241016135347-zlrn2cz --replacements \'[...]\' --maxSize 102400 --dry-run',
+                description: 'Run only after --check true reports SAFE.'
+            },
+            {
+                command: 'siyuan tool brute-edit 20241016135347-zlrn2cz --overwrite @file:/tmp/doc.md --dry-run',
+                description: 'Run only after --check true reports SAFE.'
+            },
+            {
+                command: 'cat /tmp/doc.md | siyuan tool brute-edit 20241016135347-zlrn2cz --overwrite @stdin --dry-run',
+                description: 'Run only after --check true reports SAFE.'
             }
         ]
     },
 
     async run(ctx, input) {
-        const { id, maxSize, replacements, check } = input as { id: string; maxSize?: number; replacements?: string; check?: boolean };
+        const { id, maxSize, replacements, overwrite, check } = input as { id: string; maxSize?: number; replacements?: string; overwrite?: string; check?: boolean };
         const dryRun = ctx.args.dryRun;
         const maxBytes = maxSize ?? 51200;
         const checkOnly = check ?? false;
+        const overwriteMode = overwrite !== undefined;
+        const replaceMode = replacements !== undefined;
+
+        if (overwriteMode && replaceMode) {
+            throw new Error('--overwrite and --replacements are mutually exclusive.');
+        }
 
         let pairs: Array<{ search: string; replace: string }> = [];
-        if (!checkOnly) {
-            if (!replacements) throw new Error('replacements is required unless --check true.');
+        if (!checkOnly && !overwriteMode) {
+            if (!replacements) throw new Error('replacements is required unless --check true or --overwrite is used.');
             try {
                 pairs = JSON.parse(replacements);
                 if (!Array.isArray(pairs) || pairs.length === 0) {
@@ -141,10 +170,12 @@ Uses global --dry-run to preview without writing.`,
         >('block.getChildBlocks', { id });
         const markdown = children.map((c) => c.markdown ?? '').join('\n\n');
         const byteLength = Buffer.byteLength(markdown, 'utf8');
+        const newByteLengthForSafety = overwriteMode ? Buffer.byteLength(overwrite, 'utf8') : undefined;
+        const sizeExceeded = byteLength > maxBytes || (newByteLengthForSafety !== undefined && newByteLengthForSafety > maxBytes);
         const blockingReasons = [
             ...(customRows.length > 0 ? ['custom-attrs'] : []),
             ...(refRows.length > 0 ? ['inbound-refs'] : []),
-            ...(byteLength > maxBytes ? ['size-limit'] : [])
+            ...(sizeExceeded ? ['size-limit'] : [])
         ];
         const safety = {
             safeForBruteEdit: blockingReasons.length === 0,
@@ -155,6 +186,7 @@ Uses global --dry-run to preview without writing.`,
                 id,
                 childBlockCount: children.length,
                 byteLength,
+                ...(newByteLengthForSafety !== undefined ? { newByteLength: newByteLengthForSafety } : {}),
                 maxSize: maxBytes
             }
         };
@@ -182,13 +214,58 @@ Uses global --dry-run to preview without writing.`,
                 hint: 'Use a non-destructive approach (block.updateBlock on individual blocks), or checkpoint and transfer refs deliberately.'
             });
         }
-        if (byteLength > maxBytes) {
-            return errorResult('size-limit', `SIZE LIMIT EXCEEDED: ${byteLength} bytes (max: ${maxBytes})`, {
+        if (sizeExceeded) {
+            return errorResult('size-limit', `SIZE LIMIT EXCEEDED: ${newByteLengthForSafety ?? byteLength} bytes (max: ${maxBytes})`, {
                 canApply: false,
                 ...safety,
-                actual: byteLength,
+                actual: newByteLengthForSafety ?? byteLength,
+                oldByteLength: byteLength,
+                newByteLength: newByteLengthForSafety ?? null,
                 max: maxBytes
             });
+        }
+
+        if (overwriteMode) {
+            const newByteLength = Buffer.byteLength(overwrite, 'utf8');
+            const unchanged = overwrite === markdown;
+            if (dryRun) {
+                return {
+                    content: unchanged
+                        ? `DRY RUN: overwrite would make no changes to document ${id} (${byteLength} bytes)`
+                        : `DRY RUN: document ${id} would be overwritten (${byteLength} → ${newByteLength} bytes)`,
+                    details: {
+                        canApply: true,
+                        ...safety,
+                        mode: 'overwrite',
+                        oldByteLength: byteLength,
+                        newByteLength,
+                        byteDelta: newByteLength - byteLength,
+                        unchanged,
+                        dryRun: true
+                    }
+                };
+            }
+            if (!unchanged) {
+                await ctx.callEndpoint('block.updateBlock', {
+                    id,
+                    data: overwrite,
+                    dataType: 'markdown'
+                });
+            }
+            return {
+                content: unchanged
+                    ? `No changes for document ${id}: overwrite content is identical (${byteLength} bytes)`
+                    : `Overwrote document ${id}: ${byteLength} → ${newByteLength} bytes`,
+                details: {
+                    canApply: true,
+                    docId: id,
+                    mode: 'overwrite',
+                    oldByteLength: byteLength,
+                    newByteLength,
+                    byteDelta: newByteLength - byteLength,
+                    unchanged
+                }
+            };
         }
 
         // STEP 5: Search uniqueness + match planning on ORIGINAL markdown

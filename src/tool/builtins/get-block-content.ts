@@ -111,6 +111,10 @@ Output contract:
             showId: {
                 type: 'boolean',
                 description: 'Inject @@{blockId}@@{type} markers into the body for edit targeting. Default: false. Do not use annotated body as brute-edit search text.'
+            },
+            bodyOnly: {
+                type: 'boolean',
+                description: 'Print only the body Markdown, without the metadata header or BEGIN marker. Default: false.'
             }
         }
     },
@@ -121,12 +125,14 @@ Output contract:
             { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range context --limit 7' },
             { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range before --limit 5' },
             { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range children --limit 30 --showId true' },
-            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range children --limit=-1' }
+            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range children --limit=-1' },
+            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range children --limit=-1 --bodyOnly true > /tmp/doc.md' }
         ]
     },
     async run(ctx, input) {
-        const raw = input as { id: string; range?: string; limit?: number; showId?: boolean };
+        const raw = input as { id: string; range?: string; limit?: number; showId?: boolean; bodyOnly?: boolean };
         const showId = raw.showId ?? false;
+        const bodyOnly = raw.bodyOnly ?? false;
 
         const rootRows = await ctx.callEndpoint<RootRow[]>('query.sql', {
             stmt: `SELECT rowid, id, parent_id, root_id, box, type, subtype, markdown, content
@@ -291,7 +297,7 @@ Output contract:
         header.push(`--- BEGIN ${bodyLabel} ---`);
 
         const rendered = blocks.map((b) => renderBlock(b, showId)).join('\n\n');
-        const content = `${header.join('\n')}\n${rendered}`;
+        const content = bodyOnly ? rendered : `${header.join('\n')}\n${rendered}`;
 
         return {
             content,
@@ -304,6 +310,7 @@ Output contract:
                 returned: blocks.length,
                 truncated,
                 showId,
+                bodyOnly,
                 warnings,
                 blocks: blocks.map((b) => ({ id: b.id, type: b.type, isAnchor: b.isAnchor ?? false }))
             }

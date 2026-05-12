@@ -2,6 +2,12 @@
 
 All notable changes to `@frostime/siyuan-cli` are documented here.
 
+## Unreleased
+
+- `get-block-content` 新增 `--bodyOnly true`，用于输出无 header 的干净 Markdown body
+- `brute-edit` 新增 `--overwrite @file:/path.md` / `@stdin` 整文档覆盖模式，保留文档 ID
+- 移除内置 `push-md` tool；新建文档使用 `filetree.createDocWithMd` / `import.importStdMd`，覆盖已有文档使用 `brute-edit --overwrite`
+
 ## [0.12.3] — 2026-05-07
 
 - `--print json` 输出统一为信封模式，approval 诊断信息走 stderr
