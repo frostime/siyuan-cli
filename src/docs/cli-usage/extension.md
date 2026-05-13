@@ -284,16 +284,9 @@ When response filtering removes content, the CLI emits `CONTENT_FILTERED` on std
 2. Does the payload contain block ids, notebook ids, or paths? → declare `guard.payloadTargets`.
 3. Is it a global read? → MUST declare `guard.response` or `guard.filterResponse`.
 
-## Raw API vs registered API: permission boundary
+## Raw API vs registered API: when to write an extension
 
-`siyuan api raw <endpoint>` bypasses endpoint schemas entirely:
-
-- no payload schema validation
-- no `guard.payloadTargets` → notebook/path-scoped permission cannot be enforced
-- no response filtering
-- no compact formatter
-
-**Decision guide:**
+`api raw` bypasses schema, guards, and response filtering; see `permission.md` §Raw API boundary.
 
 | Situation | Use |
 |-----------|-----|

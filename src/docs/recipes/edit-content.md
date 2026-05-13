@@ -43,6 +43,8 @@ Run `siyuan api <command> --help` for parameters and INPUT SOURCES.
 
 # Side effects
 
+> ⚠️ `updateBlock` on a document block (`type='d'`) replaces the entire child tree. Child ids, refs, and custom attrs are invalidated. For document rewrites, prefer `brute-edit --check true`.
+
 | Operation | Child block IDs | Risk |
 |-----------|----------------|------|
 | `updateBlock` on leaf/container child | Target id usually remains | May change block type |

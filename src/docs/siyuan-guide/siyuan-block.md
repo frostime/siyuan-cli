@@ -151,31 +151,20 @@ Inspect with a read command before writing.
 
 Prefer `tool` for reading; accessing Kramdown is usually unnecessary. SHOULD NOT read BlockDOM.
 
-### Write
+### Write / attributes
 
-| Task | Command |
-|------|---------|
-| Update block | `siyuan api block.updateBlock --id <id> --data "## New heading" --dataType markdown` |
-| Append children | `siyuan api block.appendBlock --parentID <id> --data "paragraph"` |
-| Batch append | `siyuan api block.batchAppendBlock --blocks @file:./blocks.json` |
-| Prepend children | `siyuan api block.prependBlock --parentID <id> --data "paragraph" --dataType markdown` |
-| Batch prepend | `siyuan api block.batchPrependBlock --blocks @file:./blocks.json` |
-| Insert before/after/child | `siyuan api block.insertBlock --previousID <id> --data "..." --dataType markdown` |
-| Batch insert | `siyuan api block.batchInsertBlock --blocks @file:./blocks.json` |
-| Delete block | `siyuan api block.deleteBlock --id <id>` |
-| Move block | `siyuan api block.moveBlock --id <id> --previousID <target-id> --parentID <parent-id>` |
-| Broad/complex document-level rewrite | Prefer block-level APIs for small localized edits. If block-level edits are fragile or inefficient: `brute-edit <doc-id> --check true`; if SAFE, `--dry-run` then `--yes`; if UNSAFE, `checkpoint-doc` then block-level fallback |
-| Transfer block ref | `siyuan api block.transferBlockRef --id <id> --fromID <source> --toID <target>` |
+For full write workflows → `recipes/edit-content.md`; for parameters → `<command> --help`.
 
-> ⚠️ `transferBlockRef` rewrites all references from one block to another and triggers a full kernel reindex. Use only as a deliberate standalone action.
+| Need | Prefer |
+|------|--------|
+| Append child blocks | `block.appendBlock` / `block.appendDailyNoteBlock` |
+| Replace known block(s) | `block.updateBlock` / `block.batchUpdateBlock` |
+| Insert before/after | `block.insertBlock` |
+| Move/delete block | `block.moveBlock` / `block.deleteBlock` |
+| Broad document rewrite | `brute-edit --check true` → `--dry-run` → `--yes` |
+| Attributes | `attr.getBlockAttrs` / `attr.setBlockAttrs` / batch variants |
 
-### Attributes
-
-| Task | Command |
-|------|---------|
-| Get attrs | `siyuan api attr.getBlockAttrs --id <id>` |
-| Batch get attrs | `siyuan api attr.batchGetBlockAttrs --ids '["<id1>","<id2>"]'` |
-| Set attrs | `siyuan api attr.setBlockAttrs --id <id> --attrs '{"custom-key":"value"}'` |
-| Batch set attrs | `siyuan api attr.batchSetBlockAttrs --blockAttrs '[{"id":"<id>","attrs":{"custom-key":"value"}}]'` |
-
-For multiple known IDs, prefer batch endpoints over per-id loops. All commands support `--help`. Use `--dry-run` to preview writes.
+Warnings:
+- `updateBlock` on document block (`type='d'`) replaces the child tree; use guarded `brute-edit` for document rewrites.
+- `transferBlockRef` triggers full kernel reindex; use only as a deliberate standalone action.
+- Custom attributes must use `custom-`; prefer batch endpoints for multiple ids.

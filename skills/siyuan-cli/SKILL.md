@@ -88,12 +88,10 @@ siyuan api block.batchUpdateBlock -f ./blocks.json --yes
 
 ### Append
 
-```bash
-siyuan api block.appendBlock --parentID <id> --data @stdin --yes <<'EOF'
-Content.
-EOF
+Use `block.appendBlock` with §Canonical input patterns. Daily note example:
 
-# Daily note: notebook id must be known; if unknown, list notebooks or ask.
+```bash
+# Notebook id must be known; if unknown, list notebooks or ask.
 siyuan api block.appendDailyNoteBlock --notebook <notebook-id> --data @stdin --yes <<'EOF'
 Entry.
 EOF

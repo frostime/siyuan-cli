@@ -89,23 +89,13 @@ Document block properties: `type='d'`, `root_id = id`, `parent_id` empty, `path`
 | List docs by path | `siyuan api filetree.listDocsByPath --notebook <id> --path "/..."` |
 | Search documents | `siyuan api filetree.searchDocs --k "..."` |
 
-### Notebook management
+### Notebook and document operations
 
-| Task | Command |
-|------|---------|
-| List all notebooks | `siyuan api notebook.lsNotebooks` |
-| Create notebook | `siyuan api notebook.createNotebook --name "New"` |
-| Rename notebook | `siyuan api notebook.renameNotebook --notebook <id> --name "New"` |
-| Remove notebook | `siyuan api notebook.removeNotebook --notebook <id>` |
+| Need | Prefer |
+|------|--------|
+| List notebooks | `notebook.lsNotebooks` |
+| Create/rename/remove notebook | `notebook.createNotebook` / `renameNotebook` / `removeNotebook` |
+| Create document | `filetree.createDocWithMd` |
+| Rename/move/remove document | `filetree.renameDocByID` / `moveDocsByID` / `removeDocByID` |
 
-### Document CRUD
-
-| Task | Command |
-|------|---------|
-| Create doc with markdown | `siyuan api filetree.createDocWithMd --notebook <id> --path "/foo/bar" --markdown "# Title"` |
-| Rename doc by ID | `siyuan api filetree.renameDocByID --id <id> --title "New Title"` |
-| Rename by path | `siyuan api filetree.renameDoc --notebook <id> --path "/..." --title "..."` |
-| Move doc by ID | `siyuan api filetree.moveDocsByID --fromIDs '["<id>"]' --toID <target-id>` |
-| Remove doc by ID | `siyuan api filetree.removeDocByID --id <id>` |
-
-All commands support `--help`. Use `--dry-run` to preview destructive writes.
+For safe create/move/delete workflows → `recipes/edit-content.md`. For parameters → `<command> --help`; use `--dry-run` for destructive writes.
