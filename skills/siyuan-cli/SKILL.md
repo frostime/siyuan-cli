@@ -68,7 +68,7 @@ Ask user when: no token/URL · wrong workspace · multiple plausible write targe
 Check `--help` INPUT SOURCES first.
 
 ```bash
-# heredoc: parameter supports stdin (e.g. --data, --stmt, --markdown)
+# heredoc (bash) / here-string (PowerShell @'...'@): parameter supports stdin
 siyuan api block.appendBlock --parentID <id> --data @stdin --yes <<'EOF'
 Content here.
 EOF

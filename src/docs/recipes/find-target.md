@@ -47,7 +47,7 @@ Use bounded depth. Do not load entire workspace tree.
 siyuan api filetree.searchDocs --k "<title-or-keyword>"
 ```
 
-Results are candidates, not final targets. Run `--help` for optional `--notebook`/`--path` scoping.
+Results are candidates, not final targets. `searchDocs` searches document names/paths globally; narrow by notebook with `list-doc-tree`, SQL `box`, or post-filtering returned `box` values.
 
 ## 3. Search content when title search is inconclusive
 
@@ -89,7 +89,7 @@ Confirm: title/content matches intent · notebook/scope correct · id is stable 
 → `filetree.searchDocs --k "project roadmap"` → inspect candidates with `get-block-info` → stable id
 
 **User gives notebook + title** ("meeting notes in Work"):
-→ `notebook.lsNotebooks` → identify notebook id → `list-doc-tree --entry <id> --depth 2` or scoped `searchDocs`
+→ `notebook.lsNotebooks` → identify notebook id → `list-doc-tree --entry <id> --depth 2` or SQL with `box='<notebook-id>'`
 
 **User gives an hpath** ("/Research/Papers/Transformer"):
 → `filetree.getIDsByHPath --notebook <id> --path "/..."` (if notebook known)

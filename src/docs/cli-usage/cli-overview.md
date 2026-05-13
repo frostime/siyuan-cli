@@ -177,7 +177,7 @@ Usage examples:
 # pipe
 echo "SELECT id FROM blocks LIMIT 5" | siyuan api query.sql --stmt @stdin
 
-# shell heredoc — no temp file needed, preferred for multiline input
+# shell heredoc (bash) / here-string (PowerShell @'...'@) — no temp file needed, preferred for multiline input
 siyuan api query.sql --stmt @stdin <<'EOF'
 SELECT id, content
 FROM blocks

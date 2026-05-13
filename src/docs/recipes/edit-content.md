@@ -68,7 +68,7 @@ Content.
 EOF
 ```
 
-`dataType` defaults to `markdown`. Use `--dry-run` if parent id was just resolved.
+`dataType` defaults to `markdown`. Use `--dry-run` if parent id was just resolved. For multi-line content, prefer `@stdin` (heredoc / here-string) or `@file:` over inline `--data`; shell does not interpret `\n` as a newline inside quoted strings.
 
 Daily notes are per-notebook: `block.appendDailyNoteBlock --notebook <id>`. If notebook id is unknown, run `notebook.lsNotebooks`; if multiple plausible notebooks, ask.
 
