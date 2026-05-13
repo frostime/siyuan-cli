@@ -6,6 +6,14 @@ summary: Command structure, flags, input sources, and error handling for siyuan-
 
 # CLI Overview
 
+## Agent quick sections
+
+Jump to what agents need most often:
+- [Input sources](#input-sources) — @file, @stdin, @env, heredoc, constraints
+- [Git Bash / MSYS path conversion](#git-bash--msys-path-conversion) — workarounds for `/` rewriting
+- [Error handling](#error-handling) — exit codes, warning codes, error codes
+- [Debugging](#debugging) — --debug, --dry-run, workspace which
+
 ## Command structure
 
 ```text

@@ -266,7 +266,7 @@ WHERE box = '<notebook-id>'
 LIMIT 32
 ```
 
-For field selection and scope narrowing rules, see SKILL `## Domain rules`.
+For field selection and scope narrowing: always `LIMIT`, narrow with `root_id`/`box`/`type` before fuzzy `LIKE`.
 
 ## 8. One-sentence summary
 

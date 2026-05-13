@@ -6,7 +6,9 @@ summary: id, parent_id, root_id, box, path vs hpath — how the block tree maps 
 
 # Document Tree and Path Semantics
 
-How the block tree maps to document paths. For agent rules on addressing priority and hierarchy reasoning, see SKILL `## Domain rules`.
+How the block tree maps to document paths.
+
+**Stable addressing priority: id > root_id > path.** Never use hpath or title as a stable key for programmatic use.
 
 ## 1. Three relationships
 

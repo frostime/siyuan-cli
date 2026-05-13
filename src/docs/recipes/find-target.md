@@ -7,222 +7,125 @@ summary: Resolve a user-mentioned document or block into a stable SiYuan id befo
 
 Turn a user-visible hint into a stable SiYuan target: document id, block id, notebook id, or stable path.
 
-Most user requests do not start with an id. They start with phrases like:
-
-- "the project plan document"
-- "yesterday's daily note"
-- "the paper notes under Research"
-- "the section about deployment"
-
-This recipe is the default first step before reading or editing when the target is not already a stable id.
-
 # Target rule
 
-Do not write to a target found only by title, keyword, or hpath. First resolve candidates, inspect the best match, and stabilize to id.
+Do not write to a target found only by title, keyword, or hpath. Resolve candidates → inspect → stabilize to id.
+
+If you reached this recipe directly: confirm workspace first (`siyuan workspace which`).
 
 ```text
-user hint → workspace/scope → candidate search → inspect candidate → stable id → read/write
+user hint → workspace/scope → candidate search → inspect → stable id → read/write
 ```
 
 # Inputs
 
-Any of these may be enough to start:
-
 | User gives | Treat as | First move |
 |------------|----------|------------|
-| Block/document id | stable id | inspect directly |
-| Notebook name/id | scope | list notebooks or tree |
-| hpath such as `/A/B` | human path | resolve path, then inspect id |
-| Document title/name | document candidate | search docs by keyword/title |
-| Content phrase | block/document candidate | full-text search, then inspect |
-| Date/daily note phrase | daily note candidate | list daily notes by date/scope |
+| Block/document id | stable id | `get-block-info` directly |
+| Notebook name/id | scope | `notebook.lsNotebooks` or tree |
+| hpath like `/A/B` | human path | resolve to id, then inspect |
+| Document title/name | candidate | `filetree.searchDocs --k "..."` |
+| Content phrase | candidate | `search.fullTextSearchBlock "..."` |
+| Date/daily note phrase | daily note | `list-dailynote --atDate ...` |
 
 # Default flow
 
-## 1. Confirm workspace
+## 1. Narrow scope when possible
 
-```bash
-siyuan workspace which
-```
-
-If the workspace is missing or surprising, stop and use `recipes/connect-workspace.md`.
-
-## 2. Narrow scope when possible
-
-If the user mentioned a notebook or parent document, find that scope first.
+If user mentioned a notebook or parent document:
 
 ```bash
 siyuan api notebook.lsNotebooks
 siyuan tool list-doc-tree --entry <notebook-or-doc-id> --depth 2
 ```
 
-Use bounded depth. Do not load a whole large workspace tree just to find one document.
+Use bounded depth. Do not load entire workspace tree.
 
-## 3. Search by document title or path
-
-For a user-named document, start with document search.
+## 2. Search by document title
 
 ```bash
 siyuan api filetree.searchDocs --k "<title-or-keyword>"
 ```
 
-Use this when the user likely named a document, page, or file. Treat results as candidates, not final targets.
+Results are candidates, not final targets. Run `--help` for optional `--notebook`/`--path` scoping.
 
-## 4. Search content when title search is inconclusive
+## 3. Search content when title search is inconclusive
 
-Use full-text search when the user gives a phrase that may appear inside content.
-
-```bash
-siyuan api search.fullTextSearchBlock "<keyword-or-phrase>"
-```
-
-Read promising candidates before acting on them.
-
-## 5. Use SQL for structured constraints
-
-Use SQL when you need notebook/root/type/date/attribute constraints or when search results are too broad.
+Global search:
 
 ```bash
-siyuan api query.sql "SELECT id, hpath, path, box FROM blocks WHERE type='d' AND content LIKE '%<keyword>%' LIMIT 10"
+siyuan api search.fullTextSearchBlock "<phrase>"
 ```
 
-Rules:
+Scoped block grep in a known document/notebook:
 
-- Always `LIMIT`.
-- Narrow with `box`, `root_id`, or `type` before fuzzy `LIKE`.
-- SQL is read-only for agents.
+```bash
+siyuan tool locate-block --id <doc-id> --pattern "%phrase%"
+siyuan tool locate-block --box <notebook-id> --pattern "%A%|%B%" --all true
+```
 
-## 6. Inspect candidate before use
+Use `locate-block` when editing long documents: it returns matching block ids with breadcrumb/sibling context.
+
+## 4. Use SQL for structured constraints
+
+```bash
+siyuan api query.sql "SELECT id, hpath, box FROM blocks WHERE type='d' AND content LIKE '%keyword%' LIMIT 10"
+```
+
+Always `LIMIT`. Narrow with `box`/`root_id`/`type` before fuzzy `LIKE`.
+
+## 5. Inspect candidate before use
 
 ```bash
 siyuan tool get-block-info <candidate-id>
-siyuan tool get-block-content <candidate-id> --limit 30 --showId true
+siyuan tool get-block-content <candidate-id> --range context --limit 7 --showId true
 ```
 
-Confirm:
-
-- title/path/content matches the user's intent
-- notebook/scope is correct
-- id is stable enough for follow-up actions
-- for edits, the exact child block id is known when needed
+Confirm: title/content matches intent · notebook/scope correct · id is stable · for edits, exact child block id known.
 
 # Common scenarios
 
-## User names a document
+**User names a document** ("Open the project roadmap"):
+→ `filetree.searchDocs --k "project roadmap"` → inspect candidates with `get-block-info` → stable id
 
-```text
-"Open the project roadmap doc"
-```
+**User gives notebook + title** ("meeting notes in Work"):
+→ `notebook.lsNotebooks` → identify notebook id → `list-doc-tree --entry <id> --depth 2` or scoped `searchDocs`
 
-1. `siyuan workspace which`
-2. `siyuan api filetree.searchDocs --k "project roadmap"`
-3. If multiple matches, inspect likely candidates with `get-block-info`.
-4. Read with `recipes/read-content.md` or edit with `recipes/edit-content.md`.
+**User gives an hpath** ("/Research/Papers/Transformer"):
+→ `filetree.getIDsByHPath --notebook <id> --path "/..."` (if notebook known)
+→ SQL fallback: `WHERE type='d' AND hpath = '/...' LIMIT 10` (if notebook unknown)
+Convert hpath to id before writes.
 
-## User gives a notebook and title
+**User gives a content phrase** ("the note about approval broker lifecycle"):
+→ global: `search.fullTextSearchBlock "approval broker lifecycle"`
+→ scoped long-doc search: `locate-block --id <doc-id> --pattern "%approval broker lifecycle%"`
+→ `get-block-info` → context read
 
-```text
-"Find the meeting notes in Work"
-```
+**User asks for a daily note**:
+→ `siyuan tool list-dailynote --atDate yyyy-MM-dd [--notebookId <id>]`
+→ For full model: `siyuan doc read siyuan-guide/dailynote-model.md`
 
-1. `siyuan api notebook.lsNotebooks`
-2. identify notebook id for `Work`
-3. `siyuan tool list-doc-tree --entry <notebook-id> --depth 2`
-4. use `filetree.searchDocs` or SQL scoped by notebook id if tree is too broad
-
-## User gives an hpath
-
-```text
-"Read /Research/Papers/Transformer"
-```
-
-```bash
-# If notebook is known (recommended)
-siyuan api filetree.getIDsByHPath --notebook <notebook-id> --path "/Research/Papers/Transformer"
-siyuan tool get-block-info <resolved-id>
-
-# If notebook is unknown, use SQL as a global fallback
-siyuan api query.sql "SELECT id, box, path, hpath FROM blocks WHERE type='d' AND hpath = '/Research/Papers/Transformer' LIMIT 10"
-```
-
-`hpath` is human-readable and rename-sensitive. Convert it to id before writes.
-
-## User gives a content phrase
-
-```text
-"Find the note where I wrote about approval broker lifecycle"
-```
-
-```bash
-siyuan api search.fullTextSearchBlock "approval broker lifecycle"
-siyuan tool get-block-info <candidate-block-id>
-siyuan tool get-block-content <candidate-block-id> --range context --limit 7 --showId true
-```
-
-If results are noisy, switch to SQL with notebook or document constraints.
-
-## User asks for a daily note
-
-Daily notes have dedicated tools. Do not guess the path from the date; use the daily note model.
-
-```bash
-# Find today's or a specific date's daily note
-siyuan tool list-dailynote --atDate yyyy-MM-dd [--notebookId <id>]
-
-# Append content to today's daily note
-siyuan api block.appendDailyNoteBlock --notebook <notebook-id> --data @stdin <<'EOF'
-Content to append.
-EOF
-```
-
-Read `siyuan-guide/dailynote-model.md` for the full daily note model: path templates, attribute markers, date-range queries, and per-notebook behavior.
-
-## Document Has Ref Links About User's Instructions
-
-Siyuan supports block references/links (see `siyuan-guide/siyuan-block.md`). You can read the document using a given reference link ID.
-
-```bash
-# Last
-siyuan tool get-block-content <candidate-root-or-doc-id>
-# Output with ((<CitedBlockId> "anchor text")) or [anchor text](siyuan://blocks/<CitedBlockId>)
-# User says "read topic about anchor"
-
-# Read the block by ID
-siyuan tool get-block-content <CitedBlockId>
-```
+**Document has ref links about user's topic**:
+→ Read document → find `((<BlockId> "anchor"))` or `siyuan://blocks/<id>` → read referenced block by id
 
 # Success checks
 
-- You have a stable id for the document/block that will be read or written.
-- The candidate belongs to the intended notebook/workspace.
-- The result set is narrow enough that the user would recognize the target.
-- For write operations, the exact document/block id is known before editing.
+- Stable id obtained for the target document/block
+- Candidate belongs to intended notebook/workspace
+- Result set narrow enough that user would recognize the target
+- For writes: exact document/block id known before editing
 
 # Recovery
 
-## Multiple matches
+**Multiple matches**: ask for notebook, parent path, date, or distinguishing phrase. Inspect 2-3 candidates.
 
-- Ask for notebook, parent path, date, or distinguishing phrase.
-- Inspect 2-3 likely candidates instead of guessing.
-- Prefer exact id or resolved path before writing.
+**No matches**: confirm workspace · broaden keyword · try `searchDocs` + `fullTextSearchBlock` · browse bounded tree.
 
-## No matches
-
-- Confirm workspace with `siyuan workspace which`.
-- Broaden the keyword or try a different language/alias.
-- Search document titles with `filetree.searchDocs` and content with `search.fullTextSearchBlock`.
-- Browse a bounded notebook tree when the user knows the notebook.
-
-## Search result is a child block but user asked for the document
-
-- Inspect the block with `get-block-info`.
-- Use its owning document/root id for document-level read/edit.
-- Use the child block id only when the user specifically targets that block/section.
+**Search result is child block but user asked for document**: use `get-block-info` → owning document's `root_id`.
 
 # Related docs
 
-- `recipes/read-content.md`
-- `recipes/edit-content.md`
-- `siyuan-guide/document-tree-and-paths.md`
-- `siyuan-guide/sql-query-guide.md`
-- `siyuan-guide/dailynote-model.md`
+- `recipes/read-content.md` — reading after target found
+- `recipes/edit-content.md` — editing after target found
+- `siyuan-guide/document-tree-and-paths.md` — path semantics
+- `siyuan-guide/sql-query-guide.md` — SQL patterns
