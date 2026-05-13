@@ -314,7 +314,7 @@ Normalization rules:
 
 ## Approval Center
 
-When a write requires approval and `--yes` is absent (or ignored due to `behavior.allowYes: false`), the CLI submits a request to the local Approval Broker, opens `http://127.0.0.1:<port>/approval`, and waits inline for up to `behavior.approval.timeout` seconds (default 60).
+When a write requires approval and `--yes` is absent (or ignored due to `behavior.allowYes: false`), the CLI submits a request to the local Approval Broker, opens `http://127.0.0.1:<port>/approval`, and waits inline for up to `behavior.approval.timeout` seconds (default 60). Browser auto-open is debounced by `behavior.approval.openDebounceMs` (default 1000ms), but every request still emits an `APPROVAL_PENDING` event with its URL on stderr.
 
 ```bash
 siyuan approval status

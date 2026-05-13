@@ -59,6 +59,7 @@ export interface BehaviorConfig {
     approval?: {
         timeout?: number;            // seconds, default: 60
         autoOpen?: boolean;          // default: true — auto-open Approval Center in browser
+        openDebounceMs?: number;     // ms, default: 1000 — suppress repeated browser opens
     };
     rawApi?: RawApiBehaviorConfig;
 }
@@ -74,6 +75,7 @@ export interface ResolvedBehaviorConfig {
     approval: {
         timeout: number;
         autoOpen: boolean;
+        openDebounceMs: number;
     };
     rawApi: ResolvedRawApiBehaviorConfig;
 }
@@ -81,7 +83,7 @@ export interface ResolvedBehaviorConfig {
 // ————— Behavior validation —————
 
 const BEHAVIOR_KEYS = new Set(['allowYes', 'approval', 'rawApi']);
-const APPROVAL_KEYS = new Set(['timeout', 'autoOpen']);
+const APPROVAL_KEYS = new Set(['timeout', 'autoOpen', 'openDebounceMs']);
 const RAW_API_KEYS = new Set(['enabled', 'allow']);
 
 export interface BehaviorValidationError {
@@ -135,6 +137,12 @@ export function validateBehaviorRaw(
             }
             if (a['autoOpen'] !== undefined && typeof a['autoOpen'] !== 'boolean') {
                 results.push({ kind: 'error', message: `${scope}.behavior.approval.autoOpen must be a boolean.` });
+            }
+            if (
+                a['openDebounceMs'] !== undefined &&
+                (typeof a['openDebounceMs'] !== 'number' || a['openDebounceMs'] < 0 || !Number.isInteger(a['openDebounceMs']))
+            ) {
+                results.push({ kind: 'error', message: `${scope}.behavior.approval.openDebounceMs must be a non-negative integer.` });
             }
         }
     }

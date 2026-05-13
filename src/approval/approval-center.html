@@ -184,6 +184,7 @@
         detail.innerHTML =
           '<h2>' + escapeHtml(item.summary) + '</h2>' +
           '<p><strong>Risk:</strong> ' + escapeHtml(item.risk) + '</p>' +
+          '<p><strong>Triggered by:</strong> ' + escapeHtml(item.triggerReason || 'unknown') + '</p>' +
           '<p><strong>Workspace:</strong> ' + escapeHtml(item.workspaceName) + '</p>' +
           '<p><strong>Endpoint:</strong> ' + escapeHtml(item.endpointId) + '</p>' +
           '<p><strong>Expires in:</strong> ' + fmtCountdown(item.expiresAt) + '</p>' +

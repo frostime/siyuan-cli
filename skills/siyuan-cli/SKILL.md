@@ -43,6 +43,7 @@ Before using `@file:`/`@stdin`/`@env:` on a parameter, check `--help` → `INPUT
 | 5 | `CONTENT_FILTERED` / truncation = valid but incomplete; don't infer absence. |
 | 6 | `--yes` is not a safety check; use only after target verified + action intended. |
 | 7 | `api raw` bypasses schema/resource guards/response filtering; one-off only. |
+| 8 | Approval browser auto-open may be debounced; parse every `APPROVAL_PENDING` stderr event, not browser opens. |
 
 ```text
 Small localized edit with known block ids

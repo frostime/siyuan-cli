@@ -53,6 +53,7 @@ workspaces:
       allowYes: false
       approval:
         timeout: 30
+        openDebounceMs: 1000
     # permission:                      # optional: workspace-level rules (see permission.md)
     #   default: allow
     #   rules: [...]
@@ -70,6 +71,7 @@ defaults:
     approval:
       timeout: 60
       autoOpen: true
+      openDebounceMs: 1000
   # permission:                        # optional: global defaults (see permission.md)
   #   default: allow
   #   rules: [...]
@@ -100,6 +102,7 @@ Optional `behavior` section controls how the CLI handles approval-gated writes. 
 | `allowYes` | boolean | `true` | When `false`, `--yes` flag is ignored; approval flow is mandatory |
 | `approval.timeout` | number (seconds) | `60` | How long the CLI waits for an approval decision |
 | `approval.autoOpen` | boolean | `true` | Whether to auto-open the Approval Center in the browser |
+| `approval.openDebounceMs` | number (ms) | `1000` | Suppress repeated browser opens for rapid consecutive approval requests; `0` disables debounce |
 | `rawApi.enabled` | boolean | `false` | Enables the raw kernel API fallback command |
 | `rawApi.allow` | string[] | `[]` | Endpoint-id glob patterns allowed through `siyuan api raw` |
 
@@ -110,6 +113,8 @@ All fields are optional. Omitted fields inherit from the next level in the casca
 Project > Workspace > Defaults > Built-in.
 
 Merge is field-level for `allowYes` and `approval`. `rawApi` resolves as a whole object from the first level that declares it: Project > Workspace > Defaults > Built-in. This avoids accidentally combining `enabled: true` from one scope with broad allow patterns from another.
+
+`approval.openDebounceMs` affects only browser auto-open. Every approval request still emits an `APPROVAL_PENDING` event with its URL on stderr.
 
 ### Raw API fallback
 
@@ -154,6 +159,7 @@ workspaces:
       allowYes: true         # CI agent trusts --yes
       approval:
         autoOpen: false      # no browser in CI
+        openDebounceMs: 0    # irrelevant when autoOpen is false
 ```
 
 > [!Note]

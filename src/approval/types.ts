@@ -21,6 +21,7 @@ export interface PreparedApprovalRequest {
     payloadDigest: string;
     resourceSummary: string[];
     timeoutSec: number;
+    triggerReason?: string;
 }
 
 export interface ApprovalDecision {
@@ -70,6 +71,7 @@ export interface ApprovalResolvedBroker {
 export interface ApprovalClientOptions {
     cwd?: string;
     autoOpen?: boolean;
+    openDebounceMs?: number;
     openBrowser?: (url: string) => void | Promise<void>;
     jsonExtra?: JsonPrintExtra;
 }
@@ -80,4 +82,5 @@ export interface RequestApprovalInput {
     payload: unknown;
     callerTool?: string;
     timeoutSec?: number;
+    triggerReason?: string;
 }

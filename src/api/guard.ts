@@ -282,15 +282,25 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
         }
         const timeoutSec = behavior.approval.timeout;
         const autoOpen = behavior.approval.autoOpen;
+        const openDebounceMs = behavior.approval.openDebounceMs;
+
+        const triggerReasons: string[] = [];
+        if (ruleEffect === 'approval') triggerReasons.push('matched approval rule');
+        if (phase2NeedsApproval) triggerReasons.push('resource-level approval rule');
+        if (ruleEffect === 'allow' && isHighRisk(entry.meta.risk)) {
+            triggerReasons.push(`high-risk auto-approval (${entry.meta.risk})`);
+        }
+
         await requestAndWait(
             buildPreparedApprovalRequest({
                 workspaceName: workspace.name,
                 entry,
                 payload,
                 ...(callerTool ? { callerTool } : {}),
-                timeoutSec
+                timeoutSec,
+                triggerReason: triggerReasons.join('; ') || undefined
             }),
-            { autoOpen, jsonExtra }
+            { autoOpen, openDebounceMs, jsonExtra }
         );
     }
 

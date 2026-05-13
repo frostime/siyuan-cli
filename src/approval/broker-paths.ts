@@ -47,6 +47,10 @@ export function getApprovalBrokerStartLockFile(): string {
     return join(getApprovalStateDir(), 'broker-start.lock');
 }
 
+export function getApprovalBrowserOpenFile(): string {
+    return join(getApprovalStateDir(), 'last-browser-open.txt');
+}
+
 // ── Directory bootstrap ──────────────────────────────────────────────────────
 
 export function ensureApprovalStateDirs(): void {
@@ -101,6 +105,10 @@ export function readBrokerToken(): string | null {
     return readTextFile(getApprovalBrokerTokenFile());
 }
 
+export function readLastBrowserOpenAt(): number | null {
+    return readIntegerFile(getApprovalBrowserOpenFile());
+}
+
 export function getBrokerBaseUrl(port: number): string {
     return `http://127.0.0.1:${port}`;
 }
@@ -115,10 +123,17 @@ export function writeBrokerState(pid: number, port: number, token: string): void
     bestEffortChmod0600(getApprovalBrokerTokenFile());
 }
 
+export function writeLastBrowserOpenAt(value: number): void {
+    ensureApprovalStateDirs();
+    writeFileSync(getApprovalBrowserOpenFile(), String(value), 'utf-8');
+    bestEffortChmod0600(getApprovalBrowserOpenFile());
+}
+
 export function cleanupApprovalBrokerState(): void {
     removeIfExists(getApprovalBrokerPidFile());
     removeIfExists(getApprovalBrokerPortFile());
     removeIfExists(getApprovalBrokerTokenFile());
+    removeIfExists(getApprovalBrowserOpenFile());
 }
 
 export function removeApprovalStateDir(): void {

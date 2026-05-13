@@ -106,11 +106,26 @@ Uses global --dry-run to preview without writing.`,
             throw new Error('--overwrite and --replacements are mutually exclusive.');
         }
 
+        let mode: 'audit' | 'replace' | 'overwrite';
+        let dryRunGuidance: string | undefined;
+
+        if (overwriteMode) {
+            mode = 'overwrite';
+        } else if (replaceMode) {
+            mode = 'replace';
+        } else if (checkOnly) {
+            mode = 'audit';
+        } else if (dryRun) {
+            mode = 'audit';
+            dryRunGuidance = 'Hint: To preview an edit, pass --replacements or --overwrite. To apply, remove --dry-run.';
+        } else {
+            throw new Error('replacements is required unless --check true or --overwrite is used.');
+        }
+
         let pairs: Array<{ search: string; replace: string }> = [];
-        if (!checkOnly && !overwriteMode) {
-            if (!replacements) throw new Error('replacements is required unless --check true or --overwrite is used.');
+        if (mode === 'replace') {
             try {
-                pairs = JSON.parse(replacements);
+                pairs = JSON.parse(replacements!);
                 if (!Array.isArray(pairs) || pairs.length === 0) {
                     throw new Error('replacements must be a non-empty JSON array.');
                 }
@@ -191,11 +206,12 @@ Uses global --dry-run to preview without writing.`,
             }
         };
 
-        if (checkOnly) {
+        if (mode === 'audit') {
             return {
-                content: safety.safeForBruteEdit
+                content: (safety.safeForBruteEdit
                     ? `SAFE: document ${id} can use brute-edit (${byteLength} bytes, ${children.length} child blocks)`
-                    : `UNSAFE: document ${id} should not use brute-edit (${blockingReasons.join(', ')})`,
+                    : `UNSAFE: document ${id} should not use brute-edit (${blockingReasons.join(', ')})`)
+                    + (dryRunGuidance ? `\n\n${dryRunGuidance}` : ''),
                 details: safety
             };
         }
@@ -225,9 +241,10 @@ Uses global --dry-run to preview without writing.`,
             });
         }
 
-        if (overwriteMode) {
-            const newByteLength = Buffer.byteLength(overwrite, 'utf8');
-            const unchanged = overwrite === markdown;
+        if (mode === 'overwrite') {
+            const overwriteContent = overwrite!;
+            const newByteLength = Buffer.byteLength(overwriteContent, 'utf8');
+            const unchanged = overwriteContent === markdown;
             if (dryRun) {
                 return {
                     content: unchanged
@@ -248,7 +265,7 @@ Uses global --dry-run to preview without writing.`,
             if (!unchanged) {
                 await ctx.callEndpoint('block.updateBlock', {
                     id,
-                    data: overwrite,
+                    data: overwriteContent,
                     dataType: 'markdown'
                 });
             }
