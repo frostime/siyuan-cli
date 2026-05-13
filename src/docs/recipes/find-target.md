@@ -64,7 +64,7 @@ siyuan tool locate-block --id <doc-id> --pattern "%phrase%"
 siyuan tool locate-block --box <notebook-id> --pattern "%A%|%B%" --all true
 ```
 
-Use `locate-block` when editing long documents: it returns matching block ids with breadcrumb/sibling context.
+Use `locate-block` when editing long documents: it returns matching block ids with breadcrumb/sibling context. Its pattern is SQLite `LIKE`, not regex: wrap substrings with `%...%`; `_` matches one char; multiple patterns use `|`.
 
 ## 4. Use SQL for structured constraints
 

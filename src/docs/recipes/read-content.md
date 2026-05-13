@@ -74,7 +74,7 @@ Use when exact markup, block refs, or attributes matter. Prefer batch for multip
 
 **Summarize a document**: `get-block-info` → `get-block-content --range children --limit 50` → if incomplete, `--limit=-1`.
 
-**Prepare a precise edit**: for long docs, `locate-block --id <doc-id> --pattern "%phrase%"` → read matched block context with `get-block-content --range context --limit 7 --showId true` → continue with `recipes/edit-content.md`.
+**Prepare a precise edit**: for long docs, `locate-block --id <doc-id> --pattern "%phrase%"` (SQLite `LIKE`, not regex) → read matched block context with `get-block-content --range context --limit 7 --showId true` → continue with `recipes/edit-content.md`.
 
 **Compare multiple blocks**: `block.getBlockKramdowns --ids '[...]'` — batch read.
 

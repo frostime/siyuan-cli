@@ -5,28 +5,22 @@ summary: Safely inspect, choose an edit strategy, update SiYuan content, and ver
 
 # Goal
 
-Modify existing SiYuan content with a stable target, explicit pre-flight inspection, and post-write verification.
+Modify SiYuan content with stable targets, pre-flight inspection, and post-write verification.
 
-# Scope
+Use for: append/insert, block update, batch update, document rewrite, create/move/delete. Data model → `siyuan-guide/siyuan-block.md`; target discovery → `recipes/find-target.md`.
 
-Use this recipe for: appending/inserting content, updating blocks, batch updates, document-level rewrites, creating documents, moving blocks/documents, deleting content.
+# Pre-flight
 
-For the SiYuan data model → `siyuan-guide/siyuan-block.md`. For target discovery → `recipes/find-target.md`.
-
-# Pre-flight (short form)
-
-Before any non-append write:
+For any non-append write:
 
 ```bash
 siyuan workspace which
 siyuan tool get-block-info <id>
 siyuan tool get-block-content <id> --range context --limit 7 --showId true
-
-# For long documents: locate specific blocks by pattern
-siyuan tool locate-block --id <doc-id> --pattern "%target text%"
+siyuan tool locate-block --id <doc-id> --pattern "%target text%"  # SQL LIKE, not regex
 ```
 
-If you reached this recipe directly: confirm workspace (anchor 1), stabilize target to id (anchor 2), inspect before modify (anchor 3). Full decision tree in SKILL §Safety anchors.
+Direct-entry checklist: confirm workspace · stabilize target id · inspect before modify. Full rationale: SKILL §Safety anchors.
 
 # Strategy selector
 
@@ -45,7 +39,7 @@ If you reached this recipe directly: confirm workspace (anchor 1), stabilize tar
 | Move a document | `filetree.moveDocsByID` | hpath changes; id preserved. |
 | Delete a document | `filetree.removeDocByID` | Prefer over deleting document block. |
 
-Run `siyuan api <command> --help` for parameters and input sources.
+Run `siyuan api <command> --help` for parameters and INPUT SOURCES.
 
 # Side effects
 
@@ -63,7 +57,7 @@ Run `siyuan api <command> --help` for parameters and input sources.
 
 ## Append content
 
-Fast path — no pre-inspection needed for append-only operations.
+Fast path for append-only operations.
 
 ```bash
 siyuan api block.appendBlock --parentID <id> --data @stdin --yes <<'EOF'
@@ -72,9 +66,9 @@ Content.
 EOF
 ```
 
-`dataType` defaults to `markdown`. Use `--dry-run` before `--yes` when parent id was recently resolved and not yet verified.
+`dataType` defaults to `markdown`. Use `--dry-run` if parent id was just resolved.
 
-Daily notes: `block.appendDailyNoteBlock --notebook <id>`. Daily notes are per-notebook — if notebook id is unknown, run `notebook.lsNotebooks` first. When multiple notebooks exist, ask user which one.
+Daily notes are per-notebook: `block.appendDailyNoteBlock --notebook <id>`. If notebook id is unknown, run `notebook.lsNotebooks`; if multiple plausible notebooks, ask.
 
 ## Replace one or multiple blocks
 
@@ -89,9 +83,7 @@ siyuan api block.batchUpdateBlock --blocks @file:./blocks.json --dry-run
 siyuan api block.batchUpdateBlock --blocks @file:./blocks.json --yes
 ```
 
-`blocks.json` format: `[{"id":"...","data":"...","dataType":"markdown"}, ...]`
-
-Default to `dataType: "markdown"`. Use `dom` only for DOM-level edits.
+`blocks.json`: `[{"id":"...","data":"...","dataType":"markdown"}, ...]`. Default `markdown`; use `dom` only for DOM-level edits.
 
 ## Insert before or after
 
@@ -103,7 +95,7 @@ Inserted content.
 EOF
 ```
 
-Use `--nextID` to insert before. Run `block.insertBlock --help` for full parameter details.
+Use `--nextID` to insert before. Full params: `block.insertBlock --help`.
 
 ## Create a document
 
@@ -112,23 +104,21 @@ siyuan api filetree.createDocWithMd --notebook <notebook-id> --path "/path/to/do
   --markdown @file:./content.md
 ```
 
-⚠️ On Windows Git Bash / MSYS, `--path` values starting with `/` may be rewritten. Use `MSYS_NO_PATHCONV=1` or `//path`.
+⚠️ Git Bash/MSYS may rewrite leading `/`; use `MSYS_NO_PATHCONV=1` or `//path`.
 
 ## Broad document-level rewrite (brute-edit)
 
-Use only when block-level edits are fragile or inefficient. Always check first.
+Use only when block-level edits are fragile/inefficient. Always check first.
 
 ```bash
 # 1. Check safety
 siyuan tool brute-edit <doc-id> --check true --print json
 
-# If UNSAFE → checkpoint + fall back to block-level APIs
+# UNSAFE → checkpoint + block-level fallback
 siyuan tool checkpoint-doc <doc-id>
 
-# If SAFE → preview replacements
+# SAFE → preview, then execute
 siyuan tool brute-edit <doc-id> --replacements @file:./replacements.json --dry-run
-
-# If plan looks correct → execute
 siyuan tool brute-edit <doc-id> --replacements @file:./replacements.json --yes
 ```
 
@@ -147,7 +137,7 @@ siyuan tool brute-edit <doc-id> --overwrite @file:$TMPDIR/doc.md --yes
 rm "$TMPDIR/doc.md"
 ```
 
-Do not overwrite from `--showId true` output — markers are not source text.
+Never overwrite from `--showId true` output; markers are not source text.
 
 ## Move a block
 
@@ -162,7 +152,7 @@ siyuan api block.moveBlock --id <block-id> --previousID <sibling-id> --parentID 
 siyuan api filetree.moveDocsByID --fromIDs '["<doc-id>"]' --toID <target-parent-id>
 ```
 
-`--toID` accepts document id (move inside) or notebook id (move to root). Block ids preserved; hpath changes.
+`--toID`: document id (move inside) or notebook id (move to root). Block ids preserved; hpath changes.
 
 # Verification
 
@@ -172,13 +162,13 @@ After writing:
 siyuan tool get-block-content <id> --range context --limit 7 --showId true
 ```
 
-Confirm: intended target changed · neighbors unchanged · block ids known for follow-up · correct workspace/notebook.
+Confirm: intended target changed · neighbors unchanged · follow-up ids known · correct workspace/notebook.
 
 # Recovery
 
-**Wrong target**: re-run `workspace which` + `get-block-info` + bounded read. Narrow to stable block id before retrying.
+**Wrong target**: re-run `workspace which` + `get-block-info` + bounded read; narrow to stable block id before retry.
 
-**Write denied / approval required**: inspect rules with `workspace which`. If Approval Center opens, approve/reject there. `siyuan approval list` shows pending requests. Retry with `--yes` only when action is intended and `behavior.allowYes` is not `false`.
+**Denied / approval required**: inspect rules with `workspace which`; approve/reject in Approval Center or `siyuan approval list`. Retry with `--yes` only when intended and allowed.
 
 # Related docs
 
