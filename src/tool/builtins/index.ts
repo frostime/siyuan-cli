@@ -6,6 +6,7 @@ import { tool as getBlockContent } from './get-block-content.js';
 import { tool as bruteEdit } from './brute-edit.js';
 import { tool as locateBlock } from './locate-block.js';
 import { tool as checkpointDoc } from './checkpoint-doc.js';
+import { tool as updateBlock } from './update-block.js';
 
 const tools = [
     listDocTree,
@@ -14,7 +15,8 @@ const tools = [
     getBlockContent,
     bruteEdit,
     locateBlock,
-    checkpointDoc
+    checkpointDoc,
+    updateBlock
 ];
 for (const tool of tools) {
     toolRegistry.register(tool);

@@ -158,13 +158,14 @@ For full write workflows → `recipes/edit-content.md`; for parameters → `<com
 | Need | Prefer |
 |------|--------|
 | Append child blocks | `block.appendBlock` / `block.appendDailyNoteBlock` |
-| Replace known block(s) | `block.updateBlock` / `block.batchUpdateBlock` |
+| Replace known block(s) | `tool update-block` (preserves custom attrs) |
 | Insert before/after | `block.insertBlock` |
 | Move/delete block | `block.moveBlock` / `block.deleteBlock` |
 | Broad document rewrite | `brute-edit --check true` → `--dry-run` → `--yes` |
 | Attributes | `attr.getBlockAttrs` / `attr.setBlockAttrs` / batch variants |
 
 Warnings:
+- **Raw `updateBlock` / `batchUpdateBlock` erases all `custom-*` attributes.** Always use `siyuan tool update-block` instead.
 - `updateBlock` on document block (`type='d'`) replaces the child tree; use guarded `brute-edit` for document rewrites.
 - `transferBlockRef` triggers full kernel reindex; use only as a deliberate standalone action.
 - Custom attributes must use `custom-`; prefer batch endpoints for multiple ids.

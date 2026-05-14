@@ -67,7 +67,7 @@ siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
 siyuan api block.getBlockKramdown --id 20260417120000-abcdefg
 
 # JSON payload
-siyuan api block.updateBlock -j '{"id":"...","data":"...","dataType":"markdown"}'
+siyuan api query.sql -j '{"stmt":"SELECT * FROM blocks LIMIT 5"}'
 
 # From file
 siyuan api query.sql -f query.json
@@ -194,7 +194,7 @@ EOF
 # append endpoints default `dataType` to `markdown`; pass `--dataType dom` only when needed.
 
 # multiple long inputs in one command — use @file: for each
-siyuan api block.updateBlock --id <id> --data @file:./content.md --dataType markdown
+siyuan tool update-block --blocks @file:./updates.json --yes
 ```
 
 ## Git Bash / MSYS path conversion

@@ -47,7 +47,7 @@ Before using `@file:`/`@stdin`/`@env:` on a parameter, check `--help` → `INPUT
 
 ```text
 Small localized edit with known block ids
-  → block.updateBlock / block.batchUpdateBlock
+  → tool update-block (preserves custom attrs)
 
 Broad/complex/text-level edit
   → brute-edit <doc-id> --check true
@@ -75,14 +75,14 @@ Content here.
 EOF
 
 # @file: parameter supports file
-siyuan api block.updateBlock --id <id> --data @file:./content.md --dataType markdown --yes
+siyuan tool update-block --blocks @file:./updates.json --yes
 
 # pipe: parameter supports stdin
 cat query.sql | siyuan api query.sql --stmt @stdin
 
 # whole payload: all commands support -j / -f
 siyuan api attr.setBlockAttrs -j '{"id":"<id>","attrs":{"custom-key":"value"}}'
-siyuan api block.batchUpdateBlock -f ./blocks.json --yes
+siyuan api attr.batchSetBlockAttrs -f ./attrs.json --yes
 ```
 
 ## Hot paths
@@ -113,10 +113,12 @@ siyuan tool locate-block --id <doc-id> --pattern "%keyword%"  # SQL LIKE, not re
 Fast command, slow pre-flight. Required: workspace confirmed; stable block id; current content inspected; user intent maps exactly to block. Else read `recipes/edit-content.md`.
 
 ```bash
-siyuan api block.updateBlock --id <block-id> --dataType markdown --data @stdin --yes <<'EOF'
-Replacement.
+siyuan tool update-block --blocks @stdin --yes <<'EOF'
+[{"id":"<block-id>","data":"Replacement."}]
 EOF
 ```
+
+> ⚠️ Do NOT use raw `block.updateBlock` / `block.batchUpdateBlock` — they erase custom attributes. Always use `tool update-block`.
 
 ## Error triage
 

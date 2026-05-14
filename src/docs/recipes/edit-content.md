@@ -28,8 +28,8 @@ Direct-entry checklist: confirm workspace · stabilize target id · inspect befo
 |------|---------|-----------|
 | Append to known doc/block | `block.appendBlock` | Fast path. `--parentID`, `--data`. |
 | Append to daily note | `block.appendDailyNoteBlock` | `--notebook` required. |
-| Replace one known block | `block.updateBlock` | Requires stable block id. |
-| Replace multiple known blocks | `block.batchUpdateBlock` | Atomic. JSON array of `{id, data, dataType}`. |
+| Replace one known block | `tool update-block` | Preserves custom attrs. JSON array input. |
+| Replace multiple known blocks | `tool update-block` | Same tool, multiple items in array. |
 | Insert before/after a block | `block.insertBlock` | `--nextID` or `--previousID` + `--parentID`. |
 | Prepend under parent | `block.prependBlock` | Creates new first child. |
 | Broad document-level rewrite | `brute-edit --check` → `--dry-run` → `--yes` | Only if SAFE. Regenerates child ids. |
@@ -42,6 +42,8 @@ Direct-entry checklist: confirm workspace · stabilize target id · inspect befo
 Run `siyuan api <command> --help` for parameters and INPUT SOURCES.
 
 # Side effects
+
+> ⚠️ **Raw `updateBlock` / `batchUpdateBlock` erases all `custom-*` attributes on the target block.** Always use `siyuan tool update-block` instead — it preserves custom attributes automatically.
 
 > ⚠️ `updateBlock` on a document block (`type='d'`) replaces the entire child tree. Child ids, refs, and custom attrs are invalidated. For document rewrites, prefer `brute-edit --check true`.
 
@@ -75,17 +77,16 @@ Daily notes are per-notebook: `block.appendDailyNoteBlock --notebook <id>`. If n
 ## Replace one or multiple blocks
 
 ```bash
-# Single block (run --help for params)
-siyuan api block.updateBlock --id <block-id> --dataType markdown --data @stdin --yes <<'EOF'
-Replacement content.
+# Single block via heredoc
+siyuan tool update-block --blocks @stdin --yes <<'EOF'
+[{"id":"<block-id>","data":"Replacement content."}]
 EOF
 
-# Multiple blocks atomically (JSON array via @file: or heredoc)
-siyuan api block.batchUpdateBlock --blocks @file:./blocks.json --dry-run
-siyuan api block.batchUpdateBlock --blocks @file:./blocks.json --yes
+# Multiple blocks from file
+siyuan tool update-block --blocks @file:./updates.json --yes
 ```
 
-`blocks.json`: `[{"id":"...","data":"...","dataType":"markdown"}, ...]`. Default `markdown`; use `dom` only for DOM-level edits.
+`updates.json`: `[{"id":"...","data":"..."}, ...]`. dataType is always markdown.
 
 ## Insert before or after
 

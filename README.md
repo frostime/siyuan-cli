@@ -109,13 +109,13 @@ siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
 siyuan api block.getBlockKramdown --id 20260425162235-pnpy21c
 
 # Entire payload as inline JSON
-siyuan api block.updateBlock -j '{"id":"...","data":"## New heading","dataType":"markdown"}'
+siyuan api attr.setBlockAttrs -j '{"id":"...","attrs":{"custom-key":"value"}}'
 
 # Entire payload from a JSON file (useful for complex payloads)
-siyuan api block.updateBlock -f payload.json
+siyuan api attr.setBlockAttrs -f payload.json
 
 # Payload from stdin
-cat payload.json | siyuan api block.updateBlock -f -
+cat payload.json | siyuan api attr.setBlockAttrs -f -
 ```
 ![Invoke Demo](asset/20260501162653.png)
 
@@ -135,7 +135,7 @@ This is particularly useful for write operations where the content is long or co
 
 ```bash
 # Write a markdown file's content into a block
-siyuan api block.updateBlock --id <id> --data @file:./content.md --dataType markdown
+siyuan tool update-block --blocks @file:./updates.json --yes
 
 # Pipe SQL from another command
 echo "SELECT id FROM blocks WHERE type='d' LIMIT 3" | siyuan api query.sql @stdin
@@ -159,7 +159,7 @@ siyuan api query.sql "SELECT id, hpath FROM blocks LIMIT 5" --print json
 siyuan api block.deleteBlock --id <id> --dry-run
 
 # Print the equivalent curl command to stderr
-siyuan api block.updateBlock --id <id> --data "new text" --debug
+siyuan api attr.setBlockAttrs --id <id> --attrs '{"custom-key":"val"}' --debug
 ```
 
 Dry-run output includes a `wouldRequestApproval` field, telling you whether the current permission config would trigger the Approval Center for this operation.
@@ -212,7 +212,10 @@ siyuan tool brute-edit <doc-id> --check true
 siyuan tool brute-edit <doc-id> --overwrite @file:/tmp/doc.md --dry-run
 # If UNSAFE: create recovery material, then fall back to block-level APIs
 siyuan tool checkpoint-doc <doc-id>
-# Next: locate stable child block ids, then use block.updateBlock / block.batchUpdateBlock
+# Next: locate stable child block ids, then use tool update-block
+siyuan tool update-block --blocks @stdin --yes <<'EOF'
+[{"id":"<child-id>","data":"..."}]
+EOF
 ```
 
 Tools support `--help` and `--print json`; workflow/write tools support `--dry-run` when previewing is meaningful. Run `siyuan tool list` for the full list.
