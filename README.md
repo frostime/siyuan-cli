@@ -144,7 +144,7 @@ echo "SELECT id FROM blocks WHERE type='d' LIMIT 3" | siyuan api query.sql @stdi
 siyuan workspace add ci --url http://ci-host:6806 --token @env:SIYUAN_TOKEN
 ```
 
-For agents, `@file:` is especially valuable — the agent can write content to a temp file first, then pass it to the CLI, avoiding shell escaping issues entirely.
+For agents, `@file:` is especially valuable — the agent can write content to a temporary file first, then pass it to the CLI, avoiding shell escaping issues entirely. Agent guidance recommends using the system temp directory and cleaning temporary files afterwards.
 
 ### Output and debugging
 
@@ -168,18 +168,14 @@ Dry-run output includes a `wouldRequestApproval` field, telling you whether the 
 
 ## High-Level Tools
 
-Many real tasks require multiple API calls. For example, "append content to today's daily note" involves creating the daily note if it doesn't exist, resolving its id, then calling the append API. Tools wrap these multi-step workflows into single commands.
+Many real tasks require multiple API calls, extra safety checks, or agent-friendly output shaping. Tools wrap these workflows into single commands. Simple one-step operations should use `siyuan api` directly.
 
 ```bash
-# Append to today's daily note (auto-creates if needed, resolves id internally)
-siyuan tool append-content \
-  --targetId <notebook-id> --targetType dailynote \
-  --markdown "## Today's notes\nNew content here"
+# Append to today's daily note (markdown is the default dataType)
+siyuan api block.appendDailyNoteBlock --notebook <notebook-id> --data "## Today's notes\nNew content here"
 
-# Append from a file
-siyuan tool append-content \
-  --targetId <doc-id> --targetType document \
-  --markdown @file:./notes.md
+# Append under a known document/block
+siyuan api block.appendBlock --parentID <doc-or-block-id> --data @file:./notes.md
 
 # Document tree listing
 siyuan tool list-doc-tree --entry <notebook-id> --depth 2
@@ -196,19 +192,30 @@ siyuan tool list-doc-tree --entry <notebook-id> --depth 2
 # Daily notes by date range
 siyuan tool list-dailynote --afterDate 2026-04-01
 
-# Read document content with pagination
-siyuan tool get-block-content <doc-id> --slice "0:30" --showId true
-# Continue from where you left off
-siyuan tool get-block-content <doc-id> --slice "<last-block-id>:+20"
+# Bounded document content read
+siyuan tool get-block-content <doc-id> --range children --limit 30
+# Full document content read
+siyuan tool get-block-content <doc-id> --range children --limit=-1
+# Clean body-only read for local edit/write-back workflows
+siyuan tool get-block-content <doc-id> --range children --limit=-1 --bodyOnly true > /tmp/doc.md
+# Context read around a specific block
+siyuan tool get-block-content <block-id> --range context --limit 7 --showId true
+# Grep blocks by pattern
+siyuan tool locate-block "%keyword%" --id <doc-id>
 
 # Block metadata inspection (includes TOC for document blocks)
 siyuan tool get-block-info <block-id>
 
-# Path resolution — translate human-readable paths to stable ids
-siyuan tool resolve-path --hpath "/private/diary"
+# Guarded document-level rewrite: use only when block-level edits are fragile or inefficient
+siyuan tool brute-edit <doc-id> --check true
+# If SAFE: dry-run before applying replacements or overwrite
+siyuan tool brute-edit <doc-id> --overwrite @file:/tmp/doc.md --dry-run
+# If UNSAFE: create recovery material, then fall back to block-level APIs
+siyuan tool checkpoint-doc <doc-id>
+# Next: locate stable child block ids, then use block.updateBlock / block.batchUpdateBlock
 ```
 
-All tools support `--dry-run`, `--help`, and `--print json`. Run `siyuan tool list` for the full list.
+Tools support `--help` and `--print json`; workflow/write tools support `--dry-run` when previewing is meaningful. Run `siyuan tool list` for the full list.
 
 ![Tool Demo](asset/20260501162956.png)
 
@@ -520,14 +527,14 @@ For the full authoring guide: `siyuan doc read cli-usage/extension`.
 
 ### Windows Git Bash / MSYS
 
-Arguments starting with `/` may be rewritten into Windows paths by the shell before reaching the CLI. This affects SiYuan virtual paths like `--hpath "/TestDoc"`. Two workarounds:
+Arguments starting with `/` may be rewritten into Windows paths by the shell before reaching the CLI. This affects SiYuan virtual paths like `--path "/TestDoc"`. Two workarounds:
 
 ```bash
 # Disable path conversion for this command
-MSYS_NO_PATHCONV=1 siyuan tool resolve-path --hpath "/TestDoc"
+MSYS_NO_PATHCONV=1 siyuan api filetree.getIDsByHPath --notebook <id> --path "/TestDoc"
 
 # Or use double-slash as a Git Bash / MSYS escape
-siyuan tool resolve-path --hpath //TestDoc
+siyuan api filetree.getIDsByHPath --notebook <id> --path //TestDoc
 ```
 
 ### Auth failures

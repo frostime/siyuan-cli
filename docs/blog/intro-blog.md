@@ -142,8 +142,9 @@ OUTPUT
 
 ```bash
 siyuan tool list                                    # 查看所有可用 tool
-siyuan tool get-block-content <doc-id> --slice "0:30" # 读文档内容，按块分页
-siyuan tool push-md ./article.md --notebook <id> --toPath "/inbox"  # 导入本地 md
+siyuan tool get-block-content <doc-id> --range children --limit 30  # 读文档内容（有界分块）
+siyuan tool locate-block "%关键词%" --id <doc-id>                  # 按模式搜索块
+siyuan api filetree.createDocWithMd --notebook <id> --path "/inbox/article" --markdown @file:./article.md  # 创建本地 md 文档
 ```
 
 两层的关系是：api 是对内核 endpoint 的一对一映射，tool 是在 api 之上的组合编排。它们共享同一套全局机制——workspace 解析、权限检查、`--dry-run` 预览、`--help` 文档。

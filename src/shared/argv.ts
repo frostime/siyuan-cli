@@ -215,7 +215,8 @@ export function parsePayload(
                     base[field] = resolved;
                 }
             } else if (propSchema.type === 'integer') {
-                base[field] = Number.parseInt(resolved, 10);
+                const parsed = Number.parseInt(resolved, 10);
+                base[field] = Object.is(parsed, -0) ? 0 : parsed;
             } else if (propSchema.type === 'number') {
                 base[field] = Number(resolved);
             } else if (propSchema.type === 'boolean') {

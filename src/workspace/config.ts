@@ -63,7 +63,7 @@ const SCHEMA_VERSION = 1;
 
 const BUILT_IN_BEHAVIOR: ResolvedBehaviorConfig = {
     allowYes: true,
-    approval: { timeout: 60, autoOpen: true },
+    approval: { timeout: 60, autoOpen: true, openDebounceMs: 1000 },
     rawApi: { enabled: false, allow: [] }
 };
 
@@ -104,7 +104,12 @@ export function resolveEffectiveBehavior(
                 project?.approval?.autoOpen ??
                 workspace?.approval?.autoOpen ??
                 defaults?.approval?.autoOpen ??
-                BUILT_IN_BEHAVIOR.approval.autoOpen
+                BUILT_IN_BEHAVIOR.approval.autoOpen,
+            openDebounceMs:
+                project?.approval?.openDebounceMs ??
+                workspace?.approval?.openDebounceMs ??
+                defaults?.approval?.openDebounceMs ??
+                BUILT_IN_BEHAVIOR.approval.openDebounceMs
         },
         rawApi: resolveEffectiveRawApiBehavior(
             defaults?.rawApi,
@@ -167,6 +172,9 @@ function normalizeBehavior(behavior?: BehaviorConfig): BehaviorConfig | undefine
                           : {}),
                       ...(behavior.approval.autoOpen !== undefined
                           ? { autoOpen: behavior.approval.autoOpen }
+                          : {}),
+                      ...(behavior.approval.openDebounceMs !== undefined
+                          ? { openDebounceMs: behavior.approval.openDebounceMs }
                           : {})
                   }
               }
@@ -215,6 +223,7 @@ function renderConfigYaml(config: AppConfig): string {
         '# - behavior.allowYes: true (--yes bypasses approval)',
         '# - behavior.approval.timeout: 60 (seconds)',
         '# - behavior.approval.autoOpen: true (open browser on approval)',
+        '# - behavior.approval.openDebounceMs: 1000 (suppress repeated browser opens)',
         '# - behavior.rawApi.enabled: false (raw kernel API fallback is opt-in)',
         '# - token and tokenSource are global-only and should stay out of project files',
         ''

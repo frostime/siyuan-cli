@@ -6,42 +6,40 @@ summary: Agent-facing reference shipped with siyuan-cli. Start here when using `
 
 # SiYuan CLI Docs
 
-This page is the docs map. If you are an Agent with the installed `siyuan-cli` SKILL, follow the SKILL first; it is the operational router. Use this page to choose the right built-in document after you know the task shape.
+If you are an Agent with the installed `siyuan-cli` SKILL, read the SKILL first — it is the operational entry point with safety rules, hot-path commands, and routing. Use this page to choose the right built-in document when the SKILL routes you here or when you reach docs directly.
 
-## How to use this docs set
+## Quick start points
+
+| Situation | Read |
+|-----------|------|
+| No workspace or connection failure | `recipes/connect-workspace.md` |
+| User names a doc/block without giving an id | `recipes/find-target.md` |
+| Need to read/inspect content | `recipes/read-content.md` |
+| Need to edit, move, delete, create, or batch update | `recipes/edit-content.md` |
+| Need block/path/sql domain model | `siyuan-guide/siyuan-block.md` |
+| Need daily note operations | `siyuan-guide/dailynote-model.md` |
+| Permission denied or approval issues | `cli-usage/permission.md` |
+| Writing custom API/tool extensions | `cli-usage/extension.md` |
+| CLI flags, error codes, input sources | `cli-usage/cli-overview.md` |
+
+## Directory structure
 
 | Directory | Role | Read when |
 |-----------|------|-----------|
-| `recipes/` | Scenario playbooks | You need to do a bounded task safely. |
-| `siyuan-guide/` | SiYuan domain model | You need to understand blocks, paths, SQL, or daily notes. |
-| `cli-usage/` | CLI mechanics and configuration | You need flags, config, permissions, extension authoring, or error behavior. |
-
-## Start points
-
-| Situation | Start with |
-|-----------|------------|
-| No workspace, wrong workspace, or connection failure | `recipes/connect-workspace.md` |
-| User names a document/block without giving an id | `recipes/find-target.md` |
-| Need to inspect or quote content | `recipes/read-content.md` |
-| Need to append, edit, move, delete, or batch update | `recipes/edit-content.md` |
-| Need to understand `id`, `path`, `hpath`, `root_id`, `box` | `siyuan-guide/document-tree-and-paths.md` |
-| Need SQL query patterns or schema | `siyuan-guide/sql-query-guide.md` |
-| Need daily note creation, append, or date-range queries | `siyuan-guide/dailynote-model.md` |
-| Permission denied, approval popup, or filtered output | `cli-usage/permission.md` |
-| Need custom API/tool runtime code | `cli-usage/extension.md` |
+| `recipes/` | Scenario playbooks | Bounded task with safety considerations |
+| `siyuan-guide/` | SiYuan domain model | Understanding blocks, paths, SQL, daily notes |
+| `cli-usage/` | CLI mechanics and configuration | Flags, config, permissions, extension authoring |
 
 ## Help discovery
 
 ```bash
-siyuan --help                    # command overview + real docs root path
+siyuan --help                    # command overview + docs root path
 siyuan doc list                  # list built-in docs with real file paths
-siyuan doc read README.md        # read this docs map through CLI
+siyuan doc read <path>           # read a doc by path or unique basename
 siyuan api list                  # all available endpoints
-siyuan api <id> --help           # endpoint usage, parameters, examples
+siyuan api <id> --help           # endpoint parameters, input sources, examples
 siyuan tool list                 # all available tools
-siyuan tool <id> --help          # tool usage
-siyuan workspace which           # current workspace resolution details
-siyuan extension list            # discovered extensions + cache status
+siyuan tool <id> --help          # tool parameters, examples, behavior
 ```
 
 ## Built-in docs
@@ -50,25 +48,25 @@ siyuan extension list            # discovered extensions + cache status
 
 | File | Covers |
 |------|--------|
-| `recipes/connect-workspace.md` | Configure, verify, anchor, and recover workspace connections. |
-| `recipes/find-target.md` | Resolve user-visible hints into stable document/block ids. |
-| `recipes/read-content.md` | Read document/block content safely, including id-aware inspection and paging. |
-| `recipes/edit-content.md` | Update existing content with explicit inspection, strategy choice, and verification. |
+| `connect-workspace.md` | Configure, verify, anchor, and recover workspace connections. |
+| `find-target.md` | Resolve user-visible hints into stable document/block ids. |
+| `read-content.md` | Read document/block content safely with bounded output and id awareness. |
+| `edit-content.md` | Edit, create, move, delete content with strategy choice and verification. |
 
 ### SiYuan domain knowledge (`siyuan-guide/`)
 
 | File | Covers |
 |------|--------|
-| `siyuan-guide/siyuan-block.md` | Block as primary data model, block types, container vs leaf, attributes, Markdown syntax extensions. |
-| `siyuan-guide/document-tree-and-paths.md` | id / parent_id / root_id / box / path / hpath — what each means and when to use which. |
-| `siyuan-guide/sql-query-guide.md` | Five core tables (`blocks`, `refs`, `attributes`, `assets`, `spans`), query patterns, strategy. |
-| `siyuan-guide/dailynote-model.md` | Daily note path template, attribute marker, date range queries. |
+| `siyuan-block.md` | Block as primary data model, types, attributes, Markdown syntax extensions. |
+| `document-tree-and-paths.md` | id / parent_id / root_id / box / path / hpath semantics. |
+| `sql-query-guide.md` | Five core tables, query patterns, anti-patterns. |
+| `dailynote-model.md` | Daily note path template, attribute marker, date range queries. |
 
 ### CLI usage and configuration (`cli-usage/`)
 
 | File | Covers |
 |------|--------|
-| `cli-usage/cli-overview.md` | Full command tree, global flags, input sources, all error codes, debugging. |
-| `cli-usage/workspace-config.md` | Config file location, workspace connections, token sources, behavior, project anchoring. |
-| `cli-usage/permission.md` | Permission rule syntax, evaluation order, risk-based auto-approval, two-phase checking, extension schema coupling, debugging. |
-| `cli-usage/extension.md` | Write custom API endpoints and workflow tools; schema authoring, cold-start workflow, examples. |
+| `cli-overview.md` | Command tree, global flags, input sources, error codes, debugging. |
+| `workspace-config.md` | Config file, workspace connections, token sources, project anchoring. |
+| `permission.md` | Permission rule syntax, evaluation, risk-based approval, debugging. |
+| `extension.md` | Custom API/tool extensions, schema authoring, permission schema coupling. |

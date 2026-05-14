@@ -25,6 +25,8 @@ Extensions are written in TypeScript, loaded via `jiti` at execution time, and c
 
 If the reusable part is **code**, use an extension. If the reusable part is **decisions about when/where/how to use the CLI**, use a downstream Agent SKILL.
 
+**API extension = schema wrapper for one HTTP endpoint.** It declares payload, classification, guard, and format — but does not contain custom multi-step logic. If the operation composes multiple kernel calls or contains runtime orchestration, write a **tool extension** instead.
+
 ## Directory Layout
 
 ```
@@ -218,6 +220,81 @@ https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go
 | `dist/api/registry.mjs` | `EndpointRegistry` — endpoint registration and lookup |
 | `dist/tool/registry.mjs` | `ToolRegistry`, `createToolContext` — assembles `ToolContext` at runtime |
 
+
+## Permission schema coupling
+
+Permission behavior is not solely controlled by user config rules. Each endpoint schema declares fields that determine **what the permission engine can enforce**. This section is essential for extension authors.
+
+### `classification` → auto-approval
+
+Every endpoint schema declares a `classification`. This is the **source of truth** for risk-based auto-approval. The classification fields (`mode`, `surface`, `scope`) feed the risk derivation matrix (see `permission.md` §Risk-based auto-approval).
+
+Extension authors cannot disable auto-approval for destructive operations — only the user can, via `--yes` (if `behavior.allowYes` is true).
+
+Example:
+
+```ts
+classification: {
+  mode: "write",
+  surface: "content",
+  scope: "batch",       // batch → risk = destructive → auto-approval
+  operation: "delete"
+}
+```
+
+### `guard.payloadTargets` → resource scoping
+
+User rules that use `notebook` or `path` conditions can only match endpoints whose schema declares `guard.payloadTargets`. These tell the CLI which payload fields contain protected resources:
+
+```ts
+guard: {
+  payloadTargets: [
+    { path: "id", kind: "id", access: "read" },
+    { path: "ids[*]", kind: "id", access: "write" }
+  ]
+}
+```
+
+- `kind: "id"` → CLI resolves block id to owning document's `notebook` + `path`, enabling notebook/path-scoped rules.
+- `kind: "notebook"` → value used directly as notebook id.
+- `kind: "path"` → value used directly as id-based document path.
+
+**Without `guard.payloadTargets`**, a user rule like `notebook: "xxx"` cannot match the endpoint — the permission engine has nothing to resolve.
+
+### `guard.response` → response filtering
+
+Global read endpoints (`mode: "read"`, `scope: "global"`) MUST declare a response guard so the CLI can filter out items from disallowed notebooks/paths:
+
+```ts
+guard: {
+  response: {
+    itemsAt: "[*]",
+    fieldMap: { id: "id", path: "path", notebook: "box" }
+  }
+}
+```
+
+**`approval` does not apply to response filtering.** The response guard only acts on `deny` — items matched by an `approval` rule are kept. Approval is a pre-execution gate; it has no role after the kernel has responded.
+
+When response filtering removes content, the CLI emits `CONTENT_FILTERED` on stderr (or in `extra.warnings` for `--print json`). Agents should treat filtered results as valid but incomplete.
+
+### Extension author checklist
+
+1. What `classification` fits? Remember `write + batch` triggers auto-approval.
+2. Does the payload contain block ids, notebook ids, or paths? → declare `guard.payloadTargets`.
+3. Is it a global read? → MUST declare `guard.response` or `guard.filterResponse`.
+
+## Raw API vs registered API: when to write an extension
+
+`api raw` bypasses schema, guards, and response filtering; see `permission.md` §Raw API boundary.
+
+| Situation | Use |
+|-----------|-----|
+| One-off probe of unregistered kernel API | `api raw` |
+| Repeated use or need for schema/guard/formatting | Write an API extension |
+| Need resource-scoped permission control | Write an API extension with `guard.payloadTargets` |
+
+For `api raw` config: see `workspace-config.md` §Raw API fallback.
 
 ## Troubleshooting
 

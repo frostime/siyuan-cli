@@ -19,6 +19,7 @@ import {
     waitForApprovalBroker
 } from './runtime.js';
 import { openApprovalBrowser } from './broker-browser.js';
+import { readLastBrowserOpenAt, writeLastBrowserOpenAt } from './broker-paths.js';
 import type {
     ApprovalClientOptions,
     ApprovalCreateResponse,
@@ -28,6 +29,8 @@ import type {
     PreparedApprovalRequest,
     RequestApprovalInput
 } from './types.js';
+
+const DEFAULT_OPEN_DEBOUNCE_MS = 1000;
 
 // ── Stdout/stderr helpers ────────────────────────────────────────────────────
 
@@ -142,19 +145,29 @@ export async function requestAndWait(
         autoOpen: false
     });
     if (shouldAutoOpen) {
-        try {
-            const opened = opts?.openBrowser
-                ? (await opts.openBrowser(created.url), true)
-                : await openApprovalBrowser(created.url);
-            if (!opened) {
-                writeAutoOpenWarning(created.url, opts);
+        const debounceMs = opts?.openDebounceMs ?? DEFAULT_OPEN_DEBOUNCE_MS;
+        const now = Date.now();
+        const lastBrowserOpenAt = readLastBrowserOpenAt() ?? 0;
+        const shouldOpen = debounceMs <= 0 || now - lastBrowserOpenAt >= debounceMs;
+        if (shouldOpen) {
+            try {
+                const opened = opts?.openBrowser
+                    ? (await opts.openBrowser(created.url), true)
+                    : await openApprovalBrowser(created.url);
+                if (opened) {
+                    writeLastBrowserOpenAt(now);
+                } else {
+                    writeAutoOpenWarning(created.url, opts);
+                }
+            } catch (error) {
+                writeAutoOpenWarning(
+                    created.url,
+                    opts,
+                    error instanceof Error
+                        ? { message: error.message }
+                        : { error: String(error) }
+                );
             }
-        } catch (error) {
-            writeAutoOpenWarning(
-                created.url,
-                opts,
-                error instanceof Error ? { message: error.message } : { error: String(error) }
-            );
         }
     }
     writePendingEvent({
@@ -221,6 +234,7 @@ export function buildPreparedApprovalRequest(
         payloadPreview: input.payload,
         payloadDigest: hashPayload(input.payload),
         resourceSummary: collectResourceSummary(input.entry, input.payload),
-        timeoutSec: input.timeoutSec ?? DEFAULT_REQUEST_TIMEOUT_SEC
+        timeoutSec: input.timeoutSec ?? DEFAULT_REQUEST_TIMEOUT_SEC,
+        triggerReason: input.triggerReason
     };
 }

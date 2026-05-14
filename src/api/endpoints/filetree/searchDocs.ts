@@ -8,27 +8,17 @@ export const schema: EndpointSchema = {
         required: ['k'],
         additionalProperties: false,
         properties: {
-            k: { type: 'string', description: 'Search keyword' },
-            notebook: {
-                type: 'string',
-                description: 'Notebook ID to search in',
-                pattern: '^\\d{14}-[0-9a-z]{7}$'
-            },
-            path: { type: 'string', description: 'Path to search under' }
+            k: { type: 'string', description: 'Search keyword' }
         }
     },
     classification: {
         mode: 'read',
         surface: 'content',
-        scope: 'batch',
+        scope: 'global',
         operation: 'search'
     },
     cli: { primary: 'k' },
     guard: {
-        payloadTargets: [
-            { path: 'notebook', kind: 'notebook', access: 'read' },
-            { path: 'path', kind: 'path', access: 'read' }
-        ],
         response: {
             itemsAt: '[*]',
             fieldMap: { path: 'path', notebook: 'box' }

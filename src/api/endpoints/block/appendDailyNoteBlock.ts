@@ -6,7 +6,7 @@ export const schema: EndpointSchema<BlockTransaction[]> = {
     summary: 'Append blocks to today\'s daily note',
     payload: {
         type: 'object',
-        required: ['notebook', 'data', 'dataType'],
+        required: ['notebook', 'data'],
         additionalProperties: false,
         properties: {
             notebook: {

@@ -1,103 +1,95 @@
 import type { ToolSchema } from '@/shared/schema.js';
 import { escapeSqliteLiteral } from '@/shared/sql.js';
 
-// ————— slice helpers —————
+// ————— read model —————
 
-interface SliceBlock {
+type RangeMode = 'self' | 'children' | 'context' | 'before' | 'after';
+
+interface ContentBlock {
+    rowid: number;
     id: string;
     type: string;
     markdown: string;
+    isAnchor?: boolean;
 }
 
-/**
- * Parse a slice syntax string and return the filtered subarray.
- *
- * Supported forms (blockList indexed from 0):
- *   "<ID>:+N"     — from ID (inclusive) forward N blocks
- *   "<ID>:-N"     — up to ID (inclusive) backward N blocks
- *   "<ID>:<ID>"   — closed ID range (inclusive both ends)
- *   "<ID>:END"    — from ID to last
- *   "BEGIN:<ID>"  — from first to ID
- *   "N:M"         — numeric slice (standard JS semantics, end exclusive)
- *   "-N:"         — last N blocks
- */
-function applySlice(blockList: SliceBlock[], syntax: string): SliceBlock[] {
-    if (!syntax.trim()) return blockList;
+interface RootRow {
+    rowid: number;
+    id: string;
+    parent_id: string;
+    root_id: string;
+    box: string;
+    type: string;
+    subtype: string;
+    markdown: string;
+    content: string;
+}
 
-    const isSiyuanID = (s: string) => /^\d{14}-[0-9a-z]{7}$/.test(s);
-    const findIndex = (id: string) => {
-        const idx = blockList.findIndex((b) => b.id === id);
-        if (idx === -1) throw new Error(`Slice: anchor ID '${id}' not found.`);
-        return idx;
+const CHILD_CONTAINER_TYPES = new Set(['d', 'h', 'b', 'l', 'i', 's']);
+const DEFAULT_LIMIT = 30;
+const DEFAULT_CONTEXT_LIMIT = 7;
+
+function blockType(type: string, subtype?: string): string {
+    return type + (subtype ? `/${subtype}` : '');
+}
+
+function isRangeMode(value: unknown): value is RangeMode {
+    return value === 'self' || value === 'children' || value === 'context' || value === 'before' || value === 'after';
+}
+
+function normalizeLimit(raw: unknown, fallback: number): number {
+    const value = raw === undefined ? fallback : Number(raw);
+    if (!Number.isInteger(value) || Object.is(value, -0) || value === 0) {
+        throw new Error('--limit must be a nonzero integer. Use a negative value for unlimited reads.');
+    }
+    return value;
+}
+
+function isUnlimited(limit: number): boolean {
+    return limit < 0;
+}
+
+function displayLimit(limit: number): string {
+    return isUnlimited(limit) ? 'unlimited' : String(limit);
+}
+
+function renderBlock(block: ContentBlock, showId: boolean): string {
+    if (!showId) return block.markdown ?? '';
+    return `@@${block.id}@@${block.type}\n${block.markdown ?? ''}`;
+}
+
+function trimChildren(children: ContentBlock[], limit: number): { blocks: ContentBlock[]; truncated: boolean } {
+    if (isUnlimited(limit)) return { blocks: children, truncated: false };
+    return {
+        blocks: children.slice(0, limit),
+        truncated: children.length > limit
     };
-
-    // "<ID>:+N" or "<ID>:-N"
-    const rel = syntax.match(/^(.+):([+-])(\d+)$/);
-    if (rel) {
-        const [, anchor, sign, numStr] = rel;
-        if (isSiyuanID(anchor!)) {
-            const ai = findIndex(anchor!);
-            const n = parseInt(numStr!, 10);
-            if (sign === '+') return blockList.slice(ai, ai + n);
-            const end = ai + 1;
-            return blockList.slice(Math.max(0, end - n), end);
-        }
-    }
-
-    const parts = syntax.split(':');
-    if (parts.length !== 2) {
-        // Single ID
-        if (isSiyuanID(syntax)) {
-            const idx = findIndex(syntax);
-            return blockList.slice(idx, idx + 1);
-        }
-        // Single numeric
-        if (/^-?\d+$/.test(syntax)) return blockList.slice(parseInt(syntax, 10));
-        throw new Error(`Slice: unrecognized syntax '${syntax}'.`);
-    }
-
-    const [startRaw, endRaw] = parts.map((s) => s.trim());
-
-    let start: number;
-    if (!startRaw || startRaw === 'BEGIN') {
-        start = 0;
-    } else if (isSiyuanID(startRaw)) {
-        start = findIndex(startRaw);
-    } else {
-        start = parseInt(startRaw, 10);
-    }
-
-    let end: number | undefined;
-    if (!endRaw || endRaw === 'END') {
-        end = undefined;
-    } else if (isSiyuanID(endRaw)) {
-        end = findIndex(endRaw) + 1; // closed interval
-    } else {
-        end = parseInt(endRaw, 10);
-    }
-
-    return blockList.slice(start, end);
 }
 
 // ————— tool —————
 
 export const tool: ToolSchema = {
     id: 'get-block-content',
-    summary: 'Read Markdown content of a block or document, with optional ID annotations and slice-based paging',
-    description: `Reads the Markdown content of a block (paragraph, heading, container, or document).
+    summary: 'Read bounded Markdown content around a block, with optional ID annotations',
+    description: `Reads Markdown from a block id using one anchor + one range.
 
-**Modes**
-- Default: returns the block's own Markdown.
-- Document / heading / container blocks: always expands child blocks into a flat list.
-- showId=true: prepends @@{id}@@ markers to each block for precise edit targeting.
-- slice: paginates child blocks using range or cursor syntax (auto-enables showId).
+Default behavior:
+- Leaf blocks return their own raw Markdown.
+- Document, heading, and container blocks return their first child blocks with a hidden safety limit.
+- Multi-block reads are bounded by --limit to avoid accidental full-document dumps.
+- Use --limit=-1 for an explicit unlimited/full read.
 
-**Slice syntax** (applies to document/container/heading child lists):
-  "<LastID>:+10"  — next 10 blocks after cursor
-  "<StartID>:<EndID>"  — closed ID range
-  "0:20"           — first 20 blocks
-  "-5:"            — last 5 blocks
-  "<ID>:END"       — from ID to end`,
+Range modes:
+- self: only the anchor block itself.
+- children: child blocks of the anchor block.
+- context: sibling window around the anchor, including the anchor.
+- before: sibling blocks before the anchor.
+- after: sibling blocks after the anchor.
+
+Output contract:
+- Header appears before --- BEGIN ... --- and contains metadata, warnings, and continuation hints.
+- Body after the BEGIN line is the content.
+- showId=true injects @@id@@type markers into the body for edit targeting; those markers are not SiYuan source text and should not be used as brute-edit search text.`,
     tags: ['read'],
     input: {
         type: 'object',
@@ -106,16 +98,23 @@ export const tool: ToolSchema = {
         properties: {
             id: {
                 type: 'string',
-                description: 'Block or document ID'
+                description: 'Anchor block or document ID'
+            },
+            range: {
+                type: 'string',
+                description: 'Relative read range: self, children, context, before, or after. Default: self for leaf blocks; children for document/heading/container blocks.'
+            },
+            limit: {
+                type: 'integer',
+                description: `Maximum returned blocks for multi-block ranges. Use any negative value for unlimited/full read; prefer --limit=-1 so shells do not parse -1 as a flag. Defaults: ${DEFAULT_LIMIT} for children/before/after, ${DEFAULT_CONTEXT_LIMIT} for context.`
             },
             showId: {
                 type: 'boolean',
-                description: 'Prefix each child block with @@{blockId}@@{type} for edit targeting. Default: false (auto-enabled by slice)'
+                description: 'Inject @@{blockId}@@{type} markers into the body for edit targeting. Default: false. Do not use annotated body as brute-edit search text.'
             },
-            slice: {
-                type: 'string',
-                description:
-                    'Optional slice syntax for paginating child blocks. Examples: "id1:+20", "id1:id2", "0:30", "-10:". Forces showId=true.'
+            bodyOnly: {
+                type: 'boolean',
+                description: 'Print only the body Markdown, without the metadata header or BEGIN marker. Default: false.'
             }
         }
     },
@@ -123,96 +122,197 @@ export const tool: ToolSchema = {
         primary: 'id',
         examples: [
             { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz' },
-            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --showId true' },
-            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --slice "0:30"' },
-            {
-                command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --slice "20241016135347-abcdefg:+20"',
-                description: 'Continue reading from a known cursor block'
-            }
+            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range context --limit 7' },
+            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range before --limit 5' },
+            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range children --limit 30 --showId true' },
+            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range children --limit=-1' },
+            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range children --limit=-1 --bodyOnly true > /tmp/doc.md' }
         ]
     },
     async run(ctx, input) {
-        const { id, slice } = input as { id: string; slice?: string };
-        const forceShowId = !!slice;
-        const showId = forceShowId || ((input as { showId?: boolean }).showId ?? false);
+        const raw = input as { id: string; range?: string; limit?: number; showId?: boolean; bodyOnly?: boolean };
+        const showId = raw.showId ?? false;
+        const bodyOnly = raw.bodyOnly ?? false;
 
-        // Look up the target block from SQL (we need type info)
-        const rootRows = await ctx.callEndpoint<
-            { id: string; type: string; subtype: string; markdown: string; content: string }[]
-        >('query.sql', {
-            stmt: `SELECT id, type, subtype, markdown, content FROM blocks WHERE id = '${escapeSqliteLiteral(id)}' LIMIT 1`
+        const rootRows = await ctx.callEndpoint<RootRow[]>('query.sql', {
+            stmt: `SELECT rowid, id, parent_id, root_id, box, type, subtype, markdown, content
+                FROM blocks
+                WHERE id = '${escapeSqliteLiteral(raw.id)}'
+                LIMIT 1`
         });
 
-        if (rootRows.length === 0) throw new Error(`Block not found: ${id}`);
+        if (rootRows.length === 0) throw new Error(`Block not found: ${raw.id}`);
         const root = rootRows[0]!;
+        const canHaveChildren = CHILD_CONTAINER_TYPES.has(root.type);
 
-        const isDocument = root.type === 'd';
-        const isHeading = root.type === 'h';
-        // Container blocks: document, blockquote, list, list-item, superblock
-        const isContainer = ['d', 'b', 'l', 'i', 's'].includes(root.type);
-        const needExpand = isDocument || isHeading || isContainer;
+        if (raw.range !== undefined && !isRangeMode(raw.range)) {
+            throw new Error('--range must be one of: self, children, context, before, after.');
+        }
 
-        let blocks: SliceBlock[];
+        const range: RangeMode = raw.range ?? (canHaveChildren ? 'children' : 'self');
+        const limitFallback = range === 'context' ? DEFAULT_CONTEXT_LIMIT : DEFAULT_LIMIT;
+        const limit = range === 'self' ? 1 : normalizeLimit(raw.limit, limitFallback);
 
-        if (needExpand) {
-            // Use getChildBlocks (kernel API) which returns markdown and correct order,
-            // handling heading-as-logical-container properly.
+        const header: string[] = [];
+        const warnings: string[] = [];
+        let blocks: ContentBlock[] = [];
+        let totalAvailable: number | undefined;
+        let truncated = false;
+
+        if (range === 'self') {
+            blocks = [
+                {
+                    rowid: root.rowid,
+                    id: root.id,
+                    type: blockType(root.type, root.subtype),
+                    markdown: root.markdown ?? '',
+                    isAnchor: true
+                }
+            ];
+            if (root.type === 'd') {
+                warnings.push('DOC_SELF_TITLE_ONLY: document self content is only the title; use --range children --limit N to read body blocks.');
+            }
+        } else if (range === 'children') {
+            if (!canHaveChildren) {
+                throw new Error(`Range "children" is not applicable to leaf block ${root.id} (${blockType(root.type, root.subtype)}).`);
+            }
+
             const children = await ctx.callEndpoint<
                 { id: string; type: string; subType?: string; markdown: string }[]
-            >('block.getChildBlocks', { id });
+            >('block.getChildBlocks', { id: root.id });
+            totalAvailable = children.length;
 
-            blocks = children.map((c) => ({
+            const childBlocks: ContentBlock[] = children.map((c, index) => ({
+                rowid: index,
                 id: c.id,
-                type: c.type + (c.subType ? '/' + c.subType : ''),
+                type: blockType(c.type, c.subType),
                 markdown: c.markdown ?? ''
             }));
+            const trimmed = trimChildren(childBlocks, limit);
+            blocks = trimmed.blocks;
+            truncated = trimmed.truncated;
 
-            // For heading blocks, prepend the heading itself
-            if (isHeading) {
-                blocks.unshift({
-                    id: root.id,
-                    type: root.type + (root.subtype ? '/' + root.subtype : ''),
-                    markdown: root.markdown ?? ''
-                });
+            if (root.type === 'd') {
+                warnings.push('DOC_CHILDREN_DEFAULT: document self content is only the title; body blocks start after the BEGIN line.');
             }
         } else {
-            blocks = [{ id: root.id, type: root.type + (root.subtype ? '/' + root.subtype : ''), markdown: root.markdown ?? '' }];
+            const parentId = root.parent_id || root.root_id || root.id;
+            const comparison = range === 'before' ? '<' : '>';
+            const order = range === 'before' ? 'DESC' : 'ASC';
+            const unlimited = isUnlimited(limit);
+            const fetchLimit = unlimited ? -1 : range === 'context' ? Math.max(1, Math.floor((limit - 1) / 2)) : limit;
+
+            const fetchSiblings = async (direction: 'before' | 'after', count: number): Promise<ContentBlock[]> => {
+                if (count === 0) return [];
+                const op = direction === 'before' ? '<' : '>';
+                const sortOrder = direction === 'before' ? 'DESC' : 'ASC';
+                const limitClause = count < 0 ? '' : `\n                        LIMIT ${count + 1}`;
+                const rows = await ctx.callEndpoint<RootRow[]>('query.sql', {
+                    stmt: `SELECT rowid, id, parent_id, root_id, box, type, subtype, markdown, content
+                        FROM blocks
+                        WHERE parent_id = '${escapeSqliteLiteral(parentId)}'
+                          AND id != '${escapeSqliteLiteral(root.id)}'
+                          AND rowid ${op} ${root.rowid}
+                        ORDER BY rowid ${sortOrder}${limitClause}`
+                });
+                if (count >= 0 && rows.length > count) truncated = true;
+                const selectedRows = count < 0 ? rows : rows.slice(0, count);
+                const selected = selectedRows.map((r) => ({
+                    rowid: r.rowid,
+                    id: r.id,
+                    type: blockType(r.type, r.subtype),
+                    markdown: r.markdown ?? ''
+                }));
+                return direction === 'before' ? selected.reverse() : selected;
+            };
+
+            if (range === 'context') {
+                const beforeCount = fetchLimit;
+                const afterCount = unlimited ? -1 : Math.max(0, limit - beforeCount - 1);
+                const before = await fetchSiblings('before', beforeCount);
+                const after = await fetchSiblings('after', afterCount);
+                blocks = [
+                    ...before,
+                    {
+                        rowid: root.rowid,
+                        id: root.id,
+                        type: blockType(root.type, root.subtype),
+                        markdown: root.markdown ?? '',
+                        isAnchor: true
+                    },
+                    ...after
+                ];
+            } else {
+                const limitClause = unlimited ? '' : `\n                        LIMIT ${limit + 1}`;
+                const rows = await ctx.callEndpoint<RootRow[]>('query.sql', {
+                    stmt: `SELECT rowid, id, parent_id, root_id, box, type, subtype, markdown, content
+                        FROM blocks
+                        WHERE parent_id = '${escapeSqliteLiteral(parentId)}'
+                          AND id != '${escapeSqliteLiteral(root.id)}'
+                          AND rowid ${comparison} ${root.rowid}
+                        ORDER BY rowid ${order}${limitClause}`
+                });
+                truncated = unlimited ? false : rows.length > limit;
+                blocks = (unlimited ? rows : rows.slice(0, limit)).map((r) => ({
+                    rowid: r.rowid,
+                    id: r.id,
+                    type: blockType(r.type, r.subtype),
+                    markdown: r.markdown ?? ''
+                }));
+                if (range === 'before') blocks.reverse();
+            }
         }
 
-        // Apply slice if requested
-        let sliceInfo = '';
-        if (slice && blocks.length > 0) {
-            const originalCount = blocks.length;
-            try {
-                blocks = applySlice(blocks, slice);
-            } catch (e: unknown) {
-                throw new Error(`Slice error: ${(e as Error).message}`);
-            }
-            if (blocks.length === 0) {
-                return {
-                    content: `(Slice "${slice}" returned 0 blocks. Original child count: ${originalCount}. Check your range.)`,
-                    details: { id, sliceEmpty: true, originalCount }
-                };
-            }
-            sliceInfo = `> [Slice] filter="${slice}" | showing ${blocks.length} of ${originalCount} child blocks\n\n`;
+        const bodyLabel = showId ? 'ANNOTATED BLOCK CONTENT' : 'BLOCK CONTENT';
+        if (showId) {
+            warnings.push('SHOW_ID_ANNOTATED_BODY: @@id@@ markers are injected by siyuan-cli and are not source text; do not use annotated body as brute-edit search text.');
         }
 
-        // Render output
-        const rendered = showId
-            ? blocks.map((b) => `@@${b.id}@@${b.type}\n${b.markdown ?? ''}`).join('\n\n')
-            : blocks.map((b) => b.markdown ?? '').join('\n\n');
+        header.push('[siyuan-cli:get-block-content]');
+        header.push(`anchor: ${root.id}`);
+        header.push(`type: ${blockType(root.type, root.subtype)}`);
+        header.push(`parent: ${root.parent_id || ''}`);
+        header.push(`root: ${root.root_id}`);
+        header.push(`range: ${range}`);
+        header.push(`limit: ${displayLimit(limit)}`);
+        header.push(`returned: ${blocks.length}`);
+        if (totalAvailable !== undefined) header.push(`available: ${totalAvailable}`);
+        header.push(`truncated: ${truncated}`);
+        header.push(`showId: ${showId}`);
+        header.push(`body: ${showId ? 'annotated markdown with injected id markers' : 'raw markdown without injected id markers'}`);
+        if (warnings.length > 0) {
+            for (const warning of warnings) header.push(`warning: ${warning}`);
+        }
+        if (truncated && blocks.length > 0) {
+            if (range === 'before') {
+                const firstId = blocks[0]!.id;
+                header.push(`next: siyuan tool get-block-content ${firstId} --range before --limit ${displayLimit(limit)}${showId ? ' --showId true' : ''}`);
+            } else if (range === 'children' || range === 'after') {
+                const lastId = blocks[blocks.length - 1]!.id;
+                header.push(`next: siyuan tool get-block-content ${lastId} --range after --limit ${displayLimit(limit)}${showId ? ' --showId true' : ''}`);
+            } else if (range === 'context') {
+                header.push(`hint: context truncated; increase --limit if more neighboring blocks are needed.`);
+            }
+        }
+        header.push(`--- BEGIN ${bodyLabel} ---`);
 
-        const content = sliceInfo + rendered;
+        const rendered = blocks.map((b) => renderBlock(b, showId)).join('\n\n');
+        const content = bodyOnly ? rendered : `${header.join('\n')}\n${rendered}`;
 
         return {
             content,
             details: {
-                id,
+                id: root.id,
                 blockType: root.type,
-                expanded: needExpand,
-                blockCount: blocks.length,
+                range,
+                limit,
+                unlimited: isUnlimited(limit),
+                returned: blocks.length,
+                truncated,
                 showId,
-                slice: slice ?? null
+                bodyOnly,
+                warnings,
+                blocks: blocks.map((b) => ({ id: b.id, type: b.type, isAnchor: b.isAnchor ?? false }))
             }
         };
     }

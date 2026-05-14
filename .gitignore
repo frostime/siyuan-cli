@@ -3,6 +3,7 @@ node_modules/
 *.tgz
 nul
 NUL
+.pi-input.md
 
 # Build output
 dist/

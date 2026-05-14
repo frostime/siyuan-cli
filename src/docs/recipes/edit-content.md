@@ -5,246 +5,176 @@ summary: Safely inspect, choose an edit strategy, update SiYuan content, and ver
 
 # Goal
 
-Modify existing SiYuan content with a stable target, explicit pre-flight inspection, and post-write verification.
+Modify SiYuan content with stable targets, pre-flight inspection, and post-write verification.
 
-# Scope
-
-Use this recipe for:
-
-- appending or inserting Markdown into a known document/block
-- updating one known block
-- updating multiple known blocks atomically
-- controlled whole-document search-and-replace
-- moving a block to a new position within or across documents
-- moving a document to a different parent in the document tree
-
-This recipe is not a block-type handbook. For the SiYuan data model, read `siyuan-guide/siyuan-block.md`. For target discovery, read `recipes/find-target.md` first.
+Use for: append/insert, block update, batch update, document rewrite, create/move/delete. Data model → `siyuan-guide/siyuan-block.md`; target discovery → `recipes/find-target.md`.
 
 # Pre-flight
 
-Before any write, confirm the workspace and inspect the target.
+For any non-append write:
 
 ```bash
 siyuan workspace which
-siyuan tool get-block-info <block-or-doc-id>
-siyuan tool get-block-content <block-or-doc-id> --showId true
+siyuan tool get-block-info <id>
+siyuan tool get-block-content <id> --range context --limit 7 --showId true
+siyuan tool locate-block --id <doc-id> --pattern "%target text%"  # SQL LIKE, not regex
 ```
 
-Use `--showId true` when you need to edit a specific child block.
+Direct-entry checklist: confirm workspace · stabilize target id · inspect before modify. Full rationale: SKILL §Safety anchors.
 
 # Strategy selector
 
-| Goal | Prefer | Notes |
-|------|--------|-------|
-| Append content to a known document/block/daily note | `siyuan tool append-content` | Safest path when existing content should remain unchanged |
-| Replace one known block | `siyuan api block.updateBlock` | Use a block id, not a title or fuzzy match |
-| Replace multiple known blocks | `siyuan api block.batchUpdateBlock` | Atomic multi-block update |
-| Insert before/after a known block | `siyuan api block.insertBlock --nextID/--previousID` | Use `--parentID` when the parent is known |
-| Append/prepend under a parent block | `siyuan api block.appendBlock` / `block.prependBlock` | Creates new child blocks |
-| Whole-document search-and-replace | `siyuan tool brute-edit` | High-risk path; use only when ID churn is acceptable |
-| Move a block to a new position | `siyuan api block.moveBlock` | Block id is preserved; `--previousID` anchors position, `--parentID` is the container |
-| Move a document to another parent | `siyuan api filetree.moveDocsByID` | hpath changes; `id` and content are preserved |
-| Delete a document | `siyuan api filetree.removeDocByID` | Prefer over deleting a document block |
+| Goal | Command | Key notes |
+|------|---------|-----------|
+| Append to known doc/block | `block.appendBlock` | Fast path. `--parentID`, `--data`. |
+| Append to daily note | `block.appendDailyNoteBlock` | `--notebook` required. |
+| Replace one known block | `block.updateBlock` | Requires stable block id. |
+| Replace multiple known blocks | `block.batchUpdateBlock` | Atomic. JSON array of `{id, data, dataType}`. |
+| Insert before/after a block | `block.insertBlock` | `--nextID` or `--previousID` + `--parentID`. |
+| Prepend under parent | `block.prependBlock` | Creates new first child. |
+| Broad document-level rewrite | `brute-edit --check` → `--dry-run` → `--yes` | Only if SAFE. Regenerates child ids. |
+| Whole-document overwrite | `brute-edit --overwrite` | Same safety checks as brute-edit. |
+| Create new document | `filetree.createDocWithMd` | `--notebook`, `--path`, `--markdown`. |
+| Move a block | `block.moveBlock` | `--id`, `--previousID`, `--parentID`. |
+| Move a document | `filetree.moveDocsByID` | hpath changes; id preserved. |
+| Delete a document | `filetree.removeDocByID` | Prefer over deleting document block. |
+
+Run `siyuan api <command> --help` for parameters and INPUT SOURCES.
 
 # Side effects
 
-| Operation | Existing child block IDs | Main risk |
-|-----------|--------------------------|-----------|
-| `block.updateBlock` on a leaf/container child | Target id usually remains | Markdown may change the block type |
-| `block.batchUpdateBlock` on child blocks | Target ids remain | Wrong id updates the wrong block atomically |
-| `block.updateBlock` / `batchUpdateBlock` on a document block (`type='d'`) | Child tree is replaced | Existing child ids, refs, and attributes may be invalidated |
-| `insertBlock` / `appendBlock` / `prependBlock` | Existing ids remain; new content gets new ids | Insert position must be correct |
+> ⚠️ `updateBlock` on a document block (`type='d'`) replaces the entire child tree. Child ids, refs, and custom attrs are invalidated. For document rewrites, prefer `brute-edit --check true`.
+
+| Operation | Child block IDs | Risk |
+|-----------|----------------|------|
+| `updateBlock` on leaf/container child | Target id usually remains | May change block type |
+| `batchUpdateBlock` on children | Target ids remain | Wrong id → wrong block updated atomically |
+| `updateBlock` on document block (`type='d'`) | **Child tree replaced** | Existing child ids/refs/attrs invalidated |
+| `insertBlock` / `appendBlock` / `prependBlock` | Existing ids remain | Insert position must be correct |
 | `moveBlock` | Moved block id remains | Document structure changes |
-| `filetree.moveDocsByID` | All block ids remain | `hpath` changes; any hardcoded hpath references become stale |
-| `brute-edit` | Child block ids are regenerated | Unsafe for documents whose child blocks are referenced or attributed |
+| `filetree.moveDocsByID` | All block ids remain | hpath changes |
+| `brute-edit` / `--overwrite` | **Child ids regenerated** | Refuses docs with child attrs, inbound refs, or excessive size |
 
 # Commands
 
 ## Append content
 
+Fast path for append-only operations.
+
 ```bash
-siyuan workspace which
-siyuan tool append-content \
-  --targetId <doc-or-block-id> \
-  --targetType document \
-  --markdown @stdin \
-  --dry-run <<'EOF'
+siyuan api block.appendBlock --parentID <id> --data @stdin --yes <<'EOF'
 ## New section
-
-Paragraph content here.
-EOF
-
-siyuan tool append-content \
-  --targetId <doc-or-block-id> \
-  --targetType document \
-  --markdown @stdin \
-  --yes <<'EOF'
-## New section
-
-Paragraph content here.
+Content.
 EOF
 ```
 
-Use `--targetType block` for block targets and `--targetType dailynote` when `--targetId` is a notebook id.
+`dataType` defaults to `markdown`. Use `--dry-run` if parent id was just resolved. For multi-line content, prefer `@stdin` (heredoc / here-string) or `@file:` over inline `--data`; shell does not interpret `\n` as a newline inside quoted strings.
 
-## Replace one block
+Daily notes are per-notebook: `block.appendDailyNoteBlock --notebook <id>`. If notebook id is unknown, run `notebook.lsNotebooks`; if multiple plausible notebooks, ask.
 
-```bash
-siyuan workspace which
-siyuan tool get-block-content <doc-id> --showId true
-
-siyuan api block.updateBlock \
-  --id <block-id> \
-  --dataType markdown \
-  --data @stdin \
-  --yes <<'EOF'
-Replacement markdown content here.
-EOF
-
-siyuan tool get-block-content <doc-id> --showId true
-```
-
-Use `@file:./content.md` instead of `@stdin` when content already lives in a file.
-
-## Replace multiple blocks
+## Replace one or multiple blocks
 
 ```bash
-siyuan workspace which
-siyuan tool get-block-content <doc-id> --showId true
-
-cat > blocks.json <<'EOF'
-[
-  { "id": "<block-id-1>", "data": "New content 1", "dataType": "markdown" },
-  { "id": "<block-id-2>", "data": "New content 2", "dataType": "markdown" }
-]
+# Single block (run --help for params)
+siyuan api block.updateBlock --id <block-id> --dataType markdown --data @stdin --yes <<'EOF'
+Replacement content.
 EOF
 
+# Multiple blocks atomically (JSON array via @file: or heredoc)
 siyuan api block.batchUpdateBlock --blocks @file:./blocks.json --dry-run
 siyuan api block.batchUpdateBlock --blocks @file:./blocks.json --yes
-
-siyuan tool get-block-content <doc-id> --showId true
 ```
 
-Default to `dataType: "markdown"`. Use `dom` only when DOM-level editing is explicitly required.
+`blocks.json`: `[{"id":"...","data":"...","dataType":"markdown"}, ...]`. Default `markdown`; use `dom` only for DOM-level edits.
 
-## Insert before or after a block
+## Insert before or after
 
 ```bash
-# Insert before <next-block-id>
-siyuan api block.insertBlock \
-  --parentID <parent-id> \
-  --nextID <next-block-id> \
-  --dataType markdown \
-  --data @stdin \
-  --yes <<'EOF'
-Inserted before the target block.
-EOF
-
-# Insert after <previous-block-id>
-siyuan api block.insertBlock \
-  --parentID <parent-id> \
-  --previousID <previous-block-id> \
-  --dataType markdown \
-  --data @stdin \
-  --yes <<'EOF'
-Inserted after the target block.
+# Insert after a sibling
+siyuan api block.insertBlock --parentID <parent-id> --previousID <sibling-id> \
+  --dataType markdown --data @stdin --yes <<'EOF'
+Inserted content.
 EOF
 ```
 
-## Whole-document search-and-replace
+Use `--nextID` to insert before. Full params: `block.insertBlock --help`.
+
+## Create a document
 
 ```bash
-siyuan workspace which
-siyuan tool get-block-info <doc-id>
-
-siyuan tool brute-edit <doc-id> \
-  --replacements @stdin \
-  --dry-run <<'EOF'
-[
-  {"search": "old heading", "replace": "new heading"},
-  {"search": "deprecated term", "replace": "updated term"}
-]
-EOF
-
-# If replacements are already in a file, one @file form is enough
-siyuan tool brute-edit <doc-id> \
-  --replacements @file:./replacements.json \
-  --yes
-
-siyuan tool get-block-content <doc-id> --showId true
+siyuan api filetree.createDocWithMd --notebook <notebook-id> --path "/path/to/doc" \
+  --markdown @file:./content.md
 ```
 
-Only use this when regenerating child block ids is acceptable.
+⚠️ Git Bash/MSYS may rewrite leading `/`; use `MSYS_NO_PATHCONV=1` or `//path`.
+
+## Broad document-level rewrite (brute-edit)
+
+Use only when block-level edits are fragile/inefficient. Always check first.
+
+```bash
+# 1. Check safety
+siyuan tool brute-edit <doc-id> --check true --print json
+
+# UNSAFE → checkpoint + block-level fallback
+siyuan tool checkpoint-doc <doc-id>
+
+# SAFE → preview, then execute
+siyuan tool brute-edit <doc-id> --replacements @file:./replacements.json --dry-run
+siyuan tool brute-edit <doc-id> --replacements @file:./replacements.json --yes
+```
+
+`replacements.json`: `[{"search":"old text","replace":"new text"}, ...]`
+Each search must match exactly once. Overlapping or missing matches reject the operation.
+
+## Whole-document overwrite
+
+```bash
+siyuan tool brute-edit <doc-id> --check true --print json
+# If SAFE:
+siyuan tool get-block-content <doc-id> --range children --limit=-1 --bodyOnly true > "$TMPDIR/doc.md"
+# ... edit $TMPDIR/doc.md locally ...
+siyuan tool brute-edit <doc-id> --overwrite @file:$TMPDIR/doc.md --dry-run
+siyuan tool brute-edit <doc-id> --overwrite @file:$TMPDIR/doc.md --yes
+rm "$TMPDIR/doc.md"
+```
+
+Never overwrite from `--showId true` output; markers are not source text.
 
 ## Move a block
 
 ```bash
-siyuan workspace which
-siyuan tool get-block-info <block-id>   # confirm target block and its current parent
-
-# Move to after a known sibling (most common)
 siyuan api block.moveBlock --id <block-id> --previousID <sibling-id> --parentID <parent-id>
-
-# Move to first child of a parent (previousID must be empty string)
-siyuan api block.moveBlock --id <block-id> --previousID "" --parentID <parent-id>
-
-siyuan tool get-block-info <block-id>   # verify new parent
+# Move to first child: --previousID ""
 ```
-
-`--previousID` anchors the position (the block that will precede the moved block); `--parentID` is the container. Both are required by the CLI. To move to the first child position, pass `--previousID ""`.
 
 ## Move a document
 
 ```bash
-siyuan workspace which
-siyuan tool get-block-info <doc-id>   # confirm current location
-
-# Move one or more documents under a new parent document or notebook root
-siyuan api filetree.moveDocsByID \
-  --fromIDs '["<doc-id>"]' \
-  --toID <target-parent-doc-or-notebook-id>
-
-siyuan tool resolve-path --id <doc-id>   # verify new hpath
+siyuan api filetree.moveDocsByID --fromIDs '["<doc-id>"]' --toID <target-parent-id>
 ```
 
-`--toID` accepts either a document id (move inside that document) or a notebook id (move to notebook root). The block id and all content are preserved; only `hpath` and `path` change.
+`--toID`: document id (move inside) or notebook id (move to root). Block ids preserved; hpath changes.
 
 # Verification
 
 After writing:
 
 ```bash
-siyuan tool get-block-content <doc-or-block-id> --showId true
+siyuan tool get-block-content <id> --range context --limit 7 --showId true
 ```
 
-Check that:
-
-- the intended target changed
-- neighboring sibling content did not change unexpectedly
-- the resulting block ids are known when follow-up edits are needed
-- the target still belongs to the intended workspace/notebook/document
+Confirm: intended target changed · neighbors unchanged · follow-up ids known · correct workspace/notebook.
 
 # Recovery
 
-## Wrong target risk
+**Wrong target**: re-run `workspace which` + `get-block-info` + bounded read; narrow to stable block id before retry.
 
-- re-run `siyuan workspace which`
-- re-run `siyuan tool get-block-info <id>`
-- read content with `--showId true`
-- narrow to a stable block id before retrying
-
-## Write denied or approval required
-
-- inspect permission rules with `siyuan workspace which`
-- if the Approval Center opens, approve or reject the request there
-- `siyuan approval list` shows pending requests and their ids
-- retry with `--yes` only when the action is intended and safe
-- if `behavior.allowYes` is `false`, approve via the Approval Center instead
+**Denied / approval required**: inspect rules with `workspace which`; approve/reject in Approval Center or `siyuan approval list`. Retry with `--yes` only when intended and allowed.
 
 # Related docs
 
-- `recipes/find-target.md`
-- `recipes/read-content.md`
-- `siyuan-guide/siyuan-block.md`
-- `cli-usage/workspace-config.md`
-- `cli-usage/permission.md`
+- `recipes/find-target.md` — resolve user hints to stable ids
+- `recipes/read-content.md` — bounded reading with id awareness
+- `siyuan-guide/siyuan-block.md` — block types, attributes, Markdown extensions
+- `cli-usage/permission.md` — permission rules and debugging

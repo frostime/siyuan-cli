@@ -21,7 +21,7 @@ import type { EndpointSchema } from '@/shared/schema.js';
  */
 export const schema: EndpointSchema = {
     endpoint: '/api/import/importStdMd',
-    summary: 'Import local Markdown file into SiYuan. (Prefer push-md tool over using this API directly.)',
+    summary: 'Import local Markdown file into SiYuan. Creates a new document.',
     payload: {
         type: 'object',
         required: ['notebook', 'localPath', 'toPath'],

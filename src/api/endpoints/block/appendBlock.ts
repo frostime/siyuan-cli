@@ -5,14 +5,14 @@ export const schema: EndpointSchema = {
     summary: 'Append blocks to parent',
     payload: {
         type: 'object',
-        required: ['dataType', 'data', 'parentID'],
+        required: ['data', 'parentID'],
         additionalProperties: false,
         properties: {
             dataType: {
                 type: 'string',
                 enum: ['markdown', 'dom'],
                 default: 'markdown',
-                description: 'Content type'
+                description: 'Content type (optional, defaults to markdown; prefer markdown for agents)'
             },
             data: { type: 'string', description: 'Content to append' },
             parentID: {

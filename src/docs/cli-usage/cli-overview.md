@@ -6,6 +6,14 @@ summary: Command structure, flags, input sources, and error handling for siyuan-
 
 # CLI Overview
 
+## Agent quick sections
+
+Jump to what agents need most often:
+- [Input sources](#input-sources) — @file, @stdin, @env, heredoc, constraints
+- [Git Bash / MSYS path conversion](#git-bash--msys-path-conversion) — workarounds for `/` rewriting
+- [Error handling](#error-handling) — exit codes, warning codes, error codes
+- [Debugging](#debugging) — --debug, --dry-run, workspace which
+
 ## Command structure
 
 ```text
@@ -25,7 +33,7 @@ siyuan
 ├── tool         Run high-level composite tools
 │   ├── list     List available tools
 │   ├── describe Show tool schema
-│   └── <id>     Run a tool (e.g. list-doc-tree, append-content)
+│   └── <id>     Run a tool (e.g. list-doc-tree, get-block-content)
 ├── doc          Discover shipped docs
 │   ├── list     List built-in docs with real file paths
 │   └── read     Read a built-in doc by path or unique basename
@@ -108,8 +116,9 @@ Tools compose multiple endpoint calls into a single workflow.
 
 ```bash
 siyuan tool list
-siyuan tool resolve-path --hpath "/diary/2025-01"
-siyuan tool append-content --targetId <id> --targetType document --markdown @file:./note.md
+siyuan tool list-doc-tree --entry <notebook-or-doc-id> --depth 2
+siyuan tool get-block-content <block-or-doc-id> --range context --limit 7 --showId true
+siyuan tool checkpoint-doc <doc-id>
 ```
 
 ### Output modes
@@ -132,7 +141,7 @@ All `siyuan api <id>` and `siyuan tool <id>` commands accept:
 | `--baseUrl` | | Ad-hoc kernel URL (skips workspace resolution entirely) |
 | `--token` | | Override authentication token |
 | `--config` | | Override config file path |
-| `--dry-run` | | Preview write operations without calling kernel |
+| `--dry-run` | | Preview write operations without calling kernel. For workflow tools such as `brute-edit`, dry-run may also perform local read/planning checks and return an edit plan. |
 | `--yes` | `-y` | Execute approval-gated writes immediately without opening the Approval Center. Ignored when `behavior.allowYes` is `false` |
 | `--debug` | | Print intended request (curl-equivalent) to stderr |
 | `--json` | `-j` | Entire payload as inline JSON |
@@ -168,7 +177,7 @@ Usage examples:
 # pipe
 echo "SELECT id FROM blocks LIMIT 5" | siyuan api query.sql --stmt @stdin
 
-# shell heredoc — no temp file needed, preferred for multiline input
+# shell heredoc (bash) / here-string (PowerShell @'...'@) — no temp file needed, preferred for multiline input
 siyuan api query.sql --stmt @stdin <<'EOF'
 SELECT id, content
 FROM blocks
@@ -176,11 +185,13 @@ WHERE type = 'd' AND content LIKE '%keyword%'
 LIMIT 10
 EOF
 
-siyuan tool append-content --targetId <id> --targetType document --markdown @stdin <<'EOF'
+siyuan api block.appendBlock --parentID <id> --data @stdin <<'EOF'
 ## New section
 
 Paragraph content here.
 EOF
+
+# append endpoints default `dataType` to `markdown`; pass `--dataType dom` only when needed.
 
 # multiple long inputs in one command — use @file: for each
 siyuan api block.updateBlock --id <id> --data @file:./content.md --dataType markdown
@@ -188,21 +199,21 @@ siyuan api block.updateBlock --id <id> --data @file:./content.md --dataType mark
 
 ## Git Bash / MSYS path conversion
 
-On Windows Git Bash / MSYS shells, arguments starting with `/` may be rewritten into Windows paths before the CLI receives them. This affects SiYuan virtual paths such as `--hpath "/TestDoc"` or `--toPath "/inbox"`.
+On Windows Git Bash / MSYS shells, arguments starting with `/` may be rewritten into Windows paths before the CLI receives them. This affects SiYuan virtual paths such as `--path "/TestDoc"` or `--toPath "/inbox"`.
 
 Prefer disabling shell-side conversion for the command:
 
 ```bash
-MSYS_NO_PATHCONV=1 pnpm run siyuan tool resolve-path --hpath "/TestDoc"
-MSYS_NO_PATHCONV=1 pnpm run siyuan tool push-md ./note.md --notebook <id> --toPath /inbox
+MSYS_NO_PATHCONV=1 pnpm run siyuan api filetree.getIDsByHPath --notebook <id> --path "/TestDoc"
+MSYS_NO_PATHCONV=1 pnpm run siyuan api filetree.createDocWithMd --notebook <id> --path "/inbox/note" --markdown @file:./note.md
 ```
 
 A Git Bash / MSYS-specific escape also works: write the leading slash as `//` so the CLI receives `/...`.
 
 ```bash
-pnpm run siyuan tool resolve-path --hpath //TestDoc
-pnpm run siyuan tool push-md ./note.md --notebook <id> --toPath //inbox
-pnpm run siyuan tool push-md ./note.md --notebook <id> --toPath //
+pnpm run siyuan api filetree.getIDsByHPath --notebook <id> --path //TestDoc
+pnpm run siyuan api filetree.createDocWithMd --notebook <id> --path //inbox/note --markdown @file:./note.md
+pnpm run siyuan api filetree.createDocWithMd --notebook <id> --path //note --markdown @file:./note.md
 ```
 
 ## Error handling
@@ -303,7 +314,7 @@ Normalization rules:
 
 ## Approval Center
 
-When a write requires approval and `--yes` is absent (or ignored due to `behavior.allowYes: false`), the CLI submits a request to the local Approval Broker, opens `http://127.0.0.1:<port>/approval`, and waits inline for up to `behavior.approval.timeout` seconds (default 60).
+When a write requires approval and `--yes` is absent (or ignored due to `behavior.allowYes: false`), the CLI submits a request to the local Approval Broker, opens `http://127.0.0.1:<port>/approval`, and waits inline for up to `behavior.approval.timeout` seconds (default 60). Browser auto-open is debounced by `behavior.approval.openDebounceMs` (default 1000ms), but every request still emits an `APPROVAL_PENDING` event with its URL on stderr.
 
 ```bash
 siyuan approval status
