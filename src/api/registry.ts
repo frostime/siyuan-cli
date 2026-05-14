@@ -103,7 +103,7 @@ function deriveSeverity(classification: EndpointClassification): SeverityLabel {
 
 function deriveMeta(schema: EndpointSchema, id: string): RegisteredEndpoint['meta'] {
     const classification = normalizeLegacyClassification(schema, id);
-    const severity = deriveSeverity(classification);
+    const severity = classification.severity ?? deriveSeverity(classification);
     const tags = [
         `action:${classification.action}`,
         `domain:${classification.domain}`,

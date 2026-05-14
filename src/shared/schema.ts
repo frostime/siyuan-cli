@@ -83,7 +83,11 @@ export function validatePermissionRulesRaw(
             errors.push({ message: `${scope}.permission.rules[${i}] must be an object.` });
             continue;
         }
-        for (const key of Object.keys(rule as Record<string, unknown>)) {
+        const rec = rule as Record<string, unknown>;
+        if (typeof rec['effect'] !== 'string') {
+            errors.push({ message: `${scope}.permission.rules[${i}] must have an "effect" field.` });
+        }
+        for (const key of Object.keys(rec)) {
             if (!PERMISSION_RULE_KEYS.has(key)) {
                 errors.push({
                     message: `${scope}.permission.rules[${i}] has unknown field "${key}".`
@@ -252,7 +256,9 @@ export type EndpointConcern =
 export type EndpointCardinality = 'single' | 'batch' | 'global';
 export type SeverityLabel = 'low' | 'medium' | 'high';
 
+/** @deprecated Use EndpointAction. */
 export type EndpointMode = EndpointAction;
+/** @deprecated Use EndpointClassification['domain']. */
 export type EndpointSurface =
     | 'meta'
     | 'content'
@@ -260,7 +266,9 @@ export type EndpointSurface =
     | 'workspace'
     | 'runtime'
     | 'network';
+/** @deprecated Use EndpointCardinality. */
 export type EndpointScope = EndpointCardinality;
+/** @deprecated Removed in new classification model. */
 export type EndpointOperation =
     | 'inspect'
     | 'search'
@@ -271,6 +279,7 @@ export type EndpointOperation =
     | 'move'
     | 'upload'
     | 'control';
+/** @deprecated Use SeverityLabel. */
 export type RiskLabel =
     | 'safe'
     | 'sensitive'
@@ -364,6 +373,7 @@ export interface EndpointClassification {
     domain: EndpointDomain;
     concerns?: EndpointConcern[];
     cardinality?: EndpointCardinality;
+    severity?: SeverityLabel;
 }
 
 /** @deprecated Accepted at registry boundaries during migration. */

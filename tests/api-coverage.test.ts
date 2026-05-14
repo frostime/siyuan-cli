@@ -277,6 +277,6 @@ test('runtime/meta/network severity mapping is explicit', () => {
     assert.equal(registerOne(networkForwardProxy).meta.severity, 'high');
     assert.equal(registerOne(sqliteFlushTransaction).meta.severity, 'high');
     assert.equal(registerOne(systemGetConf).meta.severity, 'medium');
-    assert.equal(registerOne(systemLogoutAuth).meta.severity, 'high');
+    assert.equal(registerOne(systemLogoutAuth).meta.severity, 'medium');
     assert.equal(registerOne(systemVersion).meta.severity, 'low');
 });

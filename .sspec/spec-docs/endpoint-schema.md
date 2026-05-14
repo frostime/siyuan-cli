@@ -98,7 +98,8 @@ classification: {
     | 'network-request'
     | 'unbounded-read'
   >,
-  cardinality?: 'single' | 'batch' | 'global'
+  cardinality?: 'single' | 'batch' | 'global',
+  severity?: 'low' | 'medium' | 'high'
 }
 ```
 
@@ -110,11 +111,12 @@ Field semantics:
 | `domain` | Protection boundary touched by the endpoint | `content`, `storage`, `runtime` |
 | `concerns` | Notable behaviors worth explaining | `filesystem`, `process-exit`, `network-request` |
 | `cardinality` | Impact-size hint | `single`, `batch`, `global` |
+| `severity` | Manual override for derived severity | `low`, `medium`, `high` |
 
 Derived semantics:
 - Registry tags are derived from normalized `classification`.
 - Registry derives `severity: low | medium | high` for display and warnings.
-- `severity` is not authored by endpoint files.
+- `severity` can be authored explicitly; when present it takes priority over derivation.
 - `severity` is not a permission predicate and does not trigger approval.
 - Approval is controlled by permission rules and resource-level permission checks.
 
@@ -134,7 +136,7 @@ Code refs: `/src/shared/schema.ts#EndpointClassification`, `/src/api/registry.ts
 
 #### Severity derivation
 
-`severity` is intentionally coarse:
+`severity` is intentionally coarse. When `classification.severity` is authored, it is used directly. Otherwise derived from:
 
 | Facts | Severity |
 |---|---|

@@ -239,6 +239,16 @@ classification: {
 }
 ```
 
+Optional `severity` overrides the auto-derived value when the default derivation doesn't fit:
+
+```ts
+classification: {
+  action: "invoke",
+  domain: "runtime",
+  severity: "medium"  // override: default derivation would give "high"
+}
+```
+
 ### `guard.payloadTargets` → resource scoping
 
 User rules that use `notebook` or `path` conditions can only match endpoints whose schema declares `guard.payloadTargets`. These tell the CLI which payload fields contain protected resources:
@@ -277,7 +287,7 @@ When response filtering removes content, the CLI emits `CONTENT_FILTERED` on std
 
 ### Extension author checklist
 
-1. What `classification` fits: `action`, `domain`, optional `concerns`, optional `cardinality`?
+1. What `classification` fits: `action`, `domain`, optional `concerns`, optional `cardinality`, optional `severity` override?
 2. Does the payload contain block ids, notebook ids, or paths? → declare `guard.payloadTargets`.
 3. Is it a global read? → MUST declare `guard.response` or `guard.filterResponse`.
 

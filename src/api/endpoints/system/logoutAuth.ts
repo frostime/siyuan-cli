@@ -7,7 +7,8 @@ export const schema: EndpointSchema = {
     classification: {
         action: 'invoke',
         domain: 'runtime',
-        cardinality: 'single'
+        cardinality: 'single',
+        severity: 'medium'
     },
     formatStrategy: 'transaction'
 };
