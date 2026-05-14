@@ -9,6 +9,12 @@ type DailyRow = {
     created: string;
 };
 
+type NotebookInfo = {
+    id: string;
+    name: string;
+    closed: boolean;
+};
+
 function normalizeDate(dateStr: string): Date {
     const d = new Date(dateStr);
     if (Number.isNaN(d.getTime())) throw new Error(`Invalid date: ${dateStr}`);
@@ -104,12 +110,25 @@ export const tool: ToolSchema = {
 
         stmt += '\n  ORDER BY A.value DESC\n  LIMIT 200';
 
+        // Fetch notebook names for display
+        const notebooks = await ctx.callEndpoint<{ notebooks: NotebookInfo[] }>(
+            'notebook.lsNotebooks',
+            {}
+        );
+        const notebookMap = new Map(
+            notebooks.notebooks.map((nb) => [nb.id, nb.name])
+        );
+
         const rows = await ctx.callEndpoint<DailyRow[]>('query.sql', { stmt });
 
         const content = rows.length
             ? `# Daily Notes (${rows.length})\n` +
               rows
-                  .map((r) => `- [${r.id}] ${r.hpath} (notebook: ${r.box})`)
+                  .map((r) => {
+                      const nbName = notebookMap.get(r.box);
+                      const nbLabel = nbName ? `${nbName} (${r.box})` : r.box;
+                      return `- [${r.id}] ${r.hpath} (notebook: ${nbLabel})`;
+                  })
                   .join('\n')
             : 'No daily notes found.';
 
