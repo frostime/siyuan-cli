@@ -371,8 +371,7 @@ test('array payload targets reject non-array payload values', async () => {
                 },
                 { ids: '/denied/doc.sy' },
                 engine,
-                'write',
-                'content'
+                'write'
             ),
         /expected array/
     );
@@ -420,8 +419,7 @@ test('array payload targets reject non-string items', async () => {
                 },
                 { ids: ['ok', 1] },
                 engine,
-                'write',
-                'content'
+                'write'
             ),
         /must resolve to string values/
     );
@@ -472,8 +470,7 @@ test('array payload targets reject on any denied item', async () => {
             },
             { ids: ['ok', 'bad', 'later'] },
             engine,
-            'write',
-            'content'
+            'write'
         )
     );
     assert.deepEqual(seen, ['ok', 'bad']);
@@ -568,4 +565,37 @@ test('workspace deny rejects workspace-path refs', async () => {
             }),
         ContentDeniedError
     );
+});
+
+test('Phase 2 resource-level action:invoke rule matches invoke endpoint with path condition', async () => {
+    const client = { call: async () => [] } as any;
+    const { engine } = makeEngine(client, {
+        rules: [
+            { endpoint: 'network.forwardProxy', action: 'invoke', path: '/denied/**', effect: 'deny' }
+        ]
+    });
+    await assert.rejects(
+        () =>
+            engine.checkContentRef(
+                { kind: 'path', value: '/denied/x', access: 'write' },
+                { endpoint: 'network.forwardProxy' },
+                'invoke'
+            ),
+        ContentDeniedError
+    );
+});
+
+test('Phase 2 resource-level action:write rule does NOT match invoke endpoint', async () => {
+    const client = { call: async () => [] } as any;
+    const { engine } = makeEngine(client, {
+        rules: [
+            { endpoint: 'network.forwardProxy', action: 'write', path: '/denied/**', effect: 'deny' }
+        ]
+    });
+    const effect = await engine.checkContentRef(
+        { kind: 'path', value: '/denied/x', access: 'write' },
+        { endpoint: 'network.forwardProxy' },
+        'invoke'
+    );
+    assert.equal(effect, 'allow');
 });

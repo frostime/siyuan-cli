@@ -90,7 +90,7 @@ classification.action: invoke -> permission action: invoke
 
 `invoke` is not folded into `write` for permission rule matching. A rule with `action: write` matches write endpoints only. A rule without `action` matches all actions.
 
-Resource access remains separate from endpoint action. `guard.payloadTargets[*].access` is still `read | write`; invoke endpoints use write resource access when they mutate or control protected resources.
+Resource access (`guard.payloadTargets[*].access`) remains `read | write` and describes the resource operation direction, but does not determine the permission action passed to the engine. Endpoint `action` (`read | write | invoke`) is used for both caller-level (Phase 1) and resource-level (Phase 2) rule matching.
 
 Code refs: `/src/api/guard.ts#executeEndpoint`, `/src/api/guard.ts#applyPayloadGuard`, `/src/shared/permission.ts#matchesCaller`.
 

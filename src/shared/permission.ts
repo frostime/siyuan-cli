@@ -23,6 +23,7 @@ import type { AppConfig, ResolvedWorkspace } from '../workspace/config.js';
 import {
     resolvePermissionEffect,
     type CallerContext,
+    type PermissionAction,
     type PermissionConfig,
     type PermissionContext,
     type PermissionEffect,
@@ -284,11 +285,12 @@ export class PermissionEngine implements PermissionEngineLike {
             value: string;
             access: 'read' | 'write';
         },
-        caller?: CallerContext
+        caller?: CallerContext,
+        endpointAction?: PermissionAction
     ): Promise<PermissionEffect> {
         const ctx: PermissionContext = {
             ...caller,
-            action: ref.access
+            action: endpointAction ?? ref.access
         };
 
         if (ref.kind === 'notebook') {

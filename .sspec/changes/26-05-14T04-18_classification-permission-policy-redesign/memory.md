@@ -1,6 +1,6 @@
 # Memory: classification-permission-policy-redesign
 
-**Updated**: 2026-05-14T20:39+08:00
+**Updated**: 2026-05-14T21:30+08:00
 
 ## Git Baseline (Immutable)
 
@@ -18,7 +18,7 @@
 
 ## State
 
-Follow-up fixes applied; ready for user review. Pending user decision on invoke/resource-action residual semantics.
+Follow-up fixes applied (batch 2). Pending user review on invoke/resource-action fix.
 
 ## Key Files
 
@@ -46,6 +46,7 @@ Follow-up fixes applied; ready for user review. Pending user decision on invoke/
 - [2026-05-14T05:45+08:00] [Decision] Incompatible extension classification cache should hard-fail with recache guidance rather than silently register stale semantics.
 - [2026-05-14T20:39+08:00] [Fact] Upstream SiYuan kernel `kernel/api/block.go#getBlockKramdowns` reads `arg["mode"]`; payload field should stay `mode` (not `action`).
 - [2026-05-14T20:39+08:00] [Risk] Runtime Phase 2 currently sets permission context action from resource access (`read|write`), so resource-scoped `action: invoke` rules cannot match; user confirmation required before semantic change.
+- [2026-05-14T21:30+08:00] [Decision] Fixed Phase 2 invoke action semantics: `checkContentRef` now accepts optional `endpointAction`; when provided, it takes precedence over `ref.access` for permission context. `applyPayloadGuard` passes endpoint action through to `checkContentRef`. Removed dead `resourceAccess()` helper. Updated design.md and permission-model.md to remove the "invoke maps to write" language. Added two regression tests (invoke+path rule matches, write rule does not match invoke).
 
 ## Milestones
 
@@ -55,4 +56,5 @@ Follow-up fixes applied; ready for user review. Pending user decision on invoke/
 - [2026-05-14T05:30+08:00] Refined spec/design: removed invoke-to-write permission folding and removed `raw-sql` concern.
 - [2026-05-14T05:45+08:00] Ran subagent design review, accepted key spec-level fixes, and created phase-based tasks.md.
 - [2026-05-14T06:30+08:00] Implemented classification/permission policy redesign across schema, registry, guard, endpoint schemas, config validation, extension cache, workspace template, docs, and tests. Verification passed: `pnpm run typecheck`, `pnpm test`, `pnpm run build`, manual `api list --tag severity:high`.
-- [2026-05-14T20:39+08:00] Follow-up patch: restored `block.getBlockKramdowns` payload `mode`, made API/extension list show stale/uncached/incompatible cache status as pending metadata, refreshed outdated approval/risk comments, and added regression assertion for `mode` field. Verification passed: `pnpm exec tsx --test tests/endpoint-schemas.test.ts tests/extension-system.test.ts`, `pnpm run typecheck`, `pnpm exec tsx src/cli.ts api list --group system`, `pnpm exec tsx src/cli.ts extension list`.
+- [2026-05-14T20:39+08:00] Follow-up patch (batch 1): restored `block.getBlockKramdowns` payload `mode`, made API/extension list show stale/uncached/incompatible cache status as pending metadata, refreshed outdated approval/risk comments, and added regression assertion for `mode` field. Verification passed: `pnpm exec tsx --test tests/endpoint-schemas.test.ts tests/extension-system.test.ts`, `pnpm run typecheck`, `pnpm exec tsx src/cli.ts api list --group system`, `pnpm exec tsx src/cli.ts extension list`.
+- [2026-05-14T21:30+08:00] Follow-up patch (batch 2): fixed Phase 2 invoke action semantics (`checkContentRef` + `endpointAction`, `applyPayloadGuard` signature, removed dead `resourceAccess()`), updated design.md and permission-model.md, added Phase 2 invoke action tests. Verification passed: `pnpm run typecheck`, `pnpm exec tsx --test tests/core-contracts.test.ts tests/endpoint-schemas.test.ts tests/extension-system.test.ts` (44 pass), `pnpm exec tsx src/cli.ts api list --group system`.

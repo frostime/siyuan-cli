@@ -404,7 +404,8 @@ export interface PermissionEngineLike {
     checkTool(id: string): void;
     checkContentRef(
         ref: { kind: ResourceKind; value: string; access: 'read' | 'write' },
-        caller?: CallerContext
+        caller?: CallerContext,
+        endpointAction?: PermissionAction
     ): Promise<PermissionEffect>;
     resolveContentIds(
         ids: string[]

@@ -8,6 +8,7 @@ import {
     runPointerFilterTerminal,
     type CallerContext,
     type EndpointSchema,
+    type PermissionAction,
     type PermissionEngineLike,
     type RegisteredEndpoint
 } from '../shared/schema.js';
@@ -71,7 +72,7 @@ export async function applyPayloadGuard(
     schema: EndpointSchema,
     payload: unknown,
     engine: PermissionEngineLike,
-    access: 'read' | 'write',
+    endpointAction?: PermissionAction,
     caller?: CallerContext
 ): Promise<{ needsApproval: boolean }> {
     const targets = schema.guard?.payloadTargets;
@@ -98,7 +99,8 @@ export async function applyPayloadGuard(
                 }
                 const effect = await engine.checkContentRef(
                     { kind: target.kind, value, access: target.access },
-                    caller
+                    caller,
+                    endpointAction
                 );
                 if (effect === 'approval') needsApproval = true;
             }
@@ -194,10 +196,6 @@ function isWriteLike(entry: RegisteredEndpoint): boolean {
     return entry.meta.classification.action !== 'read';
 }
 
-function resourceAccess(entry: RegisteredEndpoint): 'read' | 'write' {
-    return entry.meta.classification.action === 'read' ? 'read' : 'write';
-}
-
 export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
     const {
         entry,
@@ -226,7 +224,7 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
     engine.checkEndpoint(id);
 
     // Phase 2: resource-level gate (payload targets)
-    const { needsApproval: phase2NeedsApproval } = await applyPayloadGuard(schema, payload, engine, resourceAccess(entry), caller);
+    const { needsApproval: phase2NeedsApproval } = await applyPayloadGuard(schema, payload, engine, endpointAction, caller);
 
     if (debug) debugPreview(schema, payload, jsonExtra);
 

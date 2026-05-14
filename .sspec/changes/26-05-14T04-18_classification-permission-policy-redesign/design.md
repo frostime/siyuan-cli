@@ -107,16 +107,10 @@ Endpoint action and resource access are separate runtime concepts:
 
 | Concept | Type | Use |
 |---------|------|-----|
-| `endpointAction` | `read | write | invoke` | caller-level permission rule matching |
-| `resourceAccess` | `read | write` | payload target checks and content filtering |
+| `endpointAction` | `read \| write \| invoke` | permission rule matching (caller-level and resource-level) |
+| `payloadTarget.access` | `read \| write` | describes whether the payload target is being read or written; does not determine permission action |
 
-For resource access, invoke endpoints map to write:
-
-```ts
-function resourceAccess(action: EndpointAction): 'read' | 'write' {
-  return action === 'read' ? 'read' : 'write';
-}
-```
+Resource-level rule matching uses the endpoint's `action` (`read`, `write`, or `invoke`). A rule with `action: invoke` combined with `notebook` or `path` can match invoke endpoints in Phase 2. `payloadTargets[*].access` (the resource access direction) is available for future workspace-path-targeted rules but does not control which `action` value is passed to the permission engine.
 
 ```yaml
 permission:
