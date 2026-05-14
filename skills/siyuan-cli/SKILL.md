@@ -138,6 +138,7 @@ stderr = diagnostics; stdout = result.
 | Need | Read / do |
 |------|-----------|
 | workspace connect/debug | `siyuan doc read recipes/connect-workspace.md` |
+| config schema (behavior, rawApi, defaults, project-file) | `siyuan doc read cli-usage/workspace-config.md` |
 | locate user-named doc/block | `siyuan doc read recipes/find-target.md` |
 | read content ranges/paging/ids | `siyuan doc read recipes/read-content.md` |
 | edit/move/delete/batch/create | `siyuan doc read recipes/edit-content.md` |

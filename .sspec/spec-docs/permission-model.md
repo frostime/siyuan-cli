@@ -1,11 +1,13 @@
 ---
 name: permission-model
-description: "Permission engine architecture: rule-list model, two-phase evaluation, rule cascade, project override semantics, unknown-field validation, and approval effect semantics."
-updated: 2026-05-14
+description: "Permission engine architecture: rule-list model, two-phase evaluation, tool-level enforcement, bypassPermission, rule cascade, project override semantics, and approval effect semantics."
+updated: 2026-05-15
 scope:
   - /src/shared/permission.ts
   - /src/api/guard.ts
   - /src/shared/schema.ts
+  - /src/tool/command.ts
+  - /src/tool/registry.ts
   - /src/workspace/config.ts
   - /src/workspace/resolve.ts
   - /src/workspace/project-config.ts
@@ -124,6 +126,83 @@ Called from `applyPayloadGuard` in `/src/api/guard.ts`, once per `payloadTarget`
 
 ---
 
+## Tool-level permission enforcement
+
+Tools call endpoints internally via `ctx.callEndpoint()`. Without tool-level guards, permission enforcement happens inside each endpoint call — but tools cannot distinguish "resource not found" from "resource denied" when the response filter silently removes results.
+
+Three mechanisms address this, from declarative to imperative:
+
+### Declarative: `ToolSchema.guard.payloadTargets`
+
+Same schema as endpoint `payloadTargets`, declared on the tool. Evaluated by `tool/command.ts` before `run()` is called.
+
+```ts
+// src/tool/builtins/locate-block.ts
+guard: {
+    payloadTargets: [
+        { path: 'id', kind: 'id', access: 'read', skipEmpty: true }
+    ]
+}
+```
+
+Use when the tool's input schema has a direct field referencing a protected resource. `skipEmpty: true` is required for optional fields — when the field is empty, the guard is skipped and the tool runs without resource-level restriction.
+
+### Imperative: inline `ctx.permission.checkContentRef()` in `run()`
+
+Use when:
+- The resource reference is embedded in a JSON string field (e.g. `update-block`'s `blocks` is a JSON array string containing IDs)
+- The entry field is polymorphic (e.g. `list-doc-tree`'s `entry` can be a notebook ID or a document ID)
+
+```ts
+// Polymorphic example: try as block ID, fall back to notebook ID
+try {
+    await ctx.permission.checkContentRef(
+        { kind: 'id', value: entry, access: 'read' },
+        { tool: 'list-doc-tree' }
+    );
+} catch (e) {
+    if (e instanceof BlockNotFoundError) {
+        await ctx.permission.checkContentRef(
+            { kind: 'notebook', value: entry, access: 'read' },
+            { tool: 'list-doc-tree' }
+        );
+    } else throw e;
+}
+```
+
+Write tools MUST check both `read` and `write` access — a `deny read` rule implies the tool cannot even inspect the resource.
+
+### `bypassPermission` on `callEndpoint`
+
+After a tool performs its own permission check, subsequent internal API calls should not be re-evaluated by the endpoint permission pipeline. Otherwise:
+- Response filter silently removes results → tool reports "not found" instead of "denied"
+- Double permission evaluation is redundant and can produce confusing error messages
+
+```ts
+const rows = await ctx.callEndpoint<Row[]>('query.sql', { stmt }, { bypassPermission: true });
+```
+
+`bypassPermission: true` skips Phase 1 (checkEndpoint), Phase 2 (applyPayloadGuard), approval gate evaluation, and response filtering. It preserves: payload validation, debug output, and dry-run semantics.
+
+Use only after the tool has already performed its own permission check. The three `callEndpoint` variants form a spectrum:
+
+| Variant | Permission | Approval | Debug/DryRun |
+|---------|-----------|----------|---------------|
+| `callEndpoint(id, payload)` | ✅ full | ✅ | ✅ |
+| `callEndpoint(id, payload, { bypassPermission: true })` | ❌ skipped | ❌ skipped | ✅ |
+| `callEndpointRaw(endpoint, payload)` | ❌ | ❌ | ❌ |
+
+### Design rationale
+
+The tool is the semantic boundary for permission. It knows:
+- What access level the operation truly requires (read, write, or both)
+- Whether a field is a notebook ID vs document ID
+- How to produce a meaningful error message for the user
+
+Endpoint-level permission is a safety net for direct `siyuan api` calls. When a tool wraps multiple endpoint calls into a higher-level operation, the tool-level check is authoritative and internal calls should bypass.
+
+---
+
 ## Approval gate
 
 After both phases pass, `executeEndpoint()` evaluates the approval gate.
@@ -221,8 +300,10 @@ Exit code `5` (`ExitCode.PERMISSION`) for `ENDPOINT_DENIED` and `CONTENT_DENIED`
 | File | Role |
 |------|------|
 | `/src/shared/permission.ts` | `PermissionEngine`, `cascadePermission`, Phase 1 + Phase 2 logic |
-| `/src/api/guard.ts` | `executeEndpoint`: wires Phase 1 → Phase 2 → approval gate → kernel call |
-| `/src/shared/schema.ts` | `PermissionRule`, `PermissionConfig`, `PermissionContext`, rule validation types |
+| `/src/api/guard.ts` | `executeEndpoint`: wires Phase 1 → Phase 2 → approval gate → kernel call; `bypassPermission` option |
+| `/src/shared/schema.ts` | `PermissionRule`, `PermissionConfig`, `PermissionContext`, `CallEndpointOptions`, rule validation types |
+| `/src/tool/command.ts` | Tool-level `payloadTargets` guard evaluation before `run()` |
+| `/src/tool/registry.ts` | `createToolContext`: wires `callEndpoint` with `bypassPermission` support |
 | `/src/workspace/config.ts` | global/workspace config loading, permission normalization and validation |
 | `/src/workspace/project-config.ts` | `.siyuan-cli.yaml` loading and project permission validation |
 | `/src/workspace/resolve.ts` | `effectivePermission` attachment from project config |

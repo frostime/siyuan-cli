@@ -37,6 +37,12 @@ export const tool: ToolSchema = {
     id: 'list-dailynote',
     summary: 'List daily note documents for a date or date range',
     tags: ['read', 'aggregate'],
+    classification: { action: 'read', domain: 'content' },
+    guard: {
+        payloadTargets: [
+            { path: 'notebookId', kind: 'notebook', access: 'read', skipEmpty: true }
+        ]
+    },
     input: {
         type: 'object',
         additionalProperties: false,

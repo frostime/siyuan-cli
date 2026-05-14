@@ -81,6 +81,7 @@ export const tool: ToolSchema = {
     id: 'get-block-info',
     summary: 'Get metadata for one or more blocks (type, path, breadcrumb, TOC for docs, child count for containers)',
     tags: ['read'],
+    classification: { action: 'read', domain: 'content' },
     input: {
         type: 'object',
         required: ['id'],

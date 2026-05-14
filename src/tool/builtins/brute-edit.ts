@@ -24,6 +24,13 @@ operation is rejected.
 
 Uses global --dry-run to preview without writing.`,
     tags: ['write'],
+    classification: { action: 'write', domain: 'content', severity: 'high' },
+    guard: {
+        payloadTargets: [
+            { path: 'id', kind: 'id', access: 'read' },
+            { path: 'id', kind: 'id', access: 'write' }
+        ]
+    },
     input: {
         type: 'object',
         required: ['id'],

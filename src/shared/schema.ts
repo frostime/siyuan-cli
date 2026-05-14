@@ -472,11 +472,16 @@ export interface ToolResult {
     meta?: { elapsedMs?: number; filteredCount?: number; truncated?: boolean };
 }
 
+export interface CallEndpointOptions {
+    /** Skip permission checks. Use only after tool-level permission check. */
+    bypassPermission?: boolean;
+}
+
 export interface ToolContext {
     client: unknown;
     registry: unknown;
     permission: PermissionEngineLike;
-    callEndpoint: <T = unknown>(id: string, payload: unknown) => Promise<T>;
+    callEndpoint: <T = unknown>(id: string, payload: unknown, opts?: CallEndpointOptions) => Promise<T>;
     callEndpointRaw: <T = unknown>(endpoint: string, payload: unknown) => Promise<T>;
     logger: unknown;
     args: GlobalArgs;
@@ -494,11 +499,21 @@ export interface GlobalArgs {
     yes?: boolean;
 }
 
+export interface ToolClassification {
+    action: PermissionAction;
+    domain: EndpointDomain;
+    concerns?: EndpointConcern[];
+    cardinality?: EndpointCardinality;
+    severity?: SeverityLabel;
+}
+
 export interface ToolSchema {
     id: string; // kebab-case
     summary: string;
     description?: string;
     tags?: ToolTag[];
+    classification: ToolClassification;
+    guard?: Pick<FilterSpec, 'payloadTargets'>;
     input: JSONSchema;
     output?: JSONSchemaProperty;
     cli?: CliBehavior;

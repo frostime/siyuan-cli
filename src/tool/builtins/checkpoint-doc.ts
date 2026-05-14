@@ -127,6 +127,8 @@ This is not a SiYuan repo snapshot. It stores the document Kramdown plus
 custom attributes and block reference relationships so an agent can recover
 important metadata if a high-risk edit rewrites child block IDs.`,
     tags: ['read', 'util'],
+    classification: { action: 'read', domain: 'content' },
+    guard: { payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }] },
     input: {
         type: 'object',
         required: ['id'],

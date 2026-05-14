@@ -14,7 +14,7 @@ summary: Permission rule syntax, evaluation order, explicit approval, two-phase 
 The CLI enforces two layers of permission:
 
 1. **Config rules** (this doc) — user-authored YAML rules in `config.yaml` or `.siyuan-cli.yaml` that allow/deny/approve operations by endpoint, tool, notebook, path, and action.
-2. **Schema-level guard** — built into every endpoint schema via `classification` (action/domain/severity) and `guard.payloadTargets` (resource resolution). Extension authors define what the user's rules can control. See `extension.md` for schema authoring.
+2. **Schema-level guard** — built into endpoint and tool schemas via `classification` (action/domain/severity) and `guard.payloadTargets` (resource resolution). Extension authors define what the user's rules can control. See `extension.md` for schema authoring.
 
 Config rules are optional. Without them, the default is `allow`. Approval is triggered by explicit permission rules with `effect: approval`.
 

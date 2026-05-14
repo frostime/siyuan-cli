@@ -180,6 +180,12 @@ export interface ExecuteOptions {
     dryRun?: boolean;
     yes?: boolean;
     debug?: boolean;
+    /**
+     * Skip permission checks (Phase 1 + Phase 2 + response filter).
+     * Use when the calling tool has already performed its own permission check
+     * and internal API calls should not be double-checked or silently filtered.
+     */
+    bypassPermission?: boolean;
 }
 
 function debugPreview(schema: EndpointSchema, payload: unknown, jsonExtra?: JsonPrintExtra): void {
@@ -208,7 +214,8 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
         jsonExtra,
         dryRun,
         yes,
-        debug
+        debug,
+        bypassPermission
     } = opts;
     const { schema } = entry;
     const { id } = deriveEndpointId(schema.endpoint);
@@ -220,16 +227,19 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
 
     maybeWarnImplicitWorkspace(entry, workspace, jsonExtra);
 
-    // Phase 1: caller-level gate
-    engine.checkEndpoint(id);
+    let phase2NeedsApproval = false;
+    if (!bypassPermission) {
+        // Phase 1: caller-level gate
+        engine.checkEndpoint(id);
 
-    // Phase 2: resource-level gate (payload targets)
-    const { needsApproval: phase2NeedsApproval } = await applyPayloadGuard(schema, payload, engine, endpointAction, caller);
+        // Phase 2: resource-level gate (payload targets)
+        ({ needsApproval: phase2NeedsApproval } = await applyPayloadGuard(schema, payload, engine, endpointAction, caller));
+    }
 
     if (debug) debugPreview(schema, payload, jsonExtra);
 
     // Approval gate: explicit permission sources only.
-    const ruleEffect = engine.evaluate({ ...caller, action: endpointAction });
+    const ruleEffect = bypassPermission ? 'allow' : engine.evaluate({ ...caller, action: endpointAction });
     const wouldRequestApproval =
         ruleEffect === 'approval' ||
         phase2NeedsApproval;
@@ -316,5 +326,6 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
         response = await client.call(schema.endpoint, payload);
     }
 
+    if (bypassPermission) return response;
     return await applyResponseGuard(schema, response, engine, caller, jsonExtra);
 }

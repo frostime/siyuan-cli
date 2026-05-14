@@ -1,7 +1,7 @@
 ---
 name: EndpointSchema
 description: Authored contract for siyuan-cli endpoint definitions, including identity derivation, classification metadata, permission guard coupling, CLI behavior, output semantics, and extension cache boundaries
-updated: 2026-05-14
+updated: 2026-05-15
 scope:
   - /src/shared/schema.ts
   - /src/api/registry.ts
@@ -267,6 +267,8 @@ Runtime effect:
 - `skipEmpty` is explicit per target; it is not a global permission shortcut.
 
 Code refs: `/src/api/registry.ts#validateSchema`, `/src/api/guard.ts#applyPayloadGuard`, `/src/shared/permission.ts#checkContentRef`.
+
+> **Cross-ref**: `ToolSchema` also supports `guard.payloadTargets` with the same schema. Tool-level targets are evaluated by `tool/command.ts` before `run()`. See [permission-model § Tool-level permission enforcement](permission-model.md#tool-level-permission-enforcement).
 
 ### 5. `guard.response.itemsAt` must fit terminal array filtering
 

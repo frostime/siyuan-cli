@@ -1,5 +1,6 @@
 import type { ToolSchema } from '@/shared/schema.js';
 import { escapeSqliteLiteral } from '@/shared/sql.js';
+import { BlockNotFoundError } from '@/shared/permission.js';
 
 type Row = {
     id: string;
@@ -67,6 +68,7 @@ export const tool: ToolSchema = {
     id: 'list-doc-tree',
     summary: 'List the document tree under a notebook or document',
     tags: ['read', 'aggregate'],
+    classification: { action: 'read', domain: 'content' },
     input: {
         type: 'object',
         required: ['entry'],
@@ -94,9 +96,27 @@ export const tool: ToolSchema = {
             depth?: number;
             includeMeta?: boolean;
         };
+
+        // Early permission check — entry can be notebook ID or doc ID
+        try {
+            await ctx.permission.checkContentRef(
+                { kind: 'id', value: entry, access: 'read' },
+                { tool: 'list-doc-tree' }
+            );
+        } catch (e) {
+            if (e instanceof BlockNotFoundError) {
+                // Not a block → treat as notebook ID
+                await ctx.permission.checkContentRef(
+                    { kind: 'notebook', value: entry, access: 'read' },
+                    { tool: 'list-doc-tree' }
+                );
+            } else {
+                throw e;
+            }
+        }
         let rootRows = await ctx.callEndpoint<Row[]>('query.sql', {
             stmt: `SELECT id, box, path, hpath FROM blocks WHERE id = '${escapeSqliteLiteral(entry)}' LIMIT 1`
-        });
+        }, { bypassPermission: true });
         let rows: Row[];
         let rootPath: string; // for display / details only
         let rootKey: string; // childMap key to start walking from
@@ -108,7 +128,7 @@ export const tool: ToolSchema = {
             rootTitle = root.hpath.split('/').filter(Boolean).at(-1) ?? root.id;
             rows = await ctx.callEndpoint<Row[]>('query.sql', {
                 stmt: `SELECT id, box, path, hpath FROM blocks WHERE type='d' AND box = '${root.box}' AND (path = '${escapeSqliteLiteral(root.path)}' OR path LIKE '${escapeSqliteLiteral(root.path).replace(/\.sy$/, '')}/%') ORDER BY path ASC`
-            });
+            }, { bypassPermission: true });
         } else {
             // Notebook mode: SiYuan's blocks.path is notebook-relative, so top-level
             // docs live under childMap[""], not childMap[`/${entry}`].
@@ -117,7 +137,7 @@ export const tool: ToolSchema = {
             rootTitle = entry;
             rows = await ctx.callEndpoint<Row[]>('query.sql', {
                 stmt: `SELECT id, box, path, hpath FROM blocks WHERE type='d' AND box = '${escapeSqliteLiteral(entry)}' ORDER BY path ASC`
-            });
+            }, { bypassPermission: true });
         }
         const tree = buildTree(rows, rootKey, depth ?? 2);
         const content = `# Document tree: ${rootTitle}\n\n` + render(tree).join('\n');

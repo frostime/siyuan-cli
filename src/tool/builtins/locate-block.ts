@@ -67,6 +67,13 @@ Patterns use % (any chars) and _ (single char). Wrap with % for substring match.
 Multiple patterns: separate with | for OR, add --all for AND.
 Scope: --id (document), --box (notebook), or omit both for global search.`,
     tags: ['read'],
+    classification: { action: 'read', domain: 'content' },
+    guard: {
+        payloadTargets: [
+            { path: 'id', kind: 'id', access: 'read', skipEmpty: true },
+            { path: 'box', kind: 'notebook', access: 'read', skipEmpty: true }
+        ]
+    },
     input: {
         type: 'object',
         required: ['pattern'],

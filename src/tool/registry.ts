@@ -80,7 +80,8 @@ export async function createToolContext(
      */
     const callEndpoint: ToolContext['callEndpoint'] = async <T = unknown>(
         id: string,
-        payload: unknown
+        payload: unknown,
+        opts?: { bypassPermission?: boolean }
     ): Promise<T> => {
         const entry = endpointRegistry.get(id);
         if (!entry) throw new Error(`Endpoint "${id}" not found.`);
@@ -95,7 +96,8 @@ export async function createToolContext(
             jsonExtra,
             dryRun: args.dryRun,
             yes: args.yes,
-            debug: args.debug
+            debug: args.debug,
+            bypassPermission: opts?.bypassPermission
         }) as Promise<T>;
     };
 

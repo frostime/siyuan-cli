@@ -148,6 +148,39 @@ Run it:
 siyuan tool hello-ext --name Alice
 ```
 
+### Tool-level permission guards
+
+Tools can declare `guard.payloadTargets` to get automatic permission checks before `run()` is called:
+
+```ts
+export const tool: ToolSchema = {
+  id: "my-reader",
+  summary: "Read a block with permission",
+  input: {
+    type: "object",
+    properties: {
+      id: { type: "string", description: "Block ID" }
+    },
+    required: ["id"]
+  },
+  guard: {
+    payloadTargets: [
+      { path: "id", kind: "id", access: "read" }
+    ]
+  },
+  async run(ctx, input) {
+    const { id } = input as { id: string };
+    // Permission already checked — use bypassPermission for internal calls
+    const rows = await ctx.callEndpoint('query.sql', {
+      stmt: `SELECT * FROM blocks WHERE id = '${id}'`
+    }, { bypassPermission: true });
+    return { content: rows[0]?.content ?? 'empty' };
+  }
+};
+```
+
+The `guard.payloadTargets` schema is the same as for endpoints (see "Permission schema coupling" below). Use `skipEmpty: true` for optional fields.
+
 ## Schema Cache
 
 On first execution of an extension, siyuan-cli writes a sidecar `*.schema.json` next to the `.ts` file. This cache is used for:
@@ -180,7 +213,7 @@ npm install --save-dev @frostime/siyuan-cli
 
 Your Tool's `run` function receives a `ToolContext` (`ctx`) with these helpers:
 
-- `ctx.callEndpoint(id, payload)` — call a registered endpoint (with permission checks, guard logic, and response filtering).
+- `ctx.callEndpoint(id, payload, opts?)` — call a registered endpoint (with permission checks, guard logic, and response filtering).
 - `ctx.callEndpointRaw(endpoint, payload)` — call any `/api/...` path directly, bypassing registry and guards.
 - `ctx.client` — the raw `SiyuanClient` instance for full control.
 
@@ -192,6 +225,39 @@ async run(ctx, input) {
   return { content: `Found ${docs.length} documents` };
 }
 ```
+
+### `bypassPermission` option
+
+When your tool performs its own permission check at the top of `run()`, internal API calls should not be re-evaluated by the endpoint permission pipeline. Otherwise the response filter may silently remove results, causing your tool to report "not found" instead of "denied".
+
+Pass `{ bypassPermission: true }` as the third argument:
+
+```ts
+async run(ctx, input) {
+  // Tool-level permission check (authoritative)
+  await ctx.permission.checkContentRef(
+    { kind: 'id', value: input.id, access: 'read' },
+    { tool: 'my-tool' }
+  );
+
+  // Internal calls bypass permission — already checked above
+  const rows = await ctx.callEndpoint<Row[]>('query.sql', {
+    stmt: `SELECT * FROM blocks WHERE id = '${input.id}'`
+  }, { bypassPermission: true });
+
+  return { content: `Found ${rows.length} rows` };
+}
+```
+
+This skips Phase 1 (checkEndpoint), Phase 2 (payloadGuard), approval gate, and response filtering, but preserves payload validation, debug output, and dry-run semantics.
+
+| Variant | Permission | Approval | Debug/DryRun |
+|---------|-----------|----------|---------------|
+| `callEndpoint(id, payload)` | ✅ full | ✅ | ✅ |
+| `callEndpoint(id, payload, { bypassPermission: true })` | ❌ skipped | ❌ skipped | ✅ |
+| `callEndpointRaw(endpoint, payload)` | ❌ | ❌ | ❌ |
+
+### `callEndpointRaw`
 
 Use `callEndpointRaw` only for one-off internal probes when SiYuan's kernel has an API that siyuan-cli doesn't wrap yet. It returns the unwrapped kernel `data` value and bypasses schema validation, permission checks, approval, response filtering, dry-run, and debug output:
 
@@ -290,6 +356,7 @@ When response filtering removes content, the CLI emits `CONTENT_FILTERED` on std
 1. What `classification` fits: `action`, `domain`, optional `concerns`, optional `cardinality`, optional `severity` override?
 2. Does the payload contain block ids, notebook ids, or paths? → declare `guard.payloadTargets`.
 3. Is it a global read? → MUST declare `guard.response` or `guard.filterResponse`.
+4. Writing a tool that accesses protected resources? → declare `guard.payloadTargets` on the tool, or use `ctx.permission.checkContentRef()` in `run()` for complex cases. Use `{ bypassPermission: true }` on internal `callEndpoint` calls after your own check.
 
 ## Raw API vs registered API: when to write an extension
 

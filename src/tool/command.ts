@@ -3,6 +3,7 @@ import { colors } from 'consola/utils';
 import { join } from 'pathe';
 import { parsePayload } from '../shared/argv.js';
 import { createJsonPrintExtra } from '../shared/output.js';
+import { applyPayloadGuard } from '../api/guard.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
 import { getExtensionDir } from '../workspace/paths.js';
 import {
@@ -149,8 +150,29 @@ async function runTool(
         args,
         positional
     });
+    if (!resolved.tool.classification) {
+        throw new CliError(
+            ExitCode.GENERAL,
+            'TOOL_MISSING_CLASSIFICATION',
+            `Tool "${id}" is missing required \`classification\` field.`,
+            'This field is required since siyuan-cli v0.16. Update the tool schema with `classification: { action, domain }`.'
+        );
+    }
+
     const jsonExtra = args.print === 'json' ? createJsonPrintExtra() : undefined;
     const ctx = await createToolContext(args as any, resolved.tool.id, jsonExtra);
+
+    // Apply payload guard before run() — early rejection with clear error
+    if (resolved.tool.guard?.payloadTargets?.length) {
+        await applyPayloadGuard(
+            { guard: { payloadTargets: resolved.tool.guard.payloadTargets } } as any,
+            input,
+            ctx.permission,
+            undefined, // let each target's access field determine the action
+            { tool: resolved.tool.id }
+        );
+    }
+
     const result = await resolved.tool.run(ctx, input);
     if (resolved.source) {
         writeSchemaCache(resolved.source, resolved.tool);

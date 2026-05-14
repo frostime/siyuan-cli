@@ -91,6 +91,8 @@ Output contract:
 - Body after the BEGIN line is the content.
 - showId=true injects @@id@@type markers into the body for edit targeting; those markers are not SiYuan source text and should not be used as brute-edit search text.`,
     tags: ['read'],
+    classification: { action: 'read', domain: 'content' },
+    guard: { payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }] },
     input: {
         type: 'object',
         required: ['id'],

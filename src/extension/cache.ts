@@ -13,6 +13,7 @@ import type {
     JSONSchema,
     JSONSchemaProperty,
     PayloadTargetSpec,
+    ToolClassification,
     ToolSchema,
     ToolTag
 } from '../shared/schema.js';
@@ -33,6 +34,8 @@ export interface ToolSchemaCache {
     summary: string;
     description?: string;
     tags?: ToolTag[];
+    classification?: ToolClassification;
+    guard?: { payloadTargets?: PayloadTargetSpec[] };
     input: JSONSchema;
     output?: JSONSchemaProperty;
     cli?: CliBehavior;
@@ -76,6 +79,8 @@ export function extractToolCacheData(tool: ToolSchema): ToolSchemaCache {
         summary: tool.summary,
         ...(tool.description ? { description: tool.description } : {}),
         ...(tool.tags ? { tags: [...tool.tags] } : {}),
+        ...(tool.classification ? { classification: tool.classification } : {}),
+        ...(tool.guard?.payloadTargets ? { guard: { payloadTargets: tool.guard.payloadTargets } } : {}),
         input: tool.input,
         ...(tool.output ? { output: tool.output } : {}),
         ...(tool.cli ? { cli: tool.cli } : {})
@@ -218,6 +223,8 @@ export function buildToolSchemaFromCache(cache: ToolSchemaCache): ToolSchema {
         summary: cache.summary,
         ...(cache.description ? { description: cache.description } : {}),
         ...(cache.tags ? { tags: cache.tags } : {}),
+        ...(cache.classification ? { classification: cache.classification } : {}),
+        ...(cache.guard ? { guard: cache.guard } : {}),
         input: cache.input,
         ...(cache.output ? { output: cache.output } : {}),
         ...(cache.cli ? { cli: cache.cli } : {}),
@@ -226,7 +233,7 @@ export function buildToolSchemaFromCache(cache: ToolSchemaCache): ToolSchema {
                 `Tool extension "${cache.id}" was registered from cache only.`
             );
         }
-    };
+    } as ToolSchema;
 }
 
 export function buildEndpointSchemaFromCache(

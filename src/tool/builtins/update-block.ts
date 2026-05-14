@@ -1,4 +1,5 @@
 import type { ToolSchema } from '@/shared/schema.js';
+import { escapeSqliteLiteral } from '@/shared/sql.js';
 
 interface BlockUpdate {
     id: string;
@@ -15,6 +16,7 @@ This tool reads custom attrs before updating, then writes them back after.
 Input: JSON array of {id, data} objects. dataType is always markdown.
 Supports --dry-run to preview which blocks exist and what attrs would be preserved.`,
     tags: ['write'],
+    classification: { action: 'write', domain: 'content' },
     input: {
         type: 'object',
         required: ['blocks'],
@@ -68,11 +70,24 @@ Supports --dry-run to preview which blocks exist and what attrs would be preserv
 
         const ids = blocks.map((b) => b.id);
 
+        // 1b. Early permission check — reject before any network calls
+        for (const id of ids) {
+            await ctx.permission.checkContentRef(
+                { kind: 'id', value: id, access: 'read' },
+                { tool: 'update-block' }
+            );
+            await ctx.permission.checkContentRef(
+                { kind: 'id', value: id, access: 'write' },
+                { tool: 'update-block' }
+            );
+        }
+
         // 2. Check block existence via SQL
-        const idList = ids.map((id) => `'${id}'`).join(',');
+        const idList = ids.map((id) => `'${escapeSqliteLiteral(id)}'`).join(',');
         const existingRows = await ctx.callEndpoint<{ id: string }[]>(
             'query.sql',
-            { stmt: `SELECT id FROM blocks WHERE id IN (${idList})` }
+            { stmt: `SELECT id FROM blocks WHERE id IN (${idList})` },
+            { bypassPermission: true }
         );
         const existingIds = new Set(existingRows.map((r) => r.id));
         const missingIds = ids.filter((id) => !existingIds.has(id));
