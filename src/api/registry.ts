@@ -69,6 +69,7 @@ function deriveSeverity(classification: EndpointClassification): SeverityLabel {
             [
                 'process-exit',
                 'filesystem',
+                'high-load',
                 'network-request',
                 'reindex',
                 'id-regeneration',

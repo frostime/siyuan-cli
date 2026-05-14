@@ -54,7 +54,7 @@ function discoverExtensions<T>(dir: string): DiscoveredExtension<T>[] {
         return {
             source,
             cacheStatus: cached.status,
-            ...(cached.status === 'cached' && cached.data ? { cached: cached.data } : {})
+            ...(cached.data ? { cached: cached.data } : {})
         } satisfies DiscoveredExtension<T>;
     });
 }

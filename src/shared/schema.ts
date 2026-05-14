@@ -385,11 +385,6 @@ export interface DerivedMeta {
     severity: SeverityLabel;
 }
 
-/** @deprecated Legacy helper retained for old callers during migration. */
-export function isHighRisk(risk: RiskLabel): boolean {
-    return risk === 'destructive' || risk === 'critical';
-}
-
 /**
  * Minimal shape of the permission engine that schema guards need.
  * The real engine (src/shared/permission.ts) implements this + more.
