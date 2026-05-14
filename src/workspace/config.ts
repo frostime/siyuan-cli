@@ -18,6 +18,7 @@ import { CliError, ExitCode } from '../shared/errors.js';
 import {
     resolvePermissionEffect,
     validateBehaviorRaw,
+    validatePermissionRulesRaw,
     type BehaviorConfig,
     type PermissionConfig,
     type RawApiBehaviorConfig,
@@ -337,6 +338,21 @@ function warnRulesSmoke(
     }
 }
 
+function validatePermissionRules(
+    permission: unknown,
+    scope: string,
+    configPath: string
+): void {
+    const results = validatePermissionRulesRaw(permission, scope);
+    if (results.length > 0) {
+        throw new CliError(
+            ExitCode.CONFIG,
+            'CONFIG_PARSE_ERROR',
+            `${results[0]!.message} (at ${configPath})`
+        );
+    }
+}
+
 function validateBehavior(
     behavior: unknown,
     scope: string,
@@ -378,13 +394,19 @@ export function loadConfig(configPath?: string): AppConfig {
                 'Delete the old config file and recreate workspaces in alpha stage.'
             );
         }
-        // Validate behavior on raw parsed data BEFORE normalization,
-        // so invalid shapes are caught before normalizeBehavior() strips them.
+        // Validate raw parsed data BEFORE normalization,
+        // so invalid shapes are caught before normalize*() strips or preserves them.
+        validatePermissionRules(parsed.defaults?.permission, 'defaults', path);
         validateBehavior(parsed.defaults?.behavior, 'defaults', path);
         if (parsed.workspaces) {
             for (const [name, ws] of Object.entries(parsed.workspaces)) {
                 if (ws && typeof ws === 'object') {
                     const wsRecord = ws as unknown as Record<string, unknown>;
+                    validatePermissionRules(
+                        wsRecord['permission'],
+                        `workspaces.${name}`,
+                        path
+                    );
                     validateBehavior(
                         wsRecord['behavior'],
                         `workspaces.${name}`,

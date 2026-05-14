@@ -15,10 +15,9 @@ export const schema: EndpointSchema = {
         }
     },
     classification: {
-        mode: 'read',
-        surface: 'content',
-        scope: 'global',
-        operation: 'inspect'
+        action: 'read',
+        domain: 'content',
+        cardinality: 'global',
     },
     guard: {
         response: {

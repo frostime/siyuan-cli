@@ -132,8 +132,10 @@ test('Batches A2-B2-C migrated compatible endpoints to authored classification',
         );
         const entry = registerOne(schema);
         assert.equal(
-            entry.meta.classification.mode,
-            schema.classification!.mode
+            entry.meta.classification.action,
+            'action' in schema.classification!
+                ? schema.classification.action
+                : schema.classification.mode
         );
     }
 });
@@ -270,11 +272,11 @@ test('declarative root-array response filtering still emits warnings', async () 
     }
 });
 
-test('runtime/meta/network risk mapping is explicit', () => {
-    assert.equal(registerOne(notificationPushErrMsg).meta.risk, 'safe');
-    assert.equal(registerOne(networkForwardProxy).meta.risk, 'critical');
-    assert.equal(registerOne(sqliteFlushTransaction).meta.risk, 'destructive');
-    assert.equal(registerOne(systemGetConf).meta.risk, 'sensitive');
-    assert.equal(registerOne(systemLogoutAuth).meta.risk, 'sensitive');
-    assert.equal(registerOne(systemVersion).meta.risk, 'safe');
+test('runtime/meta/network severity mapping is explicit', () => {
+    assert.equal(registerOne(notificationPushErrMsg).meta.severity, 'low');
+    assert.equal(registerOne(networkForwardProxy).meta.severity, 'high');
+    assert.equal(registerOne(sqliteFlushTransaction).meta.severity, 'high');
+    assert.equal(registerOne(systemGetConf).meta.severity, 'medium');
+    assert.equal(registerOne(systemLogoutAuth).meta.severity, 'high');
+    assert.equal(registerOne(systemVersion).meta.severity, 'low');
 });

@@ -14,9 +14,9 @@
  *     - First full-match rule wins.
  *     - No match → default effect.
  *
- * Risk-auto approval is a post-processing step in guard.ts:
- *   if evaluate() returns 'allow' but the endpoint is high risk,
- *   the execution guard sends it through the approval flow.
+ * Approval is handled in guard.ts using explicit permission sources:
+ *   - caller-level effect `approval`
+ *   - resource-level effect `approval`
  */
 import micromatch from 'micromatch';
 import type { AppConfig, ResolvedWorkspace } from '../workspace/config.js';

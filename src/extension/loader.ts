@@ -48,10 +48,13 @@ function scanExtensionSources(dir: string): string[] {
 function discoverExtensions<T>(dir: string): DiscoveredExtension<T>[] {
     return scanExtensionSources(dir).map((source) => {
         const cached = readSchemaCache<T>(source);
+        if (cached.status === 'incompatible') {
+            console.warn(cached.error);
+        }
         return {
             source,
             cacheStatus: cached.status,
-            ...(cached.data ? { cached: cached.data } : {})
+            ...(cached.status === 'cached' && cached.data ? { cached: cached.data } : {})
         } satisfies DiscoveredExtension<T>;
     });
 }

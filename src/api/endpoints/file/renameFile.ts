@@ -13,10 +13,10 @@ export const schema: EndpointSchema = {
         }
     },
     classification: {
-        mode: 'write',
-        surface: 'workspace',
-        scope: 'single',
-        operation: 'move'
+        action: 'write',
+        domain: 'storage',
+        concerns: ['filesystem'],
+        cardinality: 'single'
     },
     guard: {
         payloadTargets: [

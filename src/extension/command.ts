@@ -72,13 +72,13 @@ function renderList(root: string): string {
         )
     );
 
-    const uncached = [...tools, ...apis].filter(
-        (item) => item.cacheStatus === 'uncached'
+    const pending = [...tools, ...apis].filter(
+        (item) => item.cacheStatus !== 'cached'
     ).length;
-    if (uncached > 0) {
+    if (pending > 0) {
         lines.push('');
         lines.push(
-            `[!] ${uncached} uncached extension(s). Run \`siyuan extension cache\` to populate metadata.`
+            `[!] ${pending} extension(s) have stale/uncached/incompatible cache metadata. Run \`siyuan extension cache\` to refresh.`
         );
     }
     return lines.join('\n');
@@ -96,7 +96,9 @@ export function getPendingExtensionCount(
             : discoverEndpointExtensions(join(root, 'apis'));
     return items.filter(
         (item) =>
-            item.cacheStatus === 'uncached' || item.cacheStatus === 'stale'
+            item.cacheStatus === 'uncached' ||
+            item.cacheStatus === 'stale' ||
+            item.cacheStatus === 'incompatible'
     ).length;
 }
 

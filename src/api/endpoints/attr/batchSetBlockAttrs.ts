@@ -35,10 +35,9 @@ export const schema: EndpointSchema<BatchSetBlockAttrsData> = {
         }
     },
     classification: {
-        mode: 'write',
-        surface: 'content',
-        scope: 'batch',
-        operation: 'update'
+        action: 'write',
+        domain: 'content',
+        cardinality: 'batch',
     },
     cli: {
         allowSource: { blockAttrs: ['literal', 'file', 'stdin'] },

@@ -1,7 +1,7 @@
 ---
 title: Permission and Guard
 slug: permission
-summary: Permission rule syntax, evaluation order, risk-based auto-approval, two-phase checking, and debugging.
+summary: Permission rule syntax, evaluation order, explicit approval, two-phase checking, and debugging.
 ---
 
 # Permission and Guard
@@ -14,9 +14,9 @@ summary: Permission rule syntax, evaluation order, risk-based auto-approval, two
 The CLI enforces two layers of permission:
 
 1. **Config rules** (this doc) — user-authored YAML rules in `config.yaml` or `.siyuan-cli.yaml` that allow/deny/approve operations by endpoint, tool, notebook, path, and action.
-2. **Schema-level guard** — built into every endpoint schema via `classification` (risk) and `guard.payloadTargets` (resource resolution). Extension authors define what the user's rules can control. See `extension.md` for schema authoring.
+2. **Schema-level guard** — built into every endpoint schema via `classification` (action/domain/severity) and `guard.payloadTargets` (resource resolution). Extension authors define what the user's rules can control. See `extension.md` for schema authoring.
 
-Config rules are optional. Without them, the default is `allow`, and only built-in risk-based auto-approval (for destructive/critical operations) may trigger.
+Config rules are optional. Without them, the default is `allow`. Approval is triggered by explicit permission rules with `effect: approval`.
 
 ## Rule structure
 
@@ -47,7 +47,7 @@ permission:
 |-------|------|-------------|---------------|
 | `endpoint` | string | glob (micromatch) | any endpoint |
 | `tool` | string | glob (micromatch) | any tool (or direct API call) |
-| `action` | `"read"` \| `"write"` | exact | any action |
+| `action` | `"read"` \| `"write"` \| `"invoke"` | exact | any action |
 | `notebook` | string | exact match (must be kernel id format) | any notebook |
 | `path` | string | glob (micromatch) on raw `blocks.path` values (includes `.sy` for documents) | any path |
 | `root_id` | string | exact match document block id; normalized internally to `path: "**/<id>.sy"` | any document |
@@ -119,26 +119,24 @@ rules:
 | `**/20260107143325-zbrtqup.sy` | `/20260107143325-zbrtqup.sy`, `/parent/20260107143325-zbrtqup.sy` |
 | `/20260107143325-zbrtqup/**` | `/20260107143325-zbrtqup/child.sy`, `/20260107143325-zbrtqup/a/b.sy` |
 
-## Risk-based auto-approval
+## Explicit approval
 
-Every endpoint has a `classification` that derives a `risk` label. Endpoints classified as `destructive` or `critical` **automatically require human approval** via the Approval Center, **even if permission rules return `allow`**.
+Approval is controlled by permission rules:
 
-Passing `--yes` bypasses this gate. Set `behavior.allowYes: false` to enforce the approval flow (see `workspace-config.md`).
+```yaml
+permission:
+  rules:
+    - action: write
+      effect: approval
+      note: "Confirm durable state changes"
+    - action: invoke
+      effect: approval
+      note: "Confirm capability invocations"
+```
 
-Risk derivation matrix:
+Passing `--yes` bypasses approval when `behavior.allowYes` is true. Set `behavior.allowYes: false` to enforce the approval flow (see `workspace-config.md`).
 
-| classification | derived risk |
-|---|---|
-| `read + meta` | `safe` |
-| `read + content/asset` | `sensitive` |
-| `read + workspace/network` | `elevated` |
-| `write + content/asset + single` | `elevated` |
-| `write + content/asset + batch` | `destructive` |
-| `write + workspace` | `critical` |
-| `invoke + runtime` | `destructive` |
-| `invoke + network` | `critical` |
-
-Run `siyuan api list` to see each endpoint's risk label.
+Every endpoint also has a `classification` and derived `severity` for display and warnings. `severity` is not an approval gate. Run `siyuan api list` to see endpoint classification and severity labels.
 
 ## Raw API boundary
 

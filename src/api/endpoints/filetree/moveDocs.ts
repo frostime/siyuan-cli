@@ -22,10 +22,9 @@ export const schema: EndpointSchema = {
         }
     },
     classification: {
-        mode: 'write',
-        surface: 'content',
-        scope: 'batch',
-        operation: 'move'
+        action: 'write',
+        domain: 'content',
+        cardinality: 'batch',
     },
     guard: {
         payloadTargets: [

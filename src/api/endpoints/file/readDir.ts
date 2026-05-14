@@ -16,10 +16,9 @@ export const schema: EndpointSchema<FileEntry[]> = {
         }
     },
     classification: {
-        mode: 'read',
-        surface: 'workspace',
-        scope: 'single',
-        operation: 'inspect'
+        action: 'read',
+        domain: 'storage',
+        cardinality: 'single',
     },
     guard: {
         payloadTargets: [

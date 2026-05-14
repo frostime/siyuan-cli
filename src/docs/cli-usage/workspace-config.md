@@ -6,7 +6,7 @@ summary: Config file location, workspace connections, token sources, CLI behavio
 
 # Workspace Configuration
 
-> For permission rules and risk-based approval, see [`permission.md`](permission.md).
+> For permission rules and explicit approval, see [`permission.md`](permission.md).
 
 ## Config file location
 
@@ -54,9 +54,15 @@ workspaces:
       approval:
         timeout: 30
         openDebounceMs: 1000
-    # permission:                      # optional: workspace-level rules (see permission.md)
-    #   default: allow
-    #   rules: [...]
+    permission:                        # recommended default installed by workspace add
+      default: allow
+      rules:
+        - action: write
+          effect: approval
+          note: "Confirm write operations"
+        - action: invoke
+          effect: approval
+          note: "Confirm invoke operations"
 
   devspace:
     workspaceDir: /path/to/SiYuanDevSpace  # auto-discover port (local only)
@@ -74,7 +80,11 @@ defaults:
       openDebounceMs: 1000
   # permission:                        # optional: global defaults (see permission.md)
   #   default: allow
-  #   rules: [...]
+  #   rules:
+  #     - action: write
+  #       effect: approval
+  #     - action: invoke
+  #       effect: approval
 ```
 
 ## Token sources
@@ -164,8 +174,8 @@ workspaces:
 
 > [!Note]
 > `allowYes: true` means `--yes` bypasses the Approval Center. For safety, set `allowYes: false`
-> to enforce the approval flow and disable the `--yes` bypass. See `permission.md` for how risk-based
-> auto-approval interacts with this.
+> to enforce the approval flow and disable the `--yes` bypass. See `permission.md` for how explicit
+> approval rules interact with this.
 
 ## Project config (`.siyuan-cli.yaml`)
 
@@ -224,6 +234,6 @@ Its output includes `source` and `projectConfigPath` so you can see where the ac
 
 ## Related docs
 
-- [`permission.md`](permission.md) — permission rules, risk-based auto-approval, extension schema coupling
+- [`permission.md`](permission.md) — permission rules, explicit approval, extension schema coupling
 - [`cli-overview.md`](cli-overview.md) — Approval Center commands and broker lifecycle
 - `recipes/connect-workspace.md` — step-by-step workspace setup recipe

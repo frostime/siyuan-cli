@@ -16,7 +16,6 @@ import {
     isTerminalFilterCompatiblePointerPath,
     PointerPathShapeError,
     runPointerFilterTerminal,
-    isHighRisk,
     type EndpointSchema,
     type PermissionEngineLike
 } from '../src/shared/schema.ts';
@@ -63,31 +62,31 @@ test('registry derives meta from authored classification', () => {
 
     registry.register(schema);
     const entry = registry.get('query.sql')!;
-    assert.equal(entry.meta.classification.mode, 'read');
-    assert.equal(entry.meta.classification.surface, 'content');
-    assert.equal(entry.meta.classification.scope, 'global');
-    assert.equal(entry.meta.classification.operation, 'query');
-    assert.equal(entry.meta.risk, 'sensitive');
-    assert.ok(entry.meta.tags.includes('mode:read'));
+    assert.deepEqual(entry.meta.classification, {
+        action: 'read',
+        domain: 'content',
+        cardinality: 'global'
+    });
+    assert.equal(entry.meta.severity, 'medium');
+    assert.ok(entry.meta.tags.includes('action:read'));
 });
 
-test('riskOverride wins over matrix', () => {
+test('new classification derives high severity for process-exit concern', () => {
     const registry = new EndpointRegistry();
     registry.register({
         endpoint: '/api/system/exit',
         summary: 'Exit',
         payload: { type: 'object', properties: {} },
         classification: {
-            mode: 'invoke',
-            surface: 'runtime',
-            scope: 'single',
-            operation: 'control',
-            riskOverride: 'critical'
+            action: 'invoke',
+            domain: 'runtime',
+            concerns: ['process-exit'],
+            cardinality: 'single'
         }
     });
     const entry = registry.get('system.exit')!;
-    assert.equal(entry.meta.risk, 'critical');
-    assert.equal(isHighRisk(entry.meta.risk), true);
+    assert.equal(entry.meta.severity, 'high');
+    assert.ok(entry.meta.tags.includes('concern:process-exit'));
 });
 
 test('global read endpoint without response guard fails loud', () => {
@@ -223,7 +222,7 @@ test('runPointerFilterTerminal rejects multiple array expansions', () => {
     );
 });
 
-test('approval decision uses rule effect plus high-risk fallback', () => {
+test('approval decision uses explicit rule effect only', () => {
     const client = { call: async () => [] } as any;
     const { engine } = makeEngine(client, {
         rules: [
@@ -235,19 +234,19 @@ test('approval decision uses rule effect plus high-risk fallback', () => {
         ]
     });
 
-    const wouldRequestApproval = (effect: string, risk: string): boolean =>
-        effect === 'approval' || (effect === 'allow' && isHighRisk(risk as any));
+    const wouldRequestApproval = (effect: string): boolean =>
+        effect === 'approval';
 
     const byRule = engine.evaluate({
         endpoint: 'block.updateBlock',
         action: 'write'
     });
-    const byRisk = engine.evaluate({ endpoint: 'system.exit', action: 'write' });
+    const invokeDefault = engine.evaluate({ endpoint: 'system.exit', action: 'invoke' });
     const plainRead = engine.evaluate({ endpoint: 'query.sql', action: 'read' });
 
-    assert.equal(wouldRequestApproval(byRule, 'elevated'), true);
-    assert.equal(wouldRequestApproval(byRisk, 'critical'), true);
-    assert.equal(wouldRequestApproval(plainRead, 'sensitive'), false);
+    assert.equal(wouldRequestApproval(byRule), true);
+    assert.equal(wouldRequestApproval(invokeDefault), false);
+    assert.equal(wouldRequestApproval(plainRead), false);
 });
 
 test('resolveContentIds caches and throws BlockNotFoundError for missing ids', async () => {

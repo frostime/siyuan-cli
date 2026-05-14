@@ -47,10 +47,9 @@ export const schema: EndpointSchema<BlockTransaction[]> = {
         }
     },
     classification: {
-        mode: 'write',
-        surface: 'content',
-        scope: 'batch',
-        operation: 'create'
+        action: 'write',
+        domain: 'content',
+        cardinality: 'batch',
     },
     cli: { allowSource: { blocks: ['literal', 'file', 'stdin'] } },
     guard: {

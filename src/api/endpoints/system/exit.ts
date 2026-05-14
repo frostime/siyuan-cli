@@ -5,12 +5,10 @@ export const schema: EndpointSchema = {
     summary: 'Exit SiYuan kernel',
     payload: { type: 'object', properties: {} },
     classification: {
-        mode: 'invoke',
-        surface: 'runtime',
-        scope: 'single',
-        operation: 'control',
-        // Exits the kernel process; stronger than the default runtime-control risk level.
-        riskOverride: 'critical'
+        action: 'invoke',
+        domain: 'runtime',
+        concerns: ['process-exit'],
+        cardinality: 'single'
     },
     formatStrategy: 'transaction'
 };

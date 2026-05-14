@@ -6,44 +6,115 @@ import {
     deriveEndpointId,
     isTerminalFilterCompatiblePointerPath,
     pointerPathRoot,
+    type AuthoredEndpointClassification,
     type EndpointClassification,
+    type EndpointConcern,
     type EndpointSchema,
     type RegisteredEndpoint,
-    type RiskLabel
+    type SeverityLabel
 } from '../shared/schema.js';
 
-function deriveRisk(classification: EndpointClassification): RiskLabel {
-    if (classification.riskOverride) return classification.riskOverride;
-    const { mode, surface, scope } = classification;
-    if (mode === 'read' && surface === 'meta') return 'safe';
-    if (mode === 'read' && (surface === 'content' || surface === 'asset'))
-        return 'sensitive';
-    if (mode === 'read' && (surface === 'workspace' || surface === 'network'))
-        return 'elevated';
-    if (mode === 'write' && (surface === 'content' || surface === 'asset')) {
-        return scope === 'single' ? 'elevated' : 'destructive';
-    }
-    if (mode === 'write' && surface === 'workspace') return 'critical';
-    if (mode === 'invoke' && surface === 'runtime') return 'destructive';
-    if (mode === 'invoke' && surface === 'network') return 'critical';
-    return 'elevated';
+function hasNewClassification(
+    classification: AuthoredEndpointClassification
+): classification is EndpointClassification {
+    return 'action' in classification && 'domain' in classification;
 }
 
-function deriveMeta(schema: EndpointSchema): RegisteredEndpoint['meta'] {
-    const classification = schema.classification;
-    const risk = deriveRisk(classification);
+function normalizeLegacyClassification(
+    schema: EndpointSchema,
+    id: string
+): EndpointClassification {
+    const legacy = schema.classification;
+    if (hasNewClassification(legacy)) return legacy;
+
+    let domain: EndpointClassification['domain'];
+    if (legacy.surface === 'asset' || legacy.surface === 'workspace') {
+        domain = 'storage';
+    } else {
+        domain = legacy.surface;
+    }
+
+    const concerns: EndpointConcern[] = [];
+    if (id === 'system.getConf') domain = 'config';
+    if (id === 'notification.pushMsg' || id === 'notification.pushErrMsg') {
+        domain = 'ui';
+        concerns.push('notify');
+    }
+    if (id === 'system.exit') concerns.push('process-exit');
+    if (id === 'network.forwardProxy') concerns.push('network-request');
+    if (id === 'sqlite.flushTransaction') concerns.push('high-load');
+    if (id === 'block.transferBlockRef') {
+        concerns.push('reindex', 'high-load');
+    }
+    if (
+        id === 'file.putFile' ||
+        id === 'file.removeFile' ||
+        id === 'file.renameFile'
+    ) {
+        concerns.push('filesystem');
+    }
+
+    return {
+        action: legacy.mode,
+        domain,
+        ...(concerns.length ? { concerns } : {}),
+        cardinality: legacy.scope
+    };
+}
+
+function deriveSeverity(classification: EndpointClassification): SeverityLabel {
+    const concerns = classification.concerns ?? [];
+    if (
+        concerns.some((concern) =>
+            [
+                'process-exit',
+                'filesystem',
+                'network-request',
+                'reindex',
+                'id-regeneration',
+                'unbounded-read'
+            ].includes(concern)
+        )
+    ) {
+        return 'high';
+    }
+    if (classification.action === 'read' && classification.domain === 'meta') {
+        return 'low';
+    }
+    if (
+        classification.action === 'invoke' &&
+        classification.domain === 'ui' &&
+        concerns.includes('notify')
+    ) {
+        return 'low';
+    }
+    if (classification.action === 'write' && classification.domain === 'storage') {
+        return 'high';
+    }
+    if (
+        classification.action !== 'read' &&
+        (classification.domain === 'runtime' || classification.domain === 'network')
+    ) {
+        return 'high';
+    }
+    return 'medium';
+}
+
+function deriveMeta(schema: EndpointSchema, id: string): RegisteredEndpoint['meta'] {
+    const classification = normalizeLegacyClassification(schema, id);
+    const severity = deriveSeverity(classification);
     const tags = [
-        `mode:${classification.mode}`,
-        `surface:${classification.surface}`,
-        `scope:${classification.scope}`,
-        ...(classification.operation
-            ? [`operation:${classification.operation}`]
+        `action:${classification.action}`,
+        `domain:${classification.domain}`,
+        ...(classification.concerns ?? []).map((concern) => `concern:${concern}`),
+        ...(classification.cardinality
+            ? [`cardinality:${classification.cardinality}`]
             : []),
-        `risk:${risk}`
+        `severity:${severity}`
     ];
     return {
         classification,
-        risk,
+        severity,
         tags
     };
 }
@@ -57,7 +128,7 @@ function validateSchema(
     }
 
     const c = entry.meta.classification;
-    if (c.mode === 'read' && c.scope === 'global') {
+    if (c.action === 'read' && c.cardinality === 'global') {
         if (!schema.guard?.response && !schema.guard?.filterResponse) {
             throw new Error(
                 `Endpoint "${entry.id}" is global read and must declare guard.response or guard.filterResponse.`
@@ -106,7 +177,7 @@ export class EndpointRegistry {
             id,
             group,
             name,
-            meta: deriveMeta(schema)
+            meta: deriveMeta(schema, id)
         };
         validateSchema(schema, entry);
         this.map.set(id, entry);
@@ -137,7 +208,7 @@ export class EndpointRegistry {
                 id,
                 group,
                 name,
-                meta: deriveMeta(schema)
+                meta: deriveMeta(schema, id)
             };
             validateSchema(schema, entry);
             this.map.set(id, entry);

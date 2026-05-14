@@ -131,20 +131,18 @@ export function listEndpoints(args: Record<string, unknown>): void {
     const tag = args['tag'] as string | undefined;
     const endpoints = registry.list({ group, tag });
     const listedIds = new Set(endpoints.map((e) => e.id));
-    const staleIds = new Set(
-        discoveredEndpointExtensions
-            .filter((item) => item.cacheStatus === 'stale' && item.cached?.endpoint)
-            .map((item) => deriveEndpointId(item.cached!.endpoint).id)
-    );
-    const uncachedEndpoints = discoveredEndpointExtensions
-        .filter((item) => item.cacheStatus === 'uncached')
-        .map((item) => ({
-            id: item.source.replace(/^.*[\\/]/, '').replace(/\.(ts|mjs)$/i, ''),
-            endpoint: item.source.replace(/^.*[\\/]/, '').replace(/\.(ts|mjs)$/i, ''),
-            summary: '[uncached]',
-            cacheStatus: 'uncached' as const,
-            source: 'extension' as const
-        }))
+    const pendingEndpoints = discoveredEndpointExtensions
+        .filter((item) => item.cacheStatus !== 'cached')
+        .map((item) => {
+            const sourceId = item.source.replace(/^.*[\\/]/, '').replace(/\.(ts|mjs)$/i, '');
+            return {
+                id: sourceId,
+                endpoint: sourceId,
+                summary: `[${item.cacheStatus}]`,
+                cacheStatus: item.cacheStatus,
+                source: 'extension' as const
+            };
+        })
         .filter((item) => !listedIds.has(item.id));
 
     out([
@@ -154,16 +152,15 @@ export function listEndpoints(args: Record<string, unknown>): void {
             summary: e.schema.summary,
             tags: e.meta.tags,
             classification: e.meta.classification,
-            risk: e.meta.risk,
-            source: registry.isExtension(e.id) ? 'extension' : 'builtin',
-            ...(staleIds.has(e.id) ? { cacheStatus: 'stale' as const } : {})
+            severity: e.meta.severity,
+            source: registry.isExtension(e.id) ? 'extension' : 'builtin'
         })),
-        ...uncachedEndpoints
+        ...pendingEndpoints
     ]);
 
-    if (uncachedEndpoints.length > 0) {
+    if (pendingEndpoints.length > 0) {
         process.stderr.write(
-            `[!] ${uncachedEndpoints.length} uncached extension(s). Run \`siyuan extension cache\` to populate metadata.\n`
+            `[!] ${pendingEndpoints.length} extension(s) have stale/uncached/incompatible cache metadata. Run \`siyuan extension cache\` to refresh.\n`
         );
     }
 }
@@ -459,7 +456,7 @@ const listCommand = defineCommand({
         },
         tag: {
             type: 'string',
-            description: 'Filter by tag (mode:read, surface:content, ...)'
+            description: 'Filter by tag (action:read, domain:content, severity:high, ...)'
         }
     },
     run: ({ args }) => listEndpoints(args as Record<string, unknown>)

@@ -1,6 +1,6 @@
 # Memory: classification-permission-policy-redesign
 
-**Updated**: 2026-05-14T04:50+08:00
+**Updated**: 2026-05-14T20:39+08:00
 
 ## Git Baseline (Immutable)
 
@@ -18,7 +18,7 @@
 
 ## State
 
-Plan created after subagent design review. Ready for implementation.
+Follow-up fixes applied; ready for user review. Pending user decision on invoke/resource-action residual semantics.
 
 ## Key Files
 
@@ -44,6 +44,8 @@ Plan created after subagent design review. Ready for implementation.
 - [2026-05-14T05:45+08:00] [Decision] Guard implementation must split endpoint action (`read|write|invoke`) from resource access (`read|write`); invoke maps to write only for resource access.
 - [2026-05-14T05:45+08:00] [Decision] Severity derivation has a medium fallback for unlisted action/domain combinations.
 - [2026-05-14T05:45+08:00] [Decision] Incompatible extension classification cache should hard-fail with recache guidance rather than silently register stale semantics.
+- [2026-05-14T20:39+08:00] [Fact] Upstream SiYuan kernel `kernel/api/block.go#getBlockKramdowns` reads `arg["mode"]`; payload field should stay `mode` (not `action`).
+- [2026-05-14T20:39+08:00] [Risk] Runtime Phase 2 currently sets permission context action from resource access (`read|write`), so resource-scoped `action: invoke` rules cannot match; user confirmation required before semantic change.
 
 ## Milestones
 
@@ -52,3 +54,5 @@ Plan created after subagent design review. Ready for implementation.
 - [2026-05-14T05:20+08:00] Refined spec/design: removed ambiguous risk compatibility, added project-config validation, implicit-workspace warning rule, extension cache recache behavior, and recommended permission template.
 - [2026-05-14T05:30+08:00] Refined spec/design: removed invoke-to-write permission folding and removed `raw-sql` concern.
 - [2026-05-14T05:45+08:00] Ran subagent design review, accepted key spec-level fixes, and created phase-based tasks.md.
+- [2026-05-14T06:30+08:00] Implemented classification/permission policy redesign across schema, registry, guard, endpoint schemas, config validation, extension cache, workspace template, docs, and tests. Verification passed: `pnpm run typecheck`, `pnpm test`, `pnpm run build`, manual `api list --tag severity:high`.
+- [2026-05-14T20:39+08:00] Follow-up patch: restored `block.getBlockKramdowns` payload `mode`, made API/extension list show stale/uncached/incompatible cache status as pending metadata, refreshed outdated approval/risk comments, and added regression assertion for `mode` field. Verification passed: `pnpm exec tsx --test tests/endpoint-schemas.test.ts tests/extension-system.test.ts`, `pnpm run typecheck`, `pnpm exec tsx src/cli.ts api list --group system`, `pnpm exec tsx src/cli.ts extension list`.

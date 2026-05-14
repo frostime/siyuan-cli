@@ -22,7 +22,12 @@ import { dirname, join, resolve } from 'pathe';
 import { parse } from 'yaml';
 import { CliError, ExitCode } from '../shared/errors.js';
 import type { AppConfig } from './config.js';
-import { validateBehaviorRaw, type BehaviorConfig, type PermissionConfig } from '../shared/schema.js';
+import {
+    validateBehaviorRaw,
+    validatePermissionRulesRaw,
+    type BehaviorConfig,
+    type PermissionConfig
+} from '../shared/schema.js';
 
 export const PROJECT_CONFIG_FILENAME = '.siyuan-cli.yaml';
 export const PROJECT_SCHEMA_VERSION = 1;
@@ -255,6 +260,14 @@ export function loadProjectConfig(
     }
 
     const permission = parsed['permission'] as PermissionConfig | undefined;
+    const permissionErrors = validatePermissionRulesRaw(permission, 'project');
+    if (permissionErrors.length > 0) {
+        throw new CliError(
+            ExitCode.CONFIG,
+            'PROJECT_CONFIG_PARSE_ERROR',
+            `${permissionErrors[0]!.message} (at ${location.path})`
+        );
+    }
 
     // behavior: optional, validate field types when present
     const rawBehavior = parsed['behavior'] as Record<string, unknown> | undefined;

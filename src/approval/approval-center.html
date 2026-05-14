@@ -118,7 +118,7 @@
           return '<div class="' + active + '" data-id="' + item.id + '">' +
             '<div><strong>' + escapeHtml(item.summary) + '</strong></div>' +
             '<div class="muted">' + escapeHtml(item.endpointId) + '</div>' +
-            '<div>' + fmtCountdown(item.expiresAt) + '<span class="pill">' + escapeHtml(item.risk) + '</span></div>' +
+            '<div>' + fmtCountdown(item.expiresAt) + '<span class="pill">' + escapeHtml(item.severity) + '</span></div>' +
             '</div>';
         }).join('');
         Array.from(document.querySelectorAll('[data-id]')).forEach((el) => {
@@ -183,7 +183,7 @@
         }
         detail.innerHTML =
           '<h2>' + escapeHtml(item.summary) + '</h2>' +
-          '<p><strong>Risk:</strong> ' + escapeHtml(item.risk) + '</p>' +
+          '<p><strong>Severity:</strong> ' + escapeHtml(item.severity) + '</p>' +
           '<p><strong>Triggered by:</strong> ' + escapeHtml(item.triggerReason || 'unknown') + '</p>' +
           '<p><strong>Workspace:</strong> ' + escapeHtml(item.workspaceName) + '</p>' +
           '<p><strong>Endpoint:</strong> ' + escapeHtml(item.endpointId) + '</p>' +

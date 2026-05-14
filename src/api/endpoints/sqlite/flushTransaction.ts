@@ -5,10 +5,10 @@ export const schema: EndpointSchema = {
     summary: 'Flush SQLite transaction',
     payload: { type: 'object', properties: {} },
     classification: {
-        mode: 'invoke',
-        surface: 'runtime',
-        scope: 'single',
-        operation: 'control'
+        action: 'invoke',
+        domain: 'runtime',
+        concerns: ['high-load'],
+        cardinality: 'single'
     },
     formatStrategy: 'transaction'
 };

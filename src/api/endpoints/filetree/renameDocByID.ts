@@ -17,10 +17,9 @@ export const schema: EndpointSchema = {
         }
     },
     classification: {
-        mode: 'write',
-        surface: 'content',
-        scope: 'single',
-        operation: 'move'
+        action: 'write',
+        domain: 'content',
+        cardinality: 'single',
     },
     guard: {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'write' }]

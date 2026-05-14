@@ -1,7 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isHighRisk } from '../src/shared/schema.ts';
-
 import { EndpointRegistry } from '../src/api/registry.ts';
 import { deriveEndpointId } from '../src/shared/schema.ts';
 import {
@@ -59,12 +57,11 @@ function makeEngine(client: any, permission?: PermissionConfig) {
 test('moveBlock is normalized as content write move with three write targets', () => {
     const entry = registerOne(moveBlock);
     assert.deepEqual(entry.meta.classification, {
-        mode: 'write',
-        surface: 'content',
-        scope: 'single',
-        operation: 'move'
+        action: 'write',
+        domain: 'content',
+        cardinality: 'single'
     });
-    assert.equal(entry.meta.risk, 'elevated');
+    assert.equal(entry.meta.severity, 'medium');
     assert.deepEqual(moveBlock.guard?.payloadTargets, [
         { path: 'id', kind: 'id', access: 'write' },
         { path: 'parentID', kind: 'id', access: 'write' },
@@ -75,26 +72,33 @@ test('moveBlock is normalized as content write move with three write targets', (
 test('getBlockKramdown is normalized as content read inspect with read target', () => {
     const entry = registerOne(getBlockKramdown);
     assert.deepEqual(entry.meta.classification, {
-        mode: 'read',
-        surface: 'content',
-        scope: 'single',
-        operation: 'inspect'
+        action: 'read',
+        domain: 'content',
+        cardinality: 'single'
     });
-    assert.equal(entry.meta.risk, 'sensitive');
+    assert.equal(entry.meta.severity, 'medium');
     assert.deepEqual(getBlockKramdown.guard?.payloadTargets, [
         { path: 'id', kind: 'id', access: 'read' }
     ]);
 });
 
+test('getBlockKramdowns payload keeps kernel mode field', () => {
+    const modeField = (
+        blockGetBlockKramdowns.payload.properties as Record<string, unknown>
+    )['mode'] as Record<string, unknown> | undefined;
+    assert.ok(modeField);
+    assert.deepEqual(modeField?.['enum'], ['md', 'textmark']);
+    assert.equal(modeField?.['default'], 'md');
+});
+
 test('query.sql remains global read query with declarative root-array response guard', () => {
     const entry = registerOne(querySql);
     assert.deepEqual(entry.meta.classification, {
-        mode: 'read',
-        surface: 'content',
-        scope: 'global',
-        operation: 'query'
+        action: 'read',
+        domain: 'content',
+        cardinality: 'global'
     });
-    assert.equal(entry.meta.risk, 'sensitive');
+    assert.equal(entry.meta.severity, 'medium');
     assert.deepEqual(querySql.guard?.response, {
         itemsAt: '[*]',
         fieldMap: { id: 'id', path: 'path', notebook: 'box' }
@@ -105,33 +109,31 @@ test('file.getFile and file.putFile use workspace-path targets', () => {
     const readEntry = registerOne(fileGetFile);
     const writeEntry = registerOne(filePutFile);
 
-    assert.equal(readEntry.meta.classification.surface, 'workspace');
-    assert.equal(readEntry.meta.classification.mode, 'read');
+    assert.equal(readEntry.meta.classification.domain, 'storage');
+    assert.equal(readEntry.meta.classification.action, 'read');
     assert.deepEqual(fileGetFile.guard?.payloadTargets, [
         { path: 'path', kind: 'workspace-path', access: 'read' }
     ]);
 
-    assert.equal(writeEntry.meta.classification.surface, 'workspace');
-    assert.equal(writeEntry.meta.classification.mode, 'write');
-    assert.equal(writeEntry.meta.risk, 'critical');
+    assert.equal(writeEntry.meta.classification.domain, 'storage');
+    assert.equal(writeEntry.meta.classification.action, 'write');
+    assert.equal(writeEntry.meta.severity, 'high');
     assert.deepEqual(filePutFile.guard?.payloadTargets, [
         { path: 'path', kind: 'workspace-path', access: 'write' }
     ]);
 });
 
-test('system.exit and pushMsg demonstrate runtime riskOverride extremes', () => {
+test('system.exit and pushMsg demonstrate invoke severity extremes', () => {
     const exitEntry = registerOne(systemExit);
     const msgEntry = registerOne(notificationPushMsg);
 
-    assert.equal(exitEntry.meta.classification.mode, 'invoke');
-    assert.equal(exitEntry.meta.classification.surface, 'runtime');
-    assert.equal(exitEntry.meta.risk, 'critical');
-    assert.equal(isHighRisk(exitEntry.meta.risk), true);
+    assert.equal(exitEntry.meta.classification.action, 'invoke');
+    assert.equal(exitEntry.meta.classification.domain, 'runtime');
+    assert.equal(exitEntry.meta.severity, 'high');
 
-    assert.equal(msgEntry.meta.classification.mode, 'invoke');
-    assert.equal(msgEntry.meta.classification.surface, 'runtime');
-    assert.equal(msgEntry.meta.risk, 'safe');
-    assert.equal(isHighRisk(msgEntry.meta.risk), false);
+    assert.equal(msgEntry.meta.classification.action, 'invoke');
+    assert.equal(msgEntry.meta.classification.domain, 'ui');
+    assert.equal(msgEntry.meta.severity, 'low');
 });
 
 test('moveBlock denies when parentID resolves into denied content.write path', async () => {
@@ -313,7 +315,7 @@ test('file.putFile uses workspace.write and dry-run runs guard before preview', 
         dryRun: true,
         endpoint: '/api/file/putFile',
         payload: { path: '/allowed/file.txt', file: 'abc' },
-        wouldRequestApproval: true
+        wouldRequestApproval: false
     });
     assert.equal(uploadCalls, 0);
 });
@@ -321,12 +323,11 @@ test('file.putFile uses workspace.write and dry-run runs guard before preview', 
 test('importStdMd is write/content/single/create with notebook payload target', () => {
     const entry = registerOne(importImportStdMd);
     assert.deepEqual(entry.meta.classification, {
-        mode: 'write',
-        surface: 'content',
-        scope: 'single',
-        operation: 'create'
+        action: 'write',
+        domain: 'content',
+        cardinality: 'single'
     });
-    assert.equal(entry.meta.risk, 'elevated');
+    assert.equal(entry.meta.severity, 'medium');
     assert.deepEqual(importImportStdMd.guard?.payloadTargets, [
         { path: 'notebook', kind: 'notebook', access: 'write' }
     ]);

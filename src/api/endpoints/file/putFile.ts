@@ -25,10 +25,10 @@ export const schema: EndpointSchema = {
         }
     },
     classification: {
-        mode: 'write',
-        surface: 'workspace',
-        scope: 'single',
-        operation: 'update'
+        action: 'write',
+        domain: 'storage',
+        concerns: ['filesystem'],
+        cardinality: 'single'
     },
     cli: {
         // "file" conflicts with the global --file flag (load JSON payload from file).

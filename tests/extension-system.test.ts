@@ -71,7 +71,7 @@ test('writeSchemaCache/readSchemaCache round-trip tool cache and stale detection
     rmSync(dir, { recursive: true, force: true });
 });
 
-test('readSchemaCache marks version mismatch as stale', () => {
+test('readSchemaCache marks legacy endpoint classification cache as incompatible', () => {
     const dir = makeTempDir('endpoint-cache');
     const source = join(dir, 'custom-endpoint.ts');
     writeFileSync(source, 'export const schema = {}\n', 'utf-8');
@@ -87,7 +87,8 @@ test('readSchemaCache marks version mismatch as stale', () => {
     );
 
     const result = readSchemaCache<EndpointSchemaCache>(source);
-    assert.equal(result.status, 'stale');
+    assert.equal(result.status, 'incompatible');
+    assert.match(result.error ?? '', /siyuan extension cache/);
 
     rmSync(dir, { recursive: true, force: true });
 });

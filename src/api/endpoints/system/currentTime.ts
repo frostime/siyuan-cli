@@ -5,10 +5,9 @@ export const schema: EndpointSchema<number> = {
     summary: 'Get current system time',
     payload: { type: 'object', properties: {} },
     classification: {
-        mode: 'read',
-        surface: 'meta',
-        scope: 'single',
-        operation: 'inspect'
+        action: 'read',
+        domain: 'meta',
+        cardinality: 'single',
     },
     format: ({ responseData }) => String(responseData)
 };

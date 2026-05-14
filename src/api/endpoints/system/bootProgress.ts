@@ -5,10 +5,9 @@ export const schema: EndpointSchema = {
     summary: 'Get SiYuan boot progress (commonly used in Docker scenarios)',
     payload: { type: 'object', properties: {} },
     classification: {
-        mode: 'read',
-        surface: 'meta',
-        scope: 'single',
-        operation: 'inspect'
+        action: 'read',
+        domain: 'meta',
+        cardinality: 'single',
     },
     formatStrategy: 'json'
 };

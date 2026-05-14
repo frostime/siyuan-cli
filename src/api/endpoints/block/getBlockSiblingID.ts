@@ -17,10 +17,9 @@ export const schema: EndpointSchema<BlockSiblingIDs> = {
         }
     },
     classification: {
-        mode: 'read',
-        surface: 'meta',
-        scope: 'single',
-        operation: 'inspect'
+        action: 'read',
+        domain: 'meta',
+        cardinality: 'single',
     },
     guard: {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }],

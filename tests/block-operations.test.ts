@@ -87,17 +87,16 @@ test('insertBlock uses three optional write payload targets', () => {
         { path: 'parentID', kind: 'id', access: 'write' }
     ]);
     const entry = registerOne(blockInsertBlock);
-    assert.equal(entry.meta.classification.mode, 'write');
-    assert.equal(entry.meta.classification.operation, 'create');
+    assert.equal(entry.meta.classification.action, 'write');
+    assert.equal(entry.meta.classification.domain, 'content');
 });
 
 test('getChildBlocks uses payload guard only because children belong to the guarded parent document', () => {
     const entry = registerOne(blockGetChildBlocks);
     assert.deepEqual(entry.meta.classification, {
-        mode: 'read',
-        surface: 'content',
-        scope: 'batch',
-        operation: 'inspect'
+        action: 'read',
+        domain: 'content',
+        cardinality: 'batch'
     });
     assert.deepEqual(blockGetChildBlocks.guard?.payloadTargets, [
         { path: 'id', kind: 'id', access: 'read' }
@@ -152,5 +151,6 @@ test('transferBlockRef uses array write payload targets', () => {
         { path: 'refIDs[*]', kind: 'id', access: 'write' }
     ]);
     const entry = registerOne(blockTransferBlockRef);
-    assert.equal(entry.meta.classification.operation, 'move');
+    assert.equal(entry.meta.classification.action, 'write');
+    assert.deepEqual(entry.meta.classification.concerns, ['reindex', 'high-load']);
 });

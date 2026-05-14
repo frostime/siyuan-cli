@@ -240,7 +240,7 @@ Warnings and errors are written to stderr as single-line JSON, stdout remains cl
 | `warning` field | Meaning | Agent action |
 |-----------------|---------|--------------|
 | `CONTENT_FILTERED` | Some response items or fields were removed by permission rules | Treat stdout as a valid but incomplete view; do not infer missing content does not exist |
-| `IMPLICIT_WORKSPACE` | A risky operation used `config.current` instead of an explicit workspace/project anchor | Confirm workspace before proceeding |
+| `IMPLICIT_WORKSPACE` | A non-read or high-severity operation used `config.current` instead of an explicit workspace/project anchor | Confirm workspace before proceeding |
 | `RAW_API_NO_SCHEMA_GUARD` | `api raw` bypassed schema validation, resource guard, and response filtering | Use only for intended one-off raw calls; prefer registered endpoints/extensions when possible |
 
 ### Common error codes

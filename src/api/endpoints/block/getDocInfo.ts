@@ -17,10 +17,9 @@ export const schema: EndpointSchema<DocInfo | null> = {
         }
     },
     classification: {
-        mode: 'read',
-        surface: 'content',
-        scope: 'single',
-        operation: 'inspect'
+        action: 'read',
+        domain: 'content',
+        cardinality: 'single',
     },
     guard: {
         payloadTargets: [{ path: 'id', kind: 'id', access: 'read' }],

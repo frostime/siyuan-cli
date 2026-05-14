@@ -1,7 +1,7 @@
 ---
 name: permission-model
-description: "Permission engine architecture: rule-list model, two-phase evaluation, rule cascade, project override semantics, and approval effect semantics."
-updated: 2026-05-01
+description: "Permission engine architecture: rule-list model, two-phase evaluation, rule cascade, project override semantics, unknown-field validation, and approval effect semantics."
+updated: 2026-05-14
 scope:
   - /src/shared/permission.ts
   - /src/api/guard.ts
@@ -19,7 +19,9 @@ replacement: ""
 
 The permission system is a **unified rule-list model**: a flat ordered list of rules evaluated top-to-bottom, first full match wins. There is no "deny beats allow" override — order is the only priority mechanism.
 
-Rules are assembled from up to three config layers and evaluated by `PermissionEngine` in `src/shared/permission.ts`. The engine is constructed once per invocation in `guard.ts` and reused across Phase 1 and Phase 2.
+Rules are assembled from config layers and evaluated by `PermissionEngine` in `/src/shared/permission.ts`. The engine is constructed once per invocation and reused across caller-level and resource-level checks.
+
+Endpoint classification is metadata. Approval is triggered by explicit permission effects, not by derived severity.
 
 ---
 
@@ -31,7 +33,7 @@ Each rule has optional conditions and a mandatory effect:
 |-------|-------------|---------------|
 | `endpoint` | glob (micromatch) on endpoint id | any endpoint |
 | `tool` | glob (micromatch) on tool id | any tool (or no tool) |
-| `action` | exact: `read` \| `write` | any action |
+| `action` | exact: `read` \| `write` \| `invoke` | any action |
 | `notebook` | exact match on notebook id | any notebook |
 | `path` | glob (micromatch) on SiYuan id-based path | any path |
 | `root_id` | convenience alias, normalized to `path: "**/<id>.sy"` | any root |
@@ -44,28 +46,53 @@ A rule with no conditions matches every context — useful as a final catch-all.
 
 **`notebook` and `path` only accept ID-based values**, not hpaths. Reason: hpaths are mutable (renaming a document changes its hpath), while IDs are stable. The engine does not resolve hpaths. A smoke-test warning (`LIKELY_HPATH_NOT_ID`, `LIKELY_HPATH_NOT_ID_IN_PATH`) is emitted on config load when a value looks like an hpath.
 
+**Unknown rule fields are hard errors.** Global config, workspace config, and project config validate rule keys before normalization. This prevents a typo or unsupported condition such as `risk: high` from being silently ignored and turning the rule into a broad match.
+
+Code refs: `/src/shared/schema.ts#PermissionRule`, `/src/shared/schema.ts#validatePermissionRulesRaw`, `/src/workspace/config.ts#loadConfig`, `/src/workspace/project-config.ts#loadProjectConfig`.
+
 ---
 
 ## Rule cascade
 
 Without a project override, the final rule list and default effect are assembled from the global config:
 
-```
-final rules   = project.rules (if any)
-              ++ workspace.rules
-              ++ defaults.rules
-
-final default = project.default
-             ?? workspace.default
-             ?? defaults.default
-             ?? "allow"
+```text
+final rules   = workspace.rules ++ defaults.rules
+final default = workspace.default ?? defaults.default ?? "allow"
 ```
 
-Implemented in `cascadePermission()` in `src/shared/permission.ts`.
+Implemented in `cascadePermission()` in `/src/shared/permission.ts`.
 
-**Project permission takes precedence by position, not by replacement.** When `.siyuan-cli.yaml` declares a `permission` block, its rules are prepended to the rule list. Because evaluation is first-match-wins, project rules shadow workspace/defaults rules for any context they cover. Workspace/defaults rules remain in the list and still apply to contexts the project rules did not match.
+When project permission exists, project rules are prepended before workspace/default rules:
+
+```text
+final rules   = project.rules ++ workspace.rules ++ defaults.rules
+final default = project.default ?? workspace.default ?? defaults.default ?? "allow"
+```
+
+Because evaluation is first-match-wins, project rules shadow workspace/defaults rules for any context they cover. Workspace/defaults rules remain in the list and still apply to contexts the project rules did not match.
 
 The project `permission` block is **independent of how the workspace name was determined**. If `--workspace prod` overrides the workspace but a `.siyuan-cli.yaml` is found in cwd, the project's permission still applies. Rationale: `--workspace` expresses "use a different target", while the project file expresses "in this directory, these rules apply" — they are orthogonal.
+
+Code refs: `/src/shared/permission.ts#cascadePermission`, `/src/workspace/resolve.ts#resolveEffectiveWorkspace`.
+
+---
+
+## Action semantics
+
+Permission action uses endpoint classification action:
+
+```text
+classification.action: read   -> permission action: read
+classification.action: write  -> permission action: write
+classification.action: invoke -> permission action: invoke
+```
+
+`invoke` is not folded into `write` for permission rule matching. A rule with `action: write` matches write endpoints only. A rule without `action` matches all actions.
+
+Resource access remains separate from endpoint action. `guard.payloadTargets[*].access` is still `read | write`; invoke endpoints use write resource access when they mutate or control protected resources.
+
+Code refs: `/src/api/guard.ts#executeEndpoint`, `/src/api/guard.ts#applyPayloadGuard`, `/src/shared/permission.ts#matchesCaller`.
 
 ---
 
@@ -75,7 +102,7 @@ Permission checks are split into two phases because the available context differ
 
 ### Phase 1 — caller gate (`checkEndpoint` / `checkTool`)
 
-Called before payload parsing. Only caller info is available: `endpoint`, `tool`, `action`.
+Called before the kernel request. Only caller info is available: `endpoint`, `tool`, `action`.
 
 Three outcomes:
 
@@ -87,32 +114,34 @@ Three outcomes:
 
 ### Phase 2 — resource gate (`checkContentRef` / `filterItems`)
 
-Called from `applyPayloadGuard` in `guard.ts`, once per `payloadTarget` declared in the endpoint schema. Full context is available: `endpoint`, `tool`, `action`, `notebook`, `path`.
+Called from `applyPayloadGuard` in `/src/api/guard.ts`, once per `payloadTarget` declared in the endpoint schema. Full context is available: `endpoint`, `tool`, `action`, `notebook`, `path`.
 
 - Runs `evaluateVerbose()` against the full rule list (same list as Phase 1 — no separation).
 - If effect is `deny` → throw `ContentDeniedError`.
-- If effect is `allow` or `approval` → pass through. (Approval is handled separately in the approval gate.)
+- If effect is `allow` or `approval` → pass through. Approval is handled separately in the approval gate.
 
-**Phase 2 only runs if the endpoint declares `payloadTargets`.** If an endpoint has no `payloadTargets`, resource-qualified rules targeting that endpoint's resources are never evaluated. This is a known constraint: the endpoint schema author is responsible for declaring `payloadTargets` for any endpoint where resource-level rules should apply.
+**Phase 2 only runs if the endpoint declares `payloadTargets`.** If an endpoint has no `payloadTargets`, resource-qualified rules targeting that endpoint's resources are never evaluated. The endpoint schema author is responsible for declaring `payloadTargets` for endpoints where resource-level rules should apply.
 
-### Approval gate (post-Phase-2, in `guard.ts`)
+---
 
-After both phases pass, `executeEndpoint` evaluates the approval gate. Three sources can trigger approval:
+## Approval gate
+
+After both phases pass, `executeEndpoint()` evaluates the approval gate.
+
+Approval sources:
 
 1. **Pure-caller `approval` rule**: `engine.evaluate({ endpoint, tool?, action })` returns `approval`.
-2. **Resource-level `approval` rule**: Phase 2 (`applyPayloadGuard`) returns `{ needsApproval: true }` when any `checkContentRef` call encounters an `approval` effect.
-3. **Risk-auto**: `evaluate()` returns `allow` but the endpoint's derived risk is `destructive` or `critical`.
+2. **Resource-level `approval` rule**: Phase 2 (`applyPayloadGuard`) returns `{{ needsApproval: true }` when any `checkContentRef` call encounters an `approval` effect.
 
 ```ts
 const ruleEffect = engine.evaluate({ endpoint, tool?, action });
 const { needsApproval: phase2NeedsApproval } = await applyPayloadGuard(...);
 const wouldRequestApproval =
     ruleEffect === 'approval' ||
-    phase2NeedsApproval ||
-    (ruleEffect === 'allow' && isHighRisk(entry.meta.risk));
+    phase2NeedsApproval;
 ```
 
-`deny` is never overridden by risk-auto approval.
+There is no classification-derived approval fallback. Derived `severity` is display metadata and warning input, not policy.
 
 ### `approval` effect asymmetry: payload vs response
 
@@ -156,7 +185,19 @@ A pure-caller rule placed before a resource-qualified rule will shadow it for an
 
 `--yes` bypasses approval when `behavior.allowYes` is true (default). When `allowYes` is false, `--yes` is ignored and approval is always required.
 
-Risk-auto approval: if `evaluate()` returns `allow` but the endpoint's derived risk is `destructive` or `critical`, the guard automatically routes through approval. This post-processing is in `guard.ts`, not in the engine. The engine always returns the raw rule result.
+Recommended explicit policy:
+
+```yaml
+permission:
+  default: allow
+  rules:
+    - action: write
+      effect: approval
+      note: "Confirm write operations"
+    - action: invoke
+      effect: approval
+      note: "Confirm invoke operations"
+```
 
 ---
 
@@ -168,8 +209,10 @@ Risk-auto approval: if `evaluate()` returns `allow` but the endpoint's derived r
 | `CONTENT_DENIED` | `checkContentRef()` | resource-qualified deny rule or default deny |
 | `APPROVAL_UNAVAILABLE` | `executeEndpoint()` | approval required but no workspace resolved (needed to spawn broker) |
 | `BLOCK_NOT_FOUND` | id resolution in Phase 2 | block id not found in kernel SQL |
+| `CONFIG_PARSE_ERROR` | config loading | invalid config shape or unknown permission rule field |
+| `PROJECT_CONFIG_PARSE_ERROR` | project config loading | invalid project config shape or unknown permission rule field |
 
-Exit code `5` (`ExitCode.PERMISSION`) for `ENDPOINT_DENIED` and `CONTENT_DENIED`. Exit code `1` for the others.
+Exit code `5` (`ExitCode.PERMISSION`) for `ENDPOINT_DENIED` and `CONTENT_DENIED`. Config parse errors use `ExitCode.CONFIG`.
 
 ---
 
@@ -177,9 +220,10 @@ Exit code `5` (`ExitCode.PERMISSION`) for `ENDPOINT_DENIED` and `CONTENT_DENIED`
 
 | File | Role |
 |------|------|
-| `src/shared/permission.ts` | `PermissionEngine`, `cascadePermission`, Phase 1 + Phase 2 logic |
-| `src/api/guard.ts` | `executeEndpoint`: wires Phase 1 → Phase 2 → approval gate → kernel call |
-| `src/shared/schema.ts` | `PermissionRule`, `PermissionConfig`, `PermissionContext` types |
-| `src/workspace/config.ts` | `cascadePermission` caller; `resolveEffectiveBehavior` |
-| `src/workspace/resolve.ts` | `effectivePermission` attachment (project override) |
-| `docs/extending/30-config.md` | User-facing reference (may lag behind this spec-doc) |
+| `/src/shared/permission.ts` | `PermissionEngine`, `cascadePermission`, Phase 1 + Phase 2 logic |
+| `/src/api/guard.ts` | `executeEndpoint`: wires Phase 1 → Phase 2 → approval gate → kernel call |
+| `/src/shared/schema.ts` | `PermissionRule`, `PermissionConfig`, `PermissionContext`, rule validation types |
+| `/src/workspace/config.ts` | global/workspace config loading, permission normalization and validation |
+| `/src/workspace/project-config.ts` | `.siyuan-cli.yaml` loading and project permission validation |
+| `/src/workspace/resolve.ts` | `effectivePermission` attachment from project config |
+| `/src/docs/cli-usage/permission.md` | user-facing permission reference |

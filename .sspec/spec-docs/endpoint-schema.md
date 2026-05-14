@@ -1,13 +1,14 @@
 ---
 name: EndpointSchema
-description: Authored contract for siyuan-cli endpoint definitions, including identity derivation, permission guard coupling, CLI behavior, and output semantics
-updated: 2026-05-01
+description: Authored contract for siyuan-cli endpoint definitions, including identity derivation, classification metadata, permission guard coupling, CLI behavior, output semantics, and extension cache boundaries
+updated: 2026-05-14
 scope:
   - /src/shared/schema.ts
   - /src/api/registry.ts
   - /src/api/guard.ts
   - /src/shared/argv.ts
   - /src/shared/output.ts
+  - /src/api/command.ts
   - /src/api/endpoints/**
   - /src/extension/cache.ts
 deprecated: false
@@ -21,7 +22,7 @@ replacement: ""
 `EndpointSchema` is the authored contract for `siyuan api` endpoints. It is not a bag of optional fields. Several fields are coupled and drive runtime behavior across five stages:
 
 1. registry identity derivation,
-2. risk and tag derivation,
+2. classification normalization and metadata derivation,
 3. CLI argument parsing,
 4. permission guard execution,
 5. compact output rendering and cache serialization.
@@ -34,7 +35,7 @@ This spec defines the stable rules that built-in endpoints and API extensions mu
 graph TD
     A[EndpointSchema authoring] --> B[EndpointRegistry.register]
     B --> C[id/group/name derivation]
-    B --> D[classification -> risk/tags]
+    B --> D[classification -> severity/tags]
     B --> E[registry validation]
     E --> F[api/command parsePayload]
     E --> G[guard executeEndpoint]
@@ -47,8 +48,9 @@ graph TD
 | Component | File | Responsibility |
 |---|---|---|
 | Type contract | `/src/shared/schema.ts` | Defines `EndpointSchema`, `EndpointClassification`, `FilterSpec`, `CliBehavior`, pointer-path helpers |
-| Registry | `/src/api/registry.ts` | Derives endpoint identity and meta; enforces registry-level schema rules |
+| Registry | `/src/api/registry.ts` | Derives endpoint identity and meta; normalizes legacy classification; enforces registry-level schema rules |
 | CLI payload parser | `/src/shared/argv.ts` | Maps argv/json/file/positional input into `payload` using schema CLI metadata |
+| API command layer | `/src/api/command.ts` | Builds endpoint subcommands, list/describe output, and raw API boundary |
 | Runtime guard | `/src/api/guard.ts` | Applies endpoint-level permission checks, payload guards, approval, response filtering |
 | Output renderer | `/src/shared/output.ts` | Executes `format`/`formatStrategy` compact rendering |
 | Extension cache | `/src/extension/cache.ts` | Serializes only cache-safe schema metadata |
@@ -78,86 +80,119 @@ Rules:
 
 Code refs: `/src/shared/schema.ts#deriveEndpointId`, `/src/api/registry.ts#register`, `/src/api/registry.ts#registerExtension`.
 
-### 2. `classification` is authored truth
+### 2. `classification` is authored endpoint metadata
 
-`classification` is the semantic source of truth for endpoint behavior.
+`classification` describes endpoint facts. It does not decide approval policy.
+
+```ts
+classification: {
+  action: 'read' | 'write' | 'invoke',
+  domain: 'meta' | 'content' | 'config' | 'storage' | 'runtime' | 'network' | 'ui',
+  concerns?: Array<
+    | 'notify'
+    | 'process-exit'
+    | 'high-load'
+    | 'reindex'
+    | 'id-regeneration'
+    | 'filesystem'
+    | 'network-request'
+    | 'unbounded-read'
+  >,
+  cardinality?: 'single' | 'batch' | 'global'
+}
+```
+
+Field semantics:
+
+| Field | Meaning | Examples |
+|---|---|---|
+| `action` | How the endpoint interacts with the system | `read`, `write`, `invoke` |
+| `domain` | Protection boundary touched by the endpoint | `content`, `storage`, `runtime` |
+| `concerns` | Notable behaviors worth explaining | `filesystem`, `process-exit`, `network-request` |
+| `cardinality` | Impact-size hint | `single`, `batch`, `global` |
+
+Derived semantics:
+- Registry tags are derived from normalized `classification`.
+- Registry derives `severity: low | medium | high` for display and warnings.
+- `severity` is not authored by endpoint files.
+- `severity` is not a permission predicate and does not trigger approval.
+- Approval is controlled by permission rules and resource-level permission checks.
+
+Code refs: `/src/shared/schema.ts#EndpointClassification`, `/src/api/registry.ts#deriveMeta`, `/src/api/guard.ts#executeEndpoint`.
+
+#### Domain boundaries
+
+| Domain | Boundary | Example endpoints |
+|---|---|---|
+| `meta` | Low-sensitivity operational facts | `system.version`, `system.currentTime` |
+| `content` | Notes, blocks, refs, attrs, document tree | `block.updateBlock`, `attr.setBlockAttrs`, `filetree.searchDocs` |
+| `config` | Settings/account/sync/token-like configuration | `system.getConf` |
+| `storage` | Workspace file layer, assets, imports/exports | `file.getFile`, `file.putFile`, `asset.upload` |
+| `runtime` | Kernel, process, DB, index, sync control | `system.exit`, `sqlite.flushTransaction` |
+| `network` | Outbound/proxied network capability | `network.forwardProxy` |
+| `ui` | Notification or presentation-only effect | `notification.pushMsg` |
+
+#### Severity derivation
+
+`severity` is intentionally coarse:
+
+| Facts | Severity |
+|---|---|
+| `read + meta` | `low` |
+| `invoke + ui + notify` | `low` |
+| `write + storage` | `high` |
+| non-read `runtime` or `network` | `high` |
+| concerns: `process-exit`, `filesystem`, `network-request`, `reindex`, `id-regeneration`, `unbounded-read`, `high-load` | `high` |
+| all other combinations | `medium` |
+
+`cardinality: batch` alone does not increase severity.
+
+#### Normalized tags
+
+Tags use normalized vocabulary:
+
+```text
+action:read
+domain:content
+concern:filesystem
+cardinality:batch
+severity:high
+```
+
+The normalized model does not emit `risk` or `risk:*` tags.
+
+### 2a. Legacy classification input is registry-only compatibility
+
+During migration, registry boundaries accept legacy endpoint or extension schemas using:
 
 ```ts
 classification: {
   mode: 'read' | 'write' | 'invoke',
   surface: 'meta' | 'content' | 'asset' | 'workspace' | 'runtime' | 'network',
-  scope: 'single' | 'batch' | 'global',
-  operation?: 'inspect' | 'search' | 'query' | 'create' | 'update' | 'delete' | 'move' | 'upload' | 'control',
-  riskOverride?: 'safe' | 'sensitive' | 'elevated' | 'destructive' | 'critical'
+  scope: 'single' | 'batch' | 'global'
 }
 ```
 
-Derived semantics:
-- Registry tags are derived from `classification`.
-- Risk is derived from `classification` unless `riskOverride` is set.
-- Permission action uses endpoint mode: `mode: read` → `action: read`; `mode: write|invoke` → `action: write`.
-- Approval is a post-processing step: if rule effect is `allow` and risk is high (`destructive`/`critical`), guard upgrades to approval. Explicit `deny` is never overridden. `--yes` bypass applies only when `behavior.allowYes` is true.
+Registry normalization maps legacy input to the new model:
 
-  Guard logic (guard.ts): `wouldRequestApproval = ruleEffect === 'approval' || (ruleEffect === 'allow' && isHighRisk(risk))`
-
-Code refs: `/src/api/registry.ts#deriveRisk`, `/src/api/guard.ts#executeEndpoint`, `/src/api/guard.ts#isWriteLike`.
-
-Risk matrix:
-
-| classification | derived risk |
+| Legacy | Normalized |
 |---|---|
-| `read + meta` | `safe` |
-| `read + content/asset` | `sensitive` |
-| `read + workspace/network` | `elevated` |
-| `write + content/asset + single` | `elevated` |
-| `write + content/asset + batch` | `destructive` |
-| `write + workspace` | `critical` |
-| `invoke + runtime` | `destructive` |
-| `invoke + network` | `critical` |
+| `mode` | `action` |
+| `surface: asset` | `domain: storage` |
+| `surface: workspace` | `domain: storage` |
+| `surface: meta/content/runtime/network` | same-named domain |
+| `scope` | `cardinality` |
 
-### 2a. Risk inventory policy
+New built-in endpoint schemas SHOULD author the normalized shape directly. Legacy support exists for extension/cache compatibility, not as the preferred authoring style.
 
-This section keeps only anchor examples. Full endpoint-to-risk inventory is runtime data.
-
-Live inventory command (repo-local):
-
-```bash
-pnpm run siyuan api list
-```
-
-Anchor endpoints:
-
-- **Critical**: `file.putFile` (`write + workspace`), `network.forwardProxy` (`invoke + network`), `system.exit` (`riskOverride: critical`).
-- **Destructive**: `filetree.moveDocs` (`write + content + batch`), `sqlite.flushTransaction` (`invoke + runtime`).
-- **Elevated**: `asset.upload` (`write + asset + single`), `block.deleteBlock` (`write + content + single`), `export.exportResources` (`read + workspace`).
-
-Code refs: `/src/api/registry.ts#deriveRisk`, `/src/api/guard.ts#executeEndpoint`, `/src/api/endpoints/**`.
-
-#### Notable riskOverride examples
-
-`riskOverride` exists for endpoints whose classification would misrepresent actual risk. These cases are deliberate design decisions, documented here for maintainers:
-
-| Endpoint | Classification would derive | Actual risk via override | Rationale |
-|---|---|---|---|
-| `system.exit` | `destructive` (`invoke + runtime`) | `critical` | Shuts down the entire kernel; more severe than general runtime control |
-| `system.logoutAuth` | `destructive` (`invoke + runtime`) | `sensitive` | Session invalidation only — no data mutation |
-| `system.getConf` | `safe` (`read + meta`) | `sensitive` | Returns full system configuration including network/sync settings |
-| `notification.pushMsg` | `destructive` (`invoke + runtime`) | `safe` | UI toast only — no durable state change |
-| `notification.pushErrMsg` | `destructive` (`invoke + runtime`) | `safe` | Same as pushMsg |
-
-#### Key patterns
-
-1. **batch scope is the destructive boundary.** Any `write + content/asset` with `scope: batch` is destructive; same classification with `scope: single` is only elevated. This prevents bulk mutations from bypassing human approval.
-2. **`workspace` surface is always privileged.** `write + workspace` → critical (highest tier). `read + workspace` → elevated (one tier above `read + content`). Endpoints at this surface access the kernel's workspace filesystem directly.
-3. **Delete operations have asymmetric risk by surface.** `file.removeFile` (workspace-surface) is critical; `block.deleteBlock` / `filetree.removeDoc` / `notebook.removeNotebook` (content-surface) are only elevated despite identical irreversibility.
-4. **`riskOverride` is reserved for endpoints whose classification-surface pair would produce a misleading risk.** Use sparingly — prefer adjusting `classification` over overriding risk.
+Code refs: `/src/api/registry.ts#normalizeLegacyClassification`, `/src/extension/cache.ts#readSchemaCache`.
 
 ### 3. Global read endpoints require a response guard
 
 If an endpoint is:
 
 ```ts
-classification: { mode: 'read', scope: 'global', ... }
+classification: { action: 'read', cardinality: 'global', ... }
 ```
 
 then it MUST declare one of:
@@ -183,11 +218,11 @@ guard: {
 Invalid example:
 
 ```ts
-classification: { mode: 'read', surface: 'content', scope: 'global' }
+classification: { action: 'read', domain: 'content', cardinality: 'global' }
 // no guard.response or guard.filterResponse
 ```
 
-Code refs: `/src/api/registry.ts#validateSchema` (global-read guard requirement).
+Code refs: `/src/api/registry.ts#validateSchema`.
 
 ### 4. `guard.payloadTargets` must anchor into `payload.properties`
 
@@ -196,8 +231,8 @@ Code refs: `/src/api/registry.ts#validateSchema` (global-read guard requirement)
 `skipEmpty` MUST be explicit on the target when a payload field may intentionally be `""` (for example optional block-insertion/move anchor IDs). The runtime guard treats empty strings as rejected by default unless the target sets `skipEmpty: true`.
 
 Examples:
-- [`src/api/endpoints/block/batchInsertBlock.ts`](../../src/api/endpoints/block/batchInsertBlock.ts) — `blocks[*].parentID` / `previousID` / `nextID` use `skipEmpty: true`.
-- [`src/api/endpoints/block/moveBlock.ts`](../../src/api/endpoints/block/moveBlock.ts) — `previousID` uses `skipEmpty: true` because an empty string means "move to first child".
+- `/src/api/endpoints/block/batchInsertBlock.ts` — `blocks[*].parentID` / `previousID` / `nextID` use `skipEmpty: true`.
+- `/src/api/endpoints/block/moveBlock.ts` — `previousID` uses `skipEmpty: true` because an empty string means "move to first child".
 
 ```ts
 guard: {
@@ -220,11 +255,12 @@ Rules:
 - `path` MUST start from a declared payload property.
 - The root segment of each `path` MUST exist in `payload.properties`.
 - `kind` controls how runtime resolves the resource: `id`, `notebook`, `path`, `workspace-path`.
-- `access` controls whether permission checks are evaluated as `read` or `write`.
+- `access` controls whether resource checks are evaluated as `read` or `write`.
 
 Runtime effect:
 - `executeEndpoint()` resolves each declared target and checks permission before the kernel call.
 - Each target uses its own `access` (`read`/`write`) when calling `checkContentRef`.
+- Endpoint `action: invoke` remains `invoke` for caller-level rule matching; resource access remains `read|write`.
 - `kind: workspace-path` currently checks caller/action only; path-conditional matching is reserved for a later phase.
 - `skipEmpty` is explicit per target; it is not a global permission shortcut.
 
@@ -296,7 +332,7 @@ Example:
 cli: { skipFields: ['file'] }
 ```
 
-Code refs: `/src/shared/argv.ts#parsePayload`, `/src/api/command.ts#buildEndpointSubCommand` (reserved-arg collision + `skipFields`).
+Code refs: `/src/shared/argv.ts#parsePayload`, `/src/api/command.ts#buildEndpointSubCommand`.
 
 ### 7. Multipart switches transport semantics
 
@@ -315,7 +351,7 @@ Effects:
 
 This is a transport-mode switch, not a display hint.
 
-Code refs: `/src/api/guard.ts#executeEndpoint` (multipart upload branch), `/src/api/command.ts#buildEndpointSubCommand` (multipart collision exception).
+Code refs: `/src/api/guard.ts#executeEndpoint`, `/src/api/command.ts#buildEndpointSubCommand`.
 
 ### 8. Output precedence is fixed
 
@@ -353,7 +389,8 @@ Non-cacheable behavior stays in source modules:
 
 Consequence:
 - discovery/help/list can operate from cache,
-- execution must load source code to recover function behavior.
+- execution must load source code to recover function behavior,
+- incompatible legacy classification cache is treated as incompatible and users should rerun `siyuan extension cache`.
 
 Code refs: `/src/extension/cache.ts#extractEndpointCacheData`, `/src/extension/cache.ts#buildEndpointSchemaFromCache`, `/src/api/command.ts#resolveEndpointForExecution`.
 
@@ -385,10 +422,9 @@ export const schema: EndpointSchema = {
     }
   },
   classification: {
-    mode: 'read',
-    surface: 'content',
-    scope: 'global',
-    operation: 'search'
+    action: 'read',
+    domain: 'content',
+    cardinality: 'global'
   },
   cli: { primary: 'query' },
   guard: {
@@ -409,9 +445,9 @@ export const schema: EndpointSchema = {
   summary: 'Leaky endpoint',
   payload: { type: 'object', properties: {} },
   classification: {
-    mode: 'read',
-    surface: 'content',
-    scope: 'global'
+    action: 'read',
+    domain: 'content',
+    cardinality: 'global'
   }
 }
 ```
@@ -424,6 +460,7 @@ Registry result:
 
 When changing `EndpointSchema` semantics, update or verify tests for:
 - registry validation failures,
+- classification normalization and severity/tag derivation,
 - permission guard behavior,
 - response filtering on global reads,
 - CLI parsing for `primary` and `allowSource`,
@@ -437,5 +474,6 @@ When changing `EndpointSchema` semantics, update or verify tests for:
 - `/src/api/guard.ts`
 - `/src/shared/argv.ts`
 - `/src/shared/output.ts`
+- `/src/api/command.ts`
 - `/src/extension/cache.ts`
-- `/src/docs/extension.md`
+- `/src/docs/cli-usage/extension.md`

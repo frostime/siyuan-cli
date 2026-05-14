@@ -21,7 +21,7 @@ replacement: ""
 
 ## Overview
 
-The approval broker is a **separate Node.js process** that acts as an HTTP intermediary between the CLI caller and a human reviewer. When an endpoint requires approval (via rule or risk-auto), the CLI spawns the broker on demand, submits a request, and long-polls for a decision. The human reviews and decides via a browser UI served by the broker itself.
+The approval broker is a **separate Node.js process** that acts as an HTTP intermediary between the CLI caller and a human reviewer. When an endpoint requires approval via permission rule, the CLI spawns the broker on demand, submits a request, and long-polls for a decision. The human reviews and decides via a browser UI served by the broker itself.
 
 The broker is **not a daemon** — it exits automatically when idle.
 
@@ -168,7 +168,7 @@ Audit records are appended to `audit/YYYY-MM-DD.jsonl` on every decision (approv
 The browser UI is an HTML page loaded from `src/approval/approval-center.html` by `src/approval/ui.ts` (which injects the auth token) and served directly by the broker's HTTP server at `GET /approval?token=<t>`. It is a self-contained single-page app (no external dependencies) that:
 
 - Polls `GET /api/approval/requests` to list pending requests.
-- Displays payload preview, resource summary, risk level, and expiry countdown.
+- Displays payload preview, resource summary, severity, and expiry countdown.
 - Posts to `/api/approval/requests/:id/approve|reject` with the token embedded in the request body.
 
 The browser is opened automatically via `openApprovalBrowser()` in `src/approval/broker-browser.ts` when the first pending request is created (`autoOpen: true` by default, configurable via `behavior.approval.autoOpen`).
