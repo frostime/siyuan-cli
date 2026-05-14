@@ -26,10 +26,10 @@ export const schema: EndpointSchema = {
         }
     },
     classification: {
-        mode: 'write',
-        surface: 'content',
-        scope: 'single',
-        operation: 'move'
+        action: 'write',
+        domain: 'content',
+        concerns: ['reindex', 'high-load'],
+        cardinality: 'single'
     },
     guard: {
         payloadTargets: [

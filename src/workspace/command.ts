@@ -111,6 +111,22 @@ const addCommand = defineCommand({
                 );
             }
 
+            const recommendedPermission: WorkspaceEntry['permission'] = {
+                default: 'allow',
+                rules: [
+                    {
+                        action: 'write',
+                        effect: 'approval',
+                        note: 'Confirm write operations'
+                    },
+                    {
+                        action: 'invoke',
+                        effect: 'approval',
+                        note: 'Confirm invoke operations'
+                    }
+                ]
+            };
+
             const entry: WorkspaceEntry = {
                 ...(args['workspace-dir']
                     ? { workspaceDir: args['workspace-dir'] }
@@ -139,7 +155,8 @@ const addCommand = defineCommand({
                               value: args['token-command']
                           }
                       }
-                    : {})
+                    : {}),
+                permission: recommendedPermission
             };
 
             // Verify connectivity unless skipped
@@ -190,8 +207,9 @@ const addCommand = defineCommand({
                 tokenSource: entry.tokenSource ?? null,
                 isCurrent: config.current === args.name,
                 permission: {
-                    default: 'allow',
-                    hint: 'Configure permission policy in config.yaml if you want to restrict access.',
+                    default: recommendedPermission.default,
+                    rules: recommendedPermission.rules,
+                    hint: 'Recommended approval rules were installed. Edit config.yaml to relax or tighten them.',
                     configPath: getConfigPath()
                 }
             });

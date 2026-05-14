@@ -7,7 +7,7 @@ import {
 import { basename } from 'pathe';
 import type {
     CliBehavior,
-    EndpointClassification,
+    AuthoredEndpointClassification,
     EndpointSchema,
     FormatStrategy,
     JSONSchema,
@@ -17,7 +17,7 @@ import type {
     ToolTag
 } from '../shared/schema.js';
 
-export const CACHE_VERSION = 1;
+export const CACHE_VERSION = 2;
 
 export interface SchemaCacheEnvelope<T> {
     _version: number;
@@ -43,7 +43,7 @@ export interface EndpointSchemaCache {
     summary: string;
     description?: string;
     payload: JSONSchema;
-    classification: EndpointClassification;
+    classification: AuthoredEndpointClassification;
     guard?: {
         payloadTargets?: PayloadTargetSpec[];
         response?: {
@@ -56,13 +56,14 @@ export interface EndpointSchemaCache {
     multipart?: { fileFields: string[] };
 }
 
-export type CacheStatus = 'cached' | 'stale' | 'uncached';
+export type CacheStatus = 'cached' | 'stale' | 'uncached' | 'incompatible';
 
 export interface ReadSchemaCacheResult<T> {
     status: CacheStatus;
     cachePath: string;
     envelope?: SchemaCacheEnvelope<T>;
     data?: T;
+    error?: string;
 }
 
 export function getSchemaCachePath(source: string): string {
@@ -147,6 +148,25 @@ export function writeSchemaCache(
     }
 }
 
+function isEndpointCache(data: unknown): data is EndpointSchemaCache {
+    return (
+        typeof data === 'object' &&
+        data !== null &&
+        'endpoint' in data &&
+        'classification' in data
+    );
+}
+
+function hasNormalizedClassification(data: EndpointSchemaCache): boolean {
+    const classification = data.classification as unknown as Record<string, unknown>;
+    return (
+        typeof classification === 'object' &&
+        classification !== null &&
+        typeof classification['action'] === 'string' &&
+        typeof classification['domain'] === 'string'
+    );
+}
+
 export function readSchemaCache<T>(source: string): ReadSchemaCacheResult<T> {
     const cachePath = getSchemaCachePath(source);
     if (!existsSync(cachePath)) {
@@ -158,6 +178,15 @@ export function readSchemaCache<T>(source: string): ReadSchemaCacheResult<T> {
         envelope = JSON.parse(readFileSync(cachePath, 'utf-8')) as SchemaCacheEnvelope<T>;
     } catch {
         return { status: 'uncached', cachePath };
+    }
+
+    if (isEndpointCache(envelope.data) && !hasNormalizedClassification(envelope.data)) {
+        return {
+            status: 'incompatible',
+            cachePath,
+            envelope,
+            error: 'Extension schema cache is incompatible with the current classification model. Run `siyuan extension cache` to regenerate it.'
+        };
     }
 
     let status: CacheStatus = 'cached';

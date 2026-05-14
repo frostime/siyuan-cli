@@ -25,7 +25,7 @@ Docs = decision map. `--help` = parameter syntax.
 ```bash
 siyuan api <id> --help       # params, INPUT SOURCES, examples
 siyuan tool <id> --help      # params, examples, behavior
-siyuan api list              # endpoints + risk labels
+siyuan api list              # endpoints + classification/severity labels
 siyuan tool list             # tools
 siyuan doc list              # docs + real paths
 ```

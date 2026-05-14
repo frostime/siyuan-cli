@@ -155,12 +155,9 @@ The `MaterializedWorkspace` always has a concrete `baseUrl` by the time `SiyuanC
 
 Emitted when **both**:
 1. `resolved.source === 'global-current'` (lowest priority)
-2. endpoint risk is `elevated`, `destructive`, or `critical`
+2. endpoint action is not `read`, or derived severity is `high`
 
-**Why risk-based, not mode-based**:
-- `sensitive` reads don't warn — reading the wrong workspace is annoying but not destructive
-- `notification.pushMsg` (`riskOverride: safe`) doesn't warn — UI toast on the wrong window at worst
-- `system.exit` (`riskOverride: critical`) does warn — killing the wrong kernel is a real incident
+Low/medium read endpoints do not warn. Write and invoke endpoints warn because the selected workspace materially changes the operation target.
 
 The warning does not change exit code. Agents should treat it as a signal to add `--workspace` or a project file.
 

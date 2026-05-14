@@ -15,10 +15,9 @@ export const schema: EndpointSchema<Array<Record<string, unknown>>> = {
         }
     },
     classification: {
-        mode: 'read',
-        surface: 'content',
-        scope: 'global',
-        operation: 'query'
+        action: 'read',
+        domain: 'content',
+        cardinality: 'global',
     },
     cli: {
         primary: 'stmt',

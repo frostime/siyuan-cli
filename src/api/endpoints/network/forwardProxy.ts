@@ -28,11 +28,10 @@ export const schema: EndpointSchema = {
         }
     },
     classification: {
-        mode: 'invoke',
-        surface: 'network',
-        scope: 'single',
-        operation: 'control'
-        // Critical by fallback: this can drive arbitrary outbound requests through the kernel.
+        action: 'invoke',
+        domain: 'network',
+        concerns: ['network-request'],
+        cardinality: 'single'
     },
     formatStrategy: 'object'
 };

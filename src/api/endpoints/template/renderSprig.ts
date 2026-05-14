@@ -12,10 +12,9 @@ export const schema: EndpointSchema = {
         }
     },
     classification: {
-        mode: 'read',
-        surface: 'meta',
-        scope: 'single',
-        operation: 'inspect'
+        action: 'read',
+        domain: 'meta',
+        cardinality: 'single',
     },
     cli: {
         primary: 'template',

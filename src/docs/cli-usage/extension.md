@@ -91,7 +91,7 @@ export const schema: EndpointSchema = {
     },
     required: ["text"]
   },
-  classification: { mode: "read", surface: "meta", scope: "single" },
+  classification: { action: "read", domain: "meta", cardinality: "single" },
   format: ({ payload }) => String((payload as { text: string }).text)
 };
 ```
@@ -225,20 +225,27 @@ https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go
 
 Permission behavior is not solely controlled by user config rules. Each endpoint schema declares fields that determine **what the permission engine can enforce**. This section is essential for extension authors.
 
-### `classification` → auto-approval
+### `classification` → endpoint facts
 
-Every endpoint schema declares a `classification`. This is the **source of truth** for risk-based auto-approval. The classification fields (`mode`, `surface`, `scope`) feed the risk derivation matrix (see `permission.md` §Risk-based auto-approval).
-
-Extension authors cannot disable auto-approval for destructive operations — only the user can, via `--yes` (if `behavior.allowYes` is true).
+Every endpoint schema declares a `classification`. This is the source of truth for endpoint facts and derived display metadata such as `severity`. Approval remains controlled by user permission rules.
 
 Example:
 
 ```ts
 classification: {
-  mode: "write",
-  surface: "content",
-  scope: "batch",       // batch → risk = destructive → auto-approval
-  operation: "delete"
+  action: "write",
+  domain: "content",
+  cardinality: "batch"
+}
+```
+
+Optional `severity` overrides the auto-derived value when the default derivation doesn't fit:
+
+```ts
+classification: {
+  action: "invoke",
+  domain: "runtime",
+  severity: "medium"  // override: default derivation would give "high"
 }
 ```
 
@@ -263,7 +270,7 @@ guard: {
 
 ### `guard.response` → response filtering
 
-Global read endpoints (`mode: "read"`, `scope: "global"`) MUST declare a response guard so the CLI can filter out items from disallowed notebooks/paths:
+Global read endpoints (`action: "read"`, `cardinality: "global"`) MUST declare a response guard so the CLI can filter out items from disallowed notebooks/paths:
 
 ```ts
 guard: {
@@ -280,7 +287,7 @@ When response filtering removes content, the CLI emits `CONTENT_FILTERED` on std
 
 ### Extension author checklist
 
-1. What `classification` fits? Remember `write + batch` triggers auto-approval.
+1. What `classification` fits: `action`, `domain`, optional `concerns`, optional `cardinality`, optional `severity` override?
 2. Does the payload contain block ids, notebook ids, or paths? → declare `guard.payloadTargets`.
 3. Is it a global read? → MUST declare `guard.response` or `guard.filterResponse`.
 

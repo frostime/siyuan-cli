@@ -1,4 +1,4 @@
-import type { RegisteredEndpoint, RiskLabel } from '../shared/schema.js';
+import type { RegisteredEndpoint, SeverityLabel } from '../shared/schema.js';
 import type { JsonPrintExtra } from '../shared/output.js';
 
 export type ApprovalStatus =
@@ -15,7 +15,7 @@ export interface PreparedApprovalRequest {
     endpointId: string;
     endpointPath: string;
     callerTool?: string;
-    risk: RiskLabel;
+    severity: SeverityLabel;
     summary: string;
     payloadPreview: unknown;
     payloadDigest: string;

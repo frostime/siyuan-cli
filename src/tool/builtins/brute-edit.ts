@@ -179,6 +179,9 @@ Uses global --dry-run to preview without writing.`,
                     ) LIMIT 1000`
         });
 
+        // #TODO 检查 Doc 中是否有 Block 被某个数据库(av)引用，不过目前没有高效的方法实现，如果逐个遍历 block 效率低
+        // 留待后续
+
         // STEP 4: Read markdown + size check
         const children = await ctx.callEndpoint<
             Array<{ id: string; type: string; subType?: string; markdown: string }>

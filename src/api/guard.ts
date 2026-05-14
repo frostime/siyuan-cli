@@ -5,10 +5,10 @@
 import {
     deriveEndpointId,
     evaluatePointerPath,
-    isHighRisk,
     runPointerFilterTerminal,
     type CallerContext,
     type EndpointSchema,
+    type PermissionAction,
     type PermissionEngineLike,
     type RegisteredEndpoint
 } from '../shared/schema.js';
@@ -21,12 +21,6 @@ import {
 import type { SiyuanClient } from '../shared/client.js';
 import { resolveEffectiveBehavior, type AppConfig, type ResolvedWorkspace } from '../workspace/config.js';
 import type { JsonPrintExtra } from '../shared/output.js';
-
-const RISK_TRIGGERS_IMPLICIT_WARNING = new Set<string>([
-    'elevated',
-    'destructive',
-    'critical'
-]);
 
 function emitWarning(jsonExtra: JsonPrintExtra | undefined, warning: Record<string, unknown>): void {
     if (jsonExtra) {
@@ -59,12 +53,17 @@ function maybeWarnImplicitWorkspace(
 ): void {
     if (!workspace) return;
     if (workspace.source !== 'global-current') return;
-    if (!RISK_TRIGGERS_IMPLICIT_WARNING.has(entry.meta.risk)) return;
+    if (
+        entry.meta.classification.action === 'read' &&
+        entry.meta.severity !== 'high'
+    ) {
+        return;
+    }
     emitWarning(jsonExtra, {
         warning: 'IMPLICIT_WORKSPACE',
         endpoint: entry.id,
         workspace: workspace.name,
-        risk: entry.meta.risk,
+        severity: entry.meta.severity,
         hint: 'Resolved from global config.current. Pass --workspace, set $SIYUAN_CLI_WORKSPACE, or add .siyuan-cli.yaml to anchor the target.'
     });
 }
@@ -73,7 +72,7 @@ export async function applyPayloadGuard(
     schema: EndpointSchema,
     payload: unknown,
     engine: PermissionEngineLike,
-    access: 'read' | 'write',
+    endpointAction?: PermissionAction,
     caller?: CallerContext
 ): Promise<{ needsApproval: boolean }> {
     const targets = schema.guard?.payloadTargets;
@@ -100,7 +99,8 @@ export async function applyPayloadGuard(
                 }
                 const effect = await engine.checkContentRef(
                     { kind: target.kind, value, access: target.access },
-                    caller
+                    caller,
+                    endpointAction
                 );
                 if (effect === 'approval') needsApproval = true;
             }
@@ -172,7 +172,7 @@ export interface ExecuteOptions {
     engine: PermissionEngine;
     /** Config for behavior resolution. */
     config: AppConfig;
-    /** Optional — when supplied, enables IMPLICIT_WORKSPACE warning on write-like risks. */
+    /** Optional — when supplied, enables IMPLICIT_WORKSPACE warning policy checks. */
     workspace?: ResolvedWorkspace;
     /** When called from inside a tool, carries the tool id for permission context. */
     callerTool?: string;
@@ -193,10 +193,7 @@ function debugPreview(schema: EndpointSchema, payload: unknown, jsonExtra?: Json
 }
 
 function isWriteLike(entry: RegisteredEndpoint): boolean {
-    return (
-        entry.meta.classification.mode === 'write' ||
-        entry.meta.classification.mode === 'invoke'
-    );
+    return entry.meta.classification.action !== 'read';
 }
 
 export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
@@ -219,7 +216,7 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
         endpoint: id,
         ...(callerTool ? { tool: callerTool } : {})
     };
-    const action: 'read' | 'write' = isWriteLike(entry) ? 'write' : 'read';
+    const endpointAction = entry.meta.classification.action;
 
     maybeWarnImplicitWorkspace(entry, workspace, jsonExtra);
 
@@ -227,20 +224,15 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
     engine.checkEndpoint(id);
 
     // Phase 2: resource-level gate (payload targets)
-    const { needsApproval: phase2NeedsApproval } = await applyPayloadGuard(schema, payload, engine, action, caller);
+    const { needsApproval: phase2NeedsApproval } = await applyPayloadGuard(schema, payload, engine, endpointAction, caller);
 
     if (debug) debugPreview(schema, payload, jsonExtra);
 
-    // Approval gate: three sources can trigger approval:
-    //   1. Pure-caller rule returns 'approval' (engine.evaluate with caller-only context)
-    //   2. Resource-level rule returns 'approval' in Phase 2 (phase2NeedsApproval)
-    //   3. Risk-auto: rule returns 'allow' but endpoint is destructive/critical
-    // High risk only upgrades `allow`; explicit `deny` and `approval` are honored.
-    const ruleEffect = engine.evaluate({ ...caller, action });
+    // Approval gate: explicit permission sources only.
+    const ruleEffect = engine.evaluate({ ...caller, action: endpointAction });
     const wouldRequestApproval =
         ruleEffect === 'approval' ||
-        phase2NeedsApproval ||
-        (ruleEffect === 'allow' && isHighRisk(entry.meta.risk));
+        phase2NeedsApproval;
 
     if (dryRun && isWriteLike(entry)) {
         return {
@@ -287,9 +279,6 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
         const triggerReasons: string[] = [];
         if (ruleEffect === 'approval') triggerReasons.push('matched approval rule');
         if (phase2NeedsApproval) triggerReasons.push('resource-level approval rule');
-        if (ruleEffect === 'allow' && isHighRisk(entry.meta.risk)) {
-            triggerReasons.push(`high-risk auto-approval (${entry.meta.risk})`);
-        }
 
         await requestAndWait(
             buildPreparedApprovalRequest({

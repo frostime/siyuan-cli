@@ -13,10 +13,9 @@ export const schema: EndpointSchema<string> = {
     summary: 'Get SiYuan kernel version',
     payload: { type: 'object', properties: {} },
     classification: {
-        mode: 'read',
-        surface: 'meta',
-        scope: 'single',
-        operation: 'inspect'
+        action: 'read',
+        domain: 'meta',
+        cardinality: 'single',
     },
     format: ({ responseData }) => responseData
 };

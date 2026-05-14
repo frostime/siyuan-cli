@@ -17,10 +17,9 @@ export const schema: EndpointSchema = {
         }
     },
     classification: {
-        mode: 'read',
-        surface: 'workspace',
-        scope: 'batch',
-        operation: 'inspect'
+        action: 'read',
+        domain: 'storage',
+        cardinality: 'batch',
     },
     guard: {
         payloadTargets: [

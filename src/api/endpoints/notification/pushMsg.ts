@@ -16,12 +16,10 @@ export const schema: EndpointSchema = {
         }
     },
     classification: {
-        mode: 'invoke',
-        surface: 'runtime',
-        scope: 'single',
-        operation: 'control',
-        // UI-only notification; affects runtime UX but does not alter data or durable state.
-        riskOverride: 'safe'
+        action: 'invoke',
+        domain: 'ui',
+        concerns: ['notify'],
+        cardinality: 'single'
     },
     cli: {
         primary: 'msg',

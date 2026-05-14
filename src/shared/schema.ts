@@ -30,10 +30,12 @@ export function resolvePermissionEffect(raw: PermissionEffect | string): Permiss
     return EFFECT_ALIASES[raw] ?? (raw as PermissionEffect);
 }
 
+export type PermissionAction = 'read' | 'write' | 'invoke';
+
 export interface PermissionRule {
     endpoint?: string;    // glob on endpoint id
     tool?: string;        // glob on tool id
-    action?: 'read' | 'write';
+    action?: PermissionAction;
     notebook?: string;    // exact match notebook id
     path?: string;        // glob on SiYuan id-based path
     root_id?: string;     // exact match document block id; normalized to path: "**/<id>.sy"
@@ -45,6 +47,55 @@ export interface PermissionRule {
 export interface PermissionConfig {
     default?: PermissionEffect;    // fallback when no rule matches; defaults to 'allow'
     rules?: PermissionRule[];
+}
+
+const PERMISSION_RULE_KEYS = new Set([
+    'endpoint',
+    'tool',
+    'action',
+    'notebook',
+    'path',
+    'root_id',
+    'effect',
+    'note'
+]);
+
+export interface PermissionRuleValidationError {
+    message: string;
+}
+
+export function validatePermissionRulesRaw(
+    permission: unknown,
+    scope: string
+): PermissionRuleValidationError[] {
+    if (permission === undefined || permission === null) return [];
+    if (typeof permission !== 'object' || Array.isArray(permission)) {
+        return [{ message: `${scope}.permission must be an object.` }];
+    }
+    const p = permission as Record<string, unknown>;
+    if (p['rules'] === undefined) return [];
+    if (!Array.isArray(p['rules'])) {
+        return [{ message: `${scope}.permission.rules must be an array.` }];
+    }
+    const errors: PermissionRuleValidationError[] = [];
+    for (const [i, rule] of p['rules'].entries()) {
+        if (typeof rule !== 'object' || rule === null || Array.isArray(rule)) {
+            errors.push({ message: `${scope}.permission.rules[${i}] must be an object.` });
+            continue;
+        }
+        const rec = rule as Record<string, unknown>;
+        if (typeof rec['effect'] !== 'string') {
+            errors.push({ message: `${scope}.permission.rules[${i}] must have an "effect" field.` });
+        }
+        for (const key of Object.keys(rec)) {
+            if (!PERMISSION_RULE_KEYS.has(key)) {
+                errors.push({
+                    message: `${scope}.permission.rules[${i}] has unknown field "${key}".`
+                });
+            }
+        }
+    }
+    return errors;
 }
 
 // ————— Behavior config model —————
@@ -174,7 +225,7 @@ export function validateBehaviorRaw(
 export interface PermissionContext {
     endpoint?: string;
     tool?: string;
-    action?: 'read' | 'write';
+    action?: PermissionAction;
     notebook?: string;
     path?: string;
 }
@@ -184,7 +235,30 @@ export type GuardFieldKind = 'id' | 'path' | 'notebook';
 
 export type FormatStrategy = 'direct' | 'records' | 'transaction' | 'object' | 'json';
 
-export type EndpointMode = 'read' | 'write' | 'invoke';
+export type EndpointAction = PermissionAction;
+export type EndpointDomain =
+    | 'meta'
+    | 'content'
+    | 'config'
+    | 'storage'
+    | 'runtime'
+    | 'network'
+    | 'ui';
+export type EndpointConcern =
+    | 'notify'
+    | 'process-exit'
+    | 'high-load'
+    | 'reindex'
+    | 'id-regeneration'
+    | 'filesystem'
+    | 'network-request'
+    | 'unbounded-read';
+export type EndpointCardinality = 'single' | 'batch' | 'global';
+export type SeverityLabel = 'low' | 'medium' | 'high';
+
+/** @deprecated Use EndpointAction. */
+export type EndpointMode = EndpointAction;
+/** @deprecated Use EndpointClassification['domain']. */
 export type EndpointSurface =
     | 'meta'
     | 'content'
@@ -192,7 +266,9 @@ export type EndpointSurface =
     | 'workspace'
     | 'runtime'
     | 'network';
-export type EndpointScope = 'single' | 'batch' | 'global';
+/** @deprecated Use EndpointCardinality. */
+export type EndpointScope = EndpointCardinality;
+/** @deprecated Removed in new classification model. */
 export type EndpointOperation =
     | 'inspect'
     | 'search'
@@ -203,6 +279,7 @@ export type EndpointOperation =
     | 'move'
     | 'upload'
     | 'control';
+/** @deprecated Use SeverityLabel. */
 export type RiskLabel =
     | 'safe'
     | 'sensitive'
@@ -292,6 +369,15 @@ export interface FilterSpec {
 }
 
 export interface EndpointClassification {
+    action: EndpointAction;
+    domain: EndpointDomain;
+    concerns?: EndpointConcern[];
+    cardinality?: EndpointCardinality;
+    severity?: SeverityLabel;
+}
+
+/** @deprecated Accepted at registry boundaries during migration. */
+export interface LegacyEndpointClassification {
     mode: EndpointMode;
     surface: EndpointSurface;
     scope: EndpointScope;
@@ -299,14 +385,14 @@ export interface EndpointClassification {
     riskOverride?: RiskLabel;
 }
 
+export type AuthoredEndpointClassification =
+    | EndpointClassification
+    | LegacyEndpointClassification;
+
 export interface DerivedMeta {
     classification: EndpointClassification;
     tags: string[];
-    risk: RiskLabel;
-}
-
-export function isHighRisk(risk: RiskLabel): boolean {
-    return risk === 'destructive' || risk === 'critical';
+    severity: SeverityLabel;
 }
 
 /**
@@ -323,7 +409,8 @@ export interface PermissionEngineLike {
     checkTool(id: string): void;
     checkContentRef(
         ref: { kind: ResourceKind; value: string; access: 'read' | 'write' },
-        caller?: CallerContext
+        caller?: CallerContext,
+        endpointAction?: PermissionAction
     ): Promise<PermissionEffect>;
     resolveContentIds(
         ids: string[]
@@ -347,7 +434,7 @@ export interface EndpointSchema<TResponseData = unknown> {
     payload: JSONSchema;
 
     /** Authored endpoint classification. */
-    classification: EndpointClassification;
+    classification: AuthoredEndpointClassification;
 
     minKernelVersion?: string;
     deprecated?: { replacement?: string; removeAt?: string; reason?: string };

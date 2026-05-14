@@ -18,10 +18,9 @@ export const schema: EndpointSchema = {
         }
     },
     classification: {
-        mode: 'read',
-        surface: 'content',
-        scope: 'batch',
-        operation: 'inspect'
+        action: 'read',
+        domain: 'content',
+        cardinality: 'batch',
     },
     guard: {
         payloadTargets: [{ path: 'notebook', kind: 'notebook', access: 'read' }]

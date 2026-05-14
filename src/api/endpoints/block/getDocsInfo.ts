@@ -29,10 +29,9 @@ export const schema: EndpointSchema<DocInfo[]> = {
         }
     },
     classification: {
-        mode: 'read',
-        surface: 'content',
-        scope: 'batch',
-        operation: 'inspect'
+        action: 'read',
+        domain: 'content',
+        cardinality: 'batch',
     },
     cli: { allowSource: { ids: ['literal', 'file', 'stdin'] } },
     guard: {

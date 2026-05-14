@@ -68,5 +68,5 @@ siyuan tool <id> --help          # tool parameters, examples, behavior
 |------|--------|
 | `cli-overview.md` | Command tree, global flags, input sources, error codes, debugging. |
 | `workspace-config.md` | Config file, workspace connections, token sources, project anchoring. |
-| `permission.md` | Permission rule syntax, evaluation, risk-based approval, debugging. |
+| `permission.md` | Permission rule syntax, evaluation, explicit approval, debugging. |
 | `extension.md` | Custom API/tool extensions, schema authoring, permission schema coupling. |
