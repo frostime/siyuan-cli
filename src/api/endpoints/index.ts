@@ -67,6 +67,9 @@ import { schema as blockTransferBlockRef } from './block/transferBlockRef.js';
 import { schema as blockAppendDailyNoteBlock } from './block/appendDailyNoteBlock.js';
 import { schema as blockPrependDailyNoteBlock } from './block/prependDailyNoteBlock.js';
 
+// Outline APIs
+import { schema as outlineGetDocOutline } from './outline/getDocOutline.js';
+
 // Attr APIs
 import { schema as attrGetBlockAttrs } from './attr/getBlockAttrs.js';
 import { schema as attrSetBlockAttrs } from './attr/setBlockAttrs.js';
@@ -172,6 +175,8 @@ const schemas: EndpointSchema<any>[] = [
     blockTransferBlockRef,
     blockAppendDailyNoteBlock,
     blockPrependDailyNoteBlock,
+    // Outline
+    outlineGetDocOutline,
     // Attr
     attrGetBlockAttrs,
     attrSetBlockAttrs,

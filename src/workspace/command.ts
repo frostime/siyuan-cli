@@ -15,7 +15,7 @@ import { cascadePermission } from '../shared/permission.js';
 import { SiyuanClient } from '../shared/client.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
 import { diagnoseConnection } from './diagnostics.js';
-import { getConfigPath } from './paths.js';
+import { getConfigDir, getConfigPath } from './paths.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -509,6 +509,7 @@ const whichCommand = defineCommand({
             );
             const effectivePerm = cascadePermission(config, resolved.name, resolved.effectivePermission);
             out({
+                configDir: getConfigDir(),
                 workspace: resolved.name,
                 source: resolved.source,
                 baseUrl: resolved.baseUrl ?? null,

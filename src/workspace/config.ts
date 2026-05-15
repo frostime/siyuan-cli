@@ -285,16 +285,16 @@ function warnRulesSmoke(
                 }) + '\n'
             );
         }
-        if (rule.root_id && rule.path) {
-            process.stderr.write(
-                JSON.stringify({
-                    warning: 'ROOT_ID_OVERRIDES_PATH',
-                    scope,
-                    at: `rules[${i}]`,
-                    hint: 'root_id takes precedence; explicit path is ignored.'
-                }) + '\n'
-            );
-        }
+        // if (rule.root_id && rule.path) {
+        //     process.stderr.write(
+        //         JSON.stringify({
+        //             warning: 'ROOT_ID_OVERRIDES_PATH',
+        //             scope,
+        //             at: `rules[${i}]`,
+        //             hint: 'root_id takes precedence; explicit path is ignored.'
+        //         }) + '\n'
+        //     );
+        // }
         if (rule.root_id && !ID_PATTERN.test(rule.root_id)) {
             process.stderr.write(
                 JSON.stringify({

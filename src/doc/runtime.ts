@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { basename, dirname, extname, join, relative, resolve } from 'pathe';
+import { getConfigDir } from '../workspace/paths.js';
 
 export interface BuiltinDoc {
     relPath: string;
@@ -142,6 +143,8 @@ export function readBuiltinDoc(input: string): ResolvedBuiltinDoc {
 export function formatDocsHint(): string {
     const root = getDocsRoot();
     return (
+        `\nConfig dir\n` +
+        `  ${getConfigDir()}\n` +
         `\nBuilt-in docs root\n` +
         `  ${root}\n` +
         `\nStart here\n` +
