@@ -295,78 +295,23 @@ Uses global --dry-run to preview without writing.`,
             };
         }
 
-        // STEP 5: Search uniqueness + match planning on ORIGINAL markdown
-        interface PlannedReplacement {
-            search: string;
-            replace: string;
-            start: number;
-            end: number;
+        // STEP 5: Plan and apply replacements using shared logic
+        const planResult = planAndApply(markdown, pairs);
+        if ('error' in planResult) {
+            const d = planResult.details as Record<string, unknown>;
+            const contentMsg =
+                planResult.error === 'search-not-found' ? 'PRE-CHECK FAILED: Search string not found' :
+                planResult.error === 'search-ambiguous' ? `PRE-CHECK FAILED: Search string matches ${d['matchCount']} times` :
+                planResult.error === 'overlapping-replacements' ? 'PRE-CHECK FAILED: Replacement ranges overlap in original document' :
+                `PRE-CHECK FAILED: ${planResult.error}`;
+            return errorResult(planResult.error, contentMsg, {
+                canApply: false,
+                ...safety,
+                reason: planResult.error,
+                ...planResult.details
+            });
         }
-
-        const planned: PlannedReplacement[] = [];
-        for (const { search, replace } of pairs) {
-            const first = markdown.indexOf(search);
-            if (first === -1) {
-                return errorResult('search-not-found', `PRE-CHECK FAILED: Search string not found`, {
-                    canApply: false,
-                    ...safety,
-                    reason: 'search-not-found',
-                    search,
-                    hint: 'Check spelling or use a broader search.'
-                });
-            }
-            const second = markdown.indexOf(search, first + 1);
-            if (second !== -1) {
-                // Count total occurrences for message
-                let count = 1;
-                let pos = second;
-                while (pos !== -1) {
-                    count++;
-                    pos = markdown.indexOf(search, pos + 1);
-                }
-                return errorResult(
-                    'search-ambiguous',
-                    `PRE-CHECK FAILED: Search string matches ${count} times`,
-                    {
-                        canApply: false,
-                        ...safety,
-                        reason: 'search-ambiguous',
-                        search,
-                        matchCount: count,
-                        hint: 'Use a more specific search string.'
-                    }
-                );
-            }
-            planned.push({ search, replace, start: first, end: first + search.length });
-        }
-
-        // Check for overlapping ranges
-        const sorted = [...planned].sort((a, b) => a.start - b.start);
-        for (let i = 1; i < sorted.length; i++) {
-            if (sorted[i]!.start < sorted[i - 1]!.end) {
-                return errorResult(
-                    'overlapping-replacements',
-                    'PRE-CHECK FAILED: Replacement ranges overlap in original document',
-                    {
-                        canApply: false,
-                        ...safety,
-                        reason: 'overlapping-replacements',
-                        conflicts: [
-                            { search: sorted[i - 1]!.search, range: [sorted[i - 1]!.start, sorted[i - 1]!.end] },
-                            { search: sorted[i]!.search, range: [sorted[i]!.start, sorted[i]!.end] }
-                        ],
-                        hint: 'Split the edit into separate calls or make the search strings non-overlapping.'
-                    }
-                );
-            }
-        }
-
-        // STEP 6: Apply replacements by original match spans (end-to-start)
-        let result = markdown;
-        const sortedDesc = [...planned].sort((a, b) => b.start - a.start);
-        for (const { replace, start, end } of sortedDesc) {
-            result = result.slice(0, start) + replace + result.slice(end);
-        }
+        const { result, planned } = planResult;
 
         const plannedWithContext = planned.map((item) => ({
             search: item.search,
@@ -413,4 +358,69 @@ Uses global --dry-run to preview without writing.`,
 
 function errorResult(reason: string, content: string, details: Record<string, unknown>) {
     return { content, details: { reason, ...details } };
+}
+
+export interface PlannedReplacement {
+    search: string;
+    replace: string;
+    start: number;
+    end: number;
+}
+
+/**
+ * Plan search→replace pairs against the original markdown (no sequential drift),
+ * then apply end-to-start.
+ */
+export function planAndApply(
+    markdown: string,
+    pairs: Array<{ search: string; replace: string }>
+): { result: string; planned: PlannedReplacement[] } | { error: string; details: Record<string, unknown> } {
+    const planned: PlannedReplacement[] = [];
+
+    for (const { search, replace } of pairs) {
+        const first = markdown.indexOf(search);
+        if (first === -1) {
+            return { error: 'search-not-found', details: { search, hint: 'Check spelling or use a broader search.' } };
+        }
+        const second = markdown.indexOf(search, first + 1);
+        if (second !== -1) {
+            let count = 1;
+            let pos = second;
+            while (pos !== -1) {
+                count++;
+                pos = markdown.indexOf(search, pos + 1);
+            }
+            return {
+                error: 'search-ambiguous',
+                details: { search, matchCount: count, hint: 'Use a more specific search string.' }
+            };
+        }
+        planned.push({ search, replace, start: first, end: first + search.length });
+    }
+
+    // Check overlapping ranges
+    const sorted = [...planned].sort((a, b) => a.start - b.start);
+    for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i]!.start < sorted[i - 1]!.end) {
+            return {
+                error: 'overlapping-replacements',
+                details: {
+                    conflicts: [
+                        { search: sorted[i - 1]!.search, range: [sorted[i - 1]!.start, sorted[i - 1]!.end] },
+                        { search: sorted[i]!.search, range: [sorted[i]!.start, sorted[i]!.end] }
+                    ],
+                    hint: 'Split the edit into separate calls or make the search strings non-overlapping.'
+                }
+            };
+        }
+    }
+
+    // Apply from end to start
+    let result = markdown;
+    const sortedDesc = [...planned].sort((a, b) => b.start - a.start);
+    for (const { replace, start, end } of sortedDesc) {
+        result = result.slice(0, start) + replace + result.slice(end);
+    }
+
+    return { result, planned };
 }

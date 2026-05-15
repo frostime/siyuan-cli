@@ -13,7 +13,28 @@ function withTempConfigDir(fn: () => void | Promise<void>) {
     });
 }
 
-test('approval store creates, lists, decides, and expires requests', async () => {
+test('created approval request appears in pending list', async () => {
+    await withTempConfigDir(async () => {
+        const store = await import('../src/approval/store.ts');
+
+        store.createApprovalRequest({
+            workspaceName: 'main',
+            endpointId: 'block.deleteBlock',
+            endpointPath: '/api/block/deleteBlock',
+            risk: 'destructive',
+            summary: 'Delete block',
+            payloadPreview: { id: 'x' },
+            payloadDigest: 'sha256:abc',
+            resourceSummary: ['id: x'],
+            timeoutSec: 60
+        });
+
+        assert.equal(store.listPendingApprovalRequests().length, 1);
+        assert.equal(store.countPendingApprovalRequests(), 1);
+    });
+});
+
+test('decided approval request is no longer pending', async () => {
     await withTempConfigDir(async () => {
         const store = await import('../src/approval/store.ts');
 
@@ -29,9 +50,6 @@ test('approval store creates, lists, decides, and expires requests', async () =>
             timeoutSec: 60
         });
 
-        assert.equal(store.listPendingApprovalRequests().length, 1);
-        assert.equal(store.countPendingApprovalRequests(), 1);
-
         const approved = store.decideApprovalRequest(
             pending.id,
             'approved',
@@ -39,6 +57,12 @@ test('approval store creates, lists, decides, and expires requests', async () =>
         );
         assert.equal(approved?.status, 'approved');
         assert.equal(store.countPendingApprovalRequests(), 0);
+    });
+});
+
+test('timed-out approval request is marked timed_out', async () => {
+    await withTempConfigDir(async () => {
+        const store = await import('../src/approval/store.ts');
 
         const expired = store.createApprovalRequest(
             {

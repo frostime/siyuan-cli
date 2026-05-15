@@ -52,7 +52,7 @@ function makeEngine(client: any, permission?: PermissionConfig) {
     return { config, engine };
 }
 
-test('batch A1 migrated endpoints use authored classification without tags', () => {
+test('batch A1 migrated endpoints define classification and derive tags', () => {
     const migrated = [
         attrGetBlockAttrs,
         attrSetBlockAttrs,

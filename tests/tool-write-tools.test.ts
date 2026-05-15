@@ -6,73 +6,7 @@ import { join } from 'node:path';
 
 import { parsePayload } from '../src/shared/argv.ts';
 import type { EndpointSchema } from '../src/shared/schema.ts';
-
-// ————— brute-edit: original-span application logic —————
-
-interface PlannedReplacement {
-    search: string;
-    replace: string;
-    start: number;
-    end: number;
-}
-
-/**
- * Mirrors the brute-edit core logic: plan + apply.
- * Exported for testability; the tool itself inlines this.
- */
-function planAndApply(
-    markdown: string,
-    pairs: Array<{ search: string; replace: string }>
-): { result: string; planned: PlannedReplacement[] } | { error: string; details: Record<string, unknown> } {
-    const planned: PlannedReplacement[] = [];
-
-    for (const { search, replace } of pairs) {
-        const first = markdown.indexOf(search);
-        if (first === -1) {
-            return { error: 'search-not-found', details: { search, hint: 'Check spelling or use a broader search.' } };
-        }
-        const second = markdown.indexOf(search, first + 1);
-        if (second !== -1) {
-            let count = 1;
-            let pos = second;
-            while (pos !== -1) {
-                count++;
-                pos = markdown.indexOf(search, pos + 1);
-            }
-            return {
-                error: 'search-ambiguous',
-                details: { search, matchCount: count, hint: 'Use a more specific search string.' }
-            };
-        }
-        planned.push({ search, replace, start: first, end: first + search.length });
-    }
-
-    // Check overlapping ranges
-    const sorted = [...planned].sort((a, b) => a.start - b.start);
-    for (let i = 1; i < sorted.length; i++) {
-        if (sorted[i]!.start < sorted[i - 1]!.end) {
-            return {
-                error: 'overlapping-replacements',
-                details: {
-                    conflicts: [
-                        { search: sorted[i - 1]!.search, range: [sorted[i - 1]!.start, sorted[i - 1]!.end] },
-                        { search: sorted[i]!.search, range: [sorted[i]!.start, sorted[i]!.end] }
-                    ],
-                    hint: 'Split the edit into separate calls or make the search strings non-overlapping.'
-                }
-            };
-        }
-    }
-
-    // Apply from end to start
-    let result = markdown;
-    const sortedDesc = [...planned].sort((a, b) => b.start - a.start);
-    for (const { replace, start, end } of sortedDesc) {
-        result = result.slice(0, start) + replace + result.slice(end);
-    }
-
-    return { result, planned };
-}
+import { planAndApply } from '../src/tool/builtins/brute-edit.ts';
 
 // ————— Tests —————
 
