@@ -8,128 +8,75 @@ summary: Command structure, flags, input sources, and error handling for siyuan-
 
 ## Agent quick sections
 
-Jump to what agents need most often:
-- [Input sources](#input-sources) — @file, @stdin, @env, heredoc, constraints
-- [Git Bash / MSYS path conversion](#git-bash--msys-path-conversion) — workarounds for `/` rewriting
-- [Error handling](#error-handling) — exit codes, warning codes, error codes
-- [Debugging](#debugging) — --debug, --dry-run, workspace which
+- [Input sources](#input-sources) — `@file`, `@stdin`, `@env`, heredoc
+- [Git Bash / MSYS](#git-bash--msys-path-conversion) — path rewriting workarounds
+- [Error handling](#error-handling) — exit codes, error codes
+- [Debugging](#debugging) — `--debug`, `--dry-run`, `workspace which`
 
-## Command structure
+## Commands
 
-```text
-siyuan
-├── workspace    Manage kernel connections
-│   ├── add      Add a workspace
-│   ├── list     List workspaces
-│   ├── use      Set active workspace
-│   ├── verify   Test connection
-│   ├── remove   Remove a workspace
-│   └── which    Show current resolution
-├── api          Call kernel endpoints directly
-│   ├── list     List available endpoints
-│   ├── describe Show endpoint schema
-│   ├── raw      Call a config-allowed raw kernel endpoint
-│   └── <id>     Call an endpoint (e.g. query.sql, block.getBlockKramdown)
-├── tool         Run high-level composite tools
-│   ├── list     List available tools
-│   ├── describe Show tool schema
-│   └── <id>     Run a tool (e.g. list-doc-tree, get-block-content)
-├── doc          Discover shipped docs
-│   ├── list     List built-in docs with real file paths
-│   └── read     Read a built-in doc by path or unique basename
-├── approval     Manage the local human-approval broker and queue
-│   ├── status   Show broker status
-│   ├── list     List pending and recent approvals
-│   ├── show     Show one approval request
-│   ├── approve  Approve one request from the terminal
-│   ├── reject   Reject one request from the terminal
-│   ├── open     Open the Approval Center in the browser
-│   └── stop     Stop the broker
-├── skill        Manage the bundled agent skill
-│   ├── install  Install or update to a target
-│   ├── read     Read the bundled SKILL.md
-│   └── uninstall
-└── extension    Manage user extensions
-    ├── init     Scaffold the extensions directory
-    ├── list     List discovered extensions
-    └── cache    Load extensions and write schema cache files
-```
+| Group | Subcommands | Role |
+|-------|-------------|------|
+| `workspace` | add · list · use · verify · remove · which | Manage kernel connections |
+| `api` | list · describe · raw · `<id>` | Call kernel endpoints |
+| `tool` | list · describe · `<id>` | Run composite workflow tools |
+| `doc` | list · read | Discover bundled docs |
+| `approval` | status · list · show · approve · reject · open · stop | Manage approval broker |
+| `skill` | install · read · uninstall | Manage bundled agent skill |
+| `extension` | init · list · cache | Manage user extensions |
+
+Full flags and usage: `siyuan --help`, `siyuan <group> --help`, `siyuan <group> <sub> --help`.
 
 ## Calling kernel APIs
 
-Endpoint id format: `<group>.<name>`, derived from kernel path `/api/<group>/<name>`.
+Endpoint id: `<group>.<name>` (derived from kernel path `/api/<group>/<name>`).
 
 ```bash
-# Positional primary field
-siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
-
-# Named flags
-siyuan api block.getBlockKramdown --id 20260417120000-abcdefg
-
-# JSON payload
-siyuan api query.sql -j '{"stmt":"SELECT * FROM blocks LIMIT 5"}'
-
-# From file
-siyuan api query.sql -f query.json
+siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"  # positional
+siyuan api block.getBlockKramdown --id 20260417120000-abcdefg                 # named flags
 ```
+
+Discovery: `siyuan api list` · `siyuan api list --group block` · `siyuan api describe <id>` · `<id> --help`
 
 ### Raw fallback
 
-Use `api raw` only for kernel endpoints that are not registered yet. It must be enabled by config and explicitly allowlisted:
+`api raw` calls unregistered kernel endpoints directly. Requires config opt-in and allowlist:
 
 ```yaml
 behavior:
   rawApi:
     enabled: true
-    allow:
-      - "asset.getDocAssets"
+    allow: ["asset.getDocAssets"]
 ```
 
 ```bash
 siyuan api raw asset.getDocAssets -j '{"id":"20240922152051-7dpjfpv"}'
 ```
 
-Raw calls keep stdout as pure JSON `data` for tools like `jq`; raw warnings go to stderr. Raw has no payload schema, resource guard, response filter, or compact formatter.
-
-### Discovery
-
-```bash
-siyuan api list                    # all endpoints
-siyuan api list --group block      # filter by group
-siyuan api describe query.sql      # schema details
-siyuan api query.sql --help        # usage + examples
-```
-
-### Output modes
-
-By default, stdout uses compact endpoint rendering when available, with raw JSON fallback:
-
-```bash
-siyuan api query.sql "SELECT id, hpath FROM blocks LIMIT 5"   # compact text by default
-siyuan api query.sql "SELECT id, hpath FROM blocks LIMIT 5" --print compact
-siyuan api query.sql "SELECT id, hpath FROM blocks LIMIT 5" --print json
-```
+Raw stdout is pure JSON `data` (pipe to `jq`); warnings go to stderr. Bypasses schema validation, guards, response filtering, and compact formatting. → `workspace-config.md` §Raw API fallback.
 
 ## Using tools
 
-Tools compose multiple endpoint calls into a single workflow.
+Tools compose multiple API calls into one command.
 
 ```bash
 siyuan tool list
 siyuan tool list-doc-tree --entry <notebook-or-doc-id> --depth 2
-siyuan tool get-block-content <block-or-doc-id> --range context --limit 7 --showId true
-siyuan tool checkpoint-doc <doc-id>
+siyuan tool get-block-content <id> --range context --limit 7 --showId true
 ```
+
+Discovery: `siyuan tool list` · `siyuan tool describe <id>` · `<id> --help`
 
 ### Output modes
 
-By default, stdout is a human-readable `content` string. Structured data is available with `--print json`:
+Both `api` and `tool` default to compact human-readable text. Override with:
 
 ```bash
-siyuan tool <id> ...                  # compact content (human-readable)
-siyuan tool <id> ... --print compact  # compact content (explicit)
-siyuan tool <id> ... --print json     # envelope JSON (machine-readable)
+<command> ... --print compact   # explicit compact text
+<command> ... --print json      # envelope JSON (machine-readable)
 ```
+
+`api raw` always prints raw JSON `data` (ignores `--print`).
 
 ## Global flags
 
@@ -286,58 +233,22 @@ Common fixes:
 - `CONTENT_DENIED` → rules may restrict writes to this notebook/path; inspect rule list
 - `APPROVAL_UNAVAILABLE` → broker not running; retry with `--yes` only when safe
 
-## Built-in docs
-
-The CLI ships docs on disk and discloses the real docs root path in `siyuan --help` and `siyuan doc --help`.
-
-```bash
-siyuan doc list
-siyuan doc read README.md
-siyuan doc read edit-content
-```
-
 ## Skill install targets
 
 ```bash
-siyuan skill install
-siyuan skill install --target agents
-siyuan skill install --target claude
-siyuan skill install --target .pi --local
+siyuan skill install [--target agents|claude|.pi] [--local]
 ```
 
-Normalization rules:
-
-- `agents` and `claude` are explicit home-directory shortcuts
-- generic target names normalize to leading-dot form
-- `pi` and `.pi` resolve to the same target family
-- `--local` switches the base directory from the home directory to the current project directory
-
-## Approval Center
-
-When a write requires approval and `--yes` is absent (or ignored due to `behavior.allowYes: false`), the CLI submits a request to the local Approval Broker, opens `http://127.0.0.1:<port>/approval`, and waits inline for up to `behavior.approval.timeout` seconds (default 60). Browser auto-open is debounced by `behavior.approval.openDebounceMs` (default 1000ms), but every request still emits an `APPROVAL_PENDING` event with its URL on stderr.
-
-```bash
-siyuan approval status
-siyuan approval list
-siyuan approval open
-siyuan approval approve <request-id>
-siyuan approval reject <request-id>
-```
-
-Broker lifecycle:
-- lazy start on the first approval-gated write
-- stays alive while pending requests exist
-- queue-empty grace period: 30s
-- hard idle timeout: 5min
-- browser polling does not keep the broker alive
+`agents`/`claude` are home-directory shortcuts; generic names normalize to leading-dot form; `--local` uses project directory.
 
 ## Debugging
 
 ```bash
-siyuan workspace which              # show resolution for current directory
+siyuan workspace which              # resolution for current directory
 siyuan workspace verify             # verify effective workspace (cwd-aware)
-siyuan workspace verify <name>      # verify a specific workspace by name
 siyuan workspace verify --global-current  # verify global config.current only
-siyuan api <id> --debug             # print curl-equivalent to stderr
-siyuan api <id> ... --dry-run       # preview write operations
+siyuan api <id> --debug             # curl-equivalent to stderr
+siyuan api <id> ... --dry-run       # preview writes
 ```
+
+Approval commands: `siyuan approval status|list|open|approve|reject`. Broker config and lifecycle → `workspace-config.md` §Behavior. Permission rules → `permission.md`.

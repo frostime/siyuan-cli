@@ -67,35 +67,12 @@ Block record:
 
 Document block properties: `type='d'`, `root_id = id`, `parent_id` empty, `path` points to its `.sy` file.
 
-## 6. CLI tool & API mapping
+## 6. CLI quick reference
 
-### Path resolution
+**Path resolution**: `filetree.getIDsByHPath --notebook <id> --path "/..."` · `filetree.getPathByID --id <id>` · `filetree.getHPathByID --id <id>` · `filetree.getHPathByPath --notebook <id> --path "/..."` · SQL fallback: `WHERE type='d' AND hpath='...' LIMIT 10`
 
-| Task | Command |
-|------|---------|
-| Resolve hpath → ids (notebook-scoped) | `siyuan api filetree.getIDsByHPath --notebook <id> --path "/private/diary"` |
-| Resolve id → storage path | `siyuan api filetree.getPathByID --id <id>` |
-| Resolve id → hpath | `siyuan api filetree.getHPathByID --id <id>` |
-| Resolve path → hpath | `siyuan api filetree.getHPathByPath --notebook <id> --path "/..."` |
-| Resolve hpath globally (fallback) | `siyuan api query.sql "SELECT id, box, path, hpath FROM blocks WHERE type='d' AND hpath='/private/diary' LIMIT 10"` |
-| Resolve id → full info | `siyuan api filetree.getPathByID --id <id>` + `siyuan api filetree.getHPathByID --id <id>` |
+**Tree navigation**: `list-doc-tree --entry <notebook-or-doc-id>` · `filetree.listDocsByPath --notebook <id> --path "/..."` · `filetree.searchDocs --k "..."`
 
-### Document tree navigation
+**Notebook/doc ops**: `notebook.lsNotebooks` · `filetree.createDocWithMd` · `filetree.renameDocByID` · `filetree.moveDocsByID` · `filetree.removeDocByID`
 
-| Task | Command |
-|------|---------|
-| List doc tree under notebook | `siyuan tool list-doc-tree --entry <notebook-id>` |
-| List doc tree under document | `siyuan tool list-doc-tree --entry <document-id>` |
-| List docs by path | `siyuan api filetree.listDocsByPath --notebook <id> --path "/..."` |
-| Search documents | `siyuan api filetree.searchDocs --k "..."` |
-
-### Notebook and document operations
-
-| Need | Prefer |
-|------|--------|
-| List notebooks | `notebook.lsNotebooks` |
-| Create/rename/remove notebook | `notebook.createNotebook` / `renameNotebook` / `removeNotebook` |
-| Create document | `filetree.createDocWithMd` |
-| Rename/move/remove document | `filetree.renameDocByID` / `moveDocsByID` / `removeDocByID` |
-
-For safe create/move/delete workflows → `recipes/edit-content.md`. For parameters → `<command> --help`; use `--dry-run` for destructive writes.
+Safe create/move/delete → `recipes/edit-content.md`. Params → `<cmd> --help`; destructive writes → `--dry-run`.

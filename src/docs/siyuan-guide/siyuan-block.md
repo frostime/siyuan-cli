@@ -132,40 +132,16 @@ Must use `custom-` prefix: `custom-project`, `custom-status`, `custom-source`.
 | `custom-sy-fullwidth` | Full-width layout |
 | `custom-avs` | Linked attribute-view IDs |
 
-## 6. CLI tool & API mapping
+## 6. CLI quick reference
 
-Inspect with a read command before writing.
+**Read**: `get-block-content <id>` · `get-block-info <id>` · `locate-block "%p%"` · `get-block-content <id> --range children --limit=-1` (full doc) · `checkpoint-doc <doc-id>` · exact Kramdown: `block.getBlockKramdown --id <id>`
+Prefer `tool` over raw API for reading. Kramdown/BlockDOM rarely needed.
 
-### Read
+**Write**: `block.appendBlock` · `tool update-block` (preserves custom attrs) · `block.insertBlock` · `block.moveBlock` · `block.deleteBlock` · `brute-edit --check→dry-run→yes`
+**Attr**: `attr.getBlockAttrs` / `attr.setBlockAttrs` (batch variants available)
+Full params: `<cmd> --help`; write workflows → `recipes/edit-content.md`.
 
-| Task | Tool | Raw API fallback |
-|------|------|------------------|
-| Block Markdown | `siyuan tool get-block-content <id>` | — |
-| Block metadata | `siyuan tool get-block-info <id>` | `block.getBlockInfo` |
-| Search by pattern | `siyuan tool locate-block "%p%"` | `search.fullTextSearchBlock` |
-| Full document read | `siyuan tool get-block-content <doc-id> --range children --limit=-1` | — |
-| Document recovery checkpoint | `siyuan tool checkpoint-doc <doc-id>` | — |
-| Exact Kramdown (source/recovery prep) | — | `siyuan api block.getBlockKramdown --id <id>` |
-| Batch Kramdown / doc info | — | `block.getBlockKramdowns` / `block.getDocsInfo` |
-| Block DOM | — | `block.getBlockDOM` |
-
-Prefer `tool` for reading; accessing Kramdown is usually unnecessary. SHOULD NOT read BlockDOM.
-
-### Write / attributes
-
-For full write workflows → `recipes/edit-content.md`; for parameters → `<command> --help`.
-
-| Need | Prefer |
-|------|--------|
-| Append child blocks | `block.appendBlock` / `block.appendDailyNoteBlock` |
-| Replace known block(s) | `tool update-block` (preserves custom attrs) |
-| Insert before/after | `block.insertBlock` |
-| Move/delete block | `block.moveBlock` / `block.deleteBlock` |
-| Broad document rewrite | `brute-edit --check true` → `--dry-run` → `--yes` |
-| Attributes | `attr.getBlockAttrs` / `attr.setBlockAttrs` / batch variants |
-
-Warnings:
-- **Raw `updateBlock` / `batchUpdateBlock` erases all `custom-*` attributes.** Always use `siyuan tool update-block` instead.
-- `updateBlock` on document block (`type='d'`) replaces the child tree; use guarded `brute-edit` for document rewrites.
-- `transferBlockRef` triggers full kernel reindex; use only as a deliberate standalone action.
-- Custom attributes must use `custom-`; prefer batch endpoints for multiple ids.
+**Gotchas**:
+- Raw `updateBlock`/`batchUpdateBlock` erases all `custom-*` attributes. Use `tool update-block`.
+- `updateBlock` on document block (`type='d'`) replaces the child tree. Use `brute-edit` for document rewrites.
+- `transferBlockRef` triggers full kernel reindex; standalone action only.

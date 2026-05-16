@@ -63,23 +63,8 @@ Before operating on a daily note:
 2. create/get the target daily note for that notebook
 3. append or inspect content
 
-## CLI reference
+## CLI quick reference
 
-### High-level tools
+**Tools**: `list-dailynote --atDate YYYY-MM-DD` · `list-dailynote --afterDate ... --beforeDate ...` · `--notebookId <id>` to scope · `block.appendDailyNoteBlock --notebook <id> --data "..."` (dataType defaults to `markdown`)
 
-| Task | Command |
-|------|---------|
-| List daily notes by date range | `siyuan tool list-dailynote --afterDate 2025-01-01 --beforeDate 2025-01-31` |
-| List today's daily note | `siyuan tool list-dailynote --atDate 2025-01-15` |
-| Filter by notebook | `siyuan tool list-dailynote --notebookId <id> --atDate 2025-01-15` |
-| Append content to today's daily note | `siyuan api block.appendDailyNoteBlock --notebook <id> --data "..."` |
-
-Use `siyuan tool describe list-dailynote` / `siyuan api block.appendDailyNoteBlock --help` for full parameter details. `dataType` is optional and defaults to `markdown`.
-
-### Low-level APIs
-
-| Task | Endpoint | Notes |
-|------|----------|-------|
-| Create/get today's daily note | `siyuan api filetree.createDailyNote --notebook <id>` | Returns doc id; idempotent |
-| Query by date via SQL | `siyuan api query.sql "SELECT DISTINCT B.* FROM blocks B JOIN attributes A ON B.id=A.block_id WHERE A.name LIKE 'custom-dailynote-%' AND B.type='d' AND A.value>='20250101' LIMIT 32"` | See `siyuan-guide/sql-query-guide.md` |
-| Set custom-dailynote-* attribute | `siyuan api attr.setBlockAttrs --id <block-id> --attrs '{"custom-dailynote-20250101":"20250101"}'` | Manual attribute assignment |
+**Low-level**: `filetree.createDailyNote --notebook <id>` (idempotent, returns doc id) · `query.sql` with `attributes` table join (see `sql-query-guide.md`) · `attr.setBlockAttrs` for manual attribute assignment
