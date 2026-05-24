@@ -1,5 +1,14 @@
 import type { ToolSchema } from '@/shared/schema.js';
 import { escapeSqliteLiteral } from '@/shared/sql.js';
+import {
+    blockTypeLabel,
+    buildOutgoingRefsSql,
+    OUTGOING_REF_DISPLAY_LIMIT,
+    previewText,
+    REF_TEXT_PREVIEW_LIMIT,
+    SOURCE_PREVIEW_LIMIT,
+    type OutgoingRefRow
+} from '@/shared/refs.js';
 
 // ————— types —————
 
@@ -185,6 +194,20 @@ function sumLengths(values: Array<string | undefined>): number {
     return values.reduce((acc, value) => acc + (value?.length ?? 0), 0);
 }
 
+function formatOutgoingRefs(rows: OutgoingRefRow[]): string[] {
+    const targets = new Set(rows.map((row) => row.targetBlockId));
+    const shown = Math.min(rows.length, OUTGOING_REF_DISPLAY_LIMIT);
+    const lines = [`  outgoing refs: refs=${rows.length} targets=${targets.size} shown=${shown}`];
+    for (const row of rows.slice(0, OUTGOING_REF_DISPLAY_LIMIT)) {
+        const fromPreview = previewText(row.sourceContent || row.sourceMarkdown, SOURCE_PREVIEW_LIMIT);
+        const toPreview = previewText(row.refText || row.markdown, REF_TEXT_PREVIEW_LIMIT);
+        lines.push(
+            `    - FROM ${row.sourceBlockId} [${blockTypeLabel(row.sourceType, row.sourceSubtype)}] "${fromPreview}" -> TO ${row.targetBlockId} "${toPreview}"`
+        );
+    }
+    return lines;
+}
+
 // ————— tool —————
 
 export const tool: ToolSchema = {
@@ -357,6 +380,20 @@ export const tool: ToolSchema = {
                     // best-effort
                 }
 
+                // 6. Outgoing refs from this document
+                try {
+                    const outgoingRefs = await ctx.callEndpoint<OutgoingRefRow[]>('query.sql', {
+                        stmt: buildOutgoingRefsSql(row.id)
+                    });
+                    entry.outgoingRefs = outgoingRefs;
+                    entry.outgoingRefCount = outgoingRefs.length;
+                    entry.uniqueTargetCount = new Set(outgoingRefs.map((ref) => ref.targetBlockId)).size;
+                } catch {
+                    entry.outgoingRefs = [];
+                    entry.outgoingRefCount = 0;
+                    entry.uniqueTargetCount = 0;
+                }
+
                 try {
                     const outline = await ctx.callEndpoint<OutlineNode[]>('outline.getDocOutline', {
                         id: row.id,
@@ -413,6 +450,10 @@ export const tool: ToolSchema = {
                 lines.push('  TOC:');
                 const tocStr = formatToc(entry.toc as HeaderNode[], 2);
                 if (tocStr) lines.push(tocStr);
+            }
+
+            if (entry.outgoingRefs) {
+                lines.push(...formatOutgoingRefs(entry.outgoingRefs as OutgoingRefRow[]));
             }
 
             if (entry.safety) {

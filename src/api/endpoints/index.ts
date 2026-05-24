@@ -51,6 +51,7 @@ import { schema as blockGetBlockSiblingID } from './block/getBlockSiblingID.js';
 import { schema as blockGetBlockBreadcrumb } from './block/getBlockBreadcrumb.js';
 import { schema as blockGetBlockDOM } from './block/getBlockDOM.js';
 import { schema as blockGetBlockInfo } from './block/getBlockInfo.js';
+import { schema as blockGetBlockTreeInfos } from './block/getBlockTreeInfos.js';
 import { schema as blockAppendBlock } from './block/appendBlock.js';
 import { schema as blockPrependBlock } from './block/prependBlock.js';
 import { schema as blockInsertBlock } from './block/insertBlock.js';
@@ -160,6 +161,7 @@ const schemas: EndpointSchema<any>[] = [
     blockGetBlockBreadcrumb,
     blockGetBlockDOM,
     blockGetBlockInfo,
+    blockGetBlockTreeInfos,
     blockAppendBlock,
     blockPrependBlock,
     blockInsertBlock,
