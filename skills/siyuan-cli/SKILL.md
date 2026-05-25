@@ -102,7 +102,7 @@ EOF
 
 ```bash
 siyuan api filetree.searchDocs --k "<keyword>"    # candidates; verify before writing
-siyuan tool get-block-info <id>                   # identity; docs include outgoing refs
+siyuan tool get-block-info <id>                   # identity, meta data (ref, toc, child etc.)
 siyuan tool search-backlinks <target-id>          # inbound refs; redirects first-block hits by default
 siyuan tool get-block-content <id> --range children --limit 50
 siyuan tool get-block-content <id> --range context --limit 7 --showId true
@@ -133,12 +133,6 @@ EOF
 | 5 | permission denied | `siyuan workspace which` |
 
 stderr = diagnostics; stdout = result.
-
-## Reference navigation
-
-- `get-block-info <doc-id>` shows outgoing refs as `FROM <block in doc> -> TO <referenced block>`; use `FROM` for local context, `TO` for referenced content.
-- `search-backlinks <target-id>` answers “who references this block?”; default output redirects first paragraph backlinks to the owning document, heading, or container.
-- Use `search-backlinks <target-id> --noRedirect true` only when the exact referencing block is needed.
 
 ## Routing
 

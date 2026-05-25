@@ -1,7 +1,3 @@
-项目当前处于 Alpha 内部开发阶段
-
----
-
 ## Project-local rules
 
 - CLI 内部文档、提示使用英文。
@@ -20,15 +16,6 @@
 - 先看 `siyuan-cli` SKILL
 - 再运行 `pnpm run siyuan --help`
 - CLI 会继续引导 Agent 查看内置文档，以及同 package 下 `dist/` 中的运行时代码
-
-## Useful tools
-
-- `rg` / `grep` — Grep
-- `fd` — Find file
-- `sspec tool view-tree` — List file tree
-- `sspec tool mdtoc` — Inspect long md file
-- `slsp` — LSP CLI (`slsp --help`)
-- `sspec change [new|list|archive]`
 
 ## Test CLI
 

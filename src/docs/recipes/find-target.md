@@ -108,7 +108,7 @@ Convert hpath to id before writes.
 **Document has ref links about user's topic**:
 → `get-block-info <doc-id>` → use outgoing refs: `FROM` is the block inside the document, `TO` is the referenced block → read the needed `TO` block by id
 
-**User asks who links to a block**:
+**User asks who reference to a block**:
 → `search-backlinks <target-id>` → use redirected result ids for Agent navigation; add `--noRedirect true` only when the exact referencing source block is needed
 
 # Success checks
