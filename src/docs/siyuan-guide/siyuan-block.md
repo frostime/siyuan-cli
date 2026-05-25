@@ -134,7 +134,7 @@ Must use `custom-` prefix: `custom-project`, `custom-status`, `custom-source`.
 
 ## 6. CLI quick reference
 
-**Read**: `get-block-content <id>` · `get-block-info <id>` · `locate-block "%p%"` · `get-block-content <id> --range children --limit=-1` (full doc) · `checkpoint-doc <doc-id>` · exact Kramdown: `block.getBlockKramdown --id <id>`
+**Read**: `get-block-content <id>` · `get-block-info <id>` (docs include outgoing refs) · `search-backlinks <target-id>` · `locate-block "%p%"` · `get-block-content <id> --range children --limit=-1` (full doc) · `checkpoint-doc <doc-id>` · exact Kramdown: `block.getBlockKramdown --id <id>`
 Prefer `tool` over raw API for reading. Kramdown/BlockDOM rarely needed.
 
 **Write**: `block.appendBlock` · `tool update-block` (preserves custom attrs) · `block.insertBlock` · `block.moveBlock` · `block.deleteBlock` · `brute-edit --check→dry-run→yes`

@@ -80,6 +80,10 @@ Use when exact markup, block refs, or attributes matter. Prefer batch for multip
 
 **Navigate from child to document**: `get-block-info` → use `root_id` for document-level operations.
 
+**Follow outgoing refs from a document**: `get-block-info <doc-id>` → each outgoing ref is `FROM <block in doc> -> TO <referenced block>`; read `TO` for the target content, read `FROM` context when you need why it was referenced.
+
+**Inspect backlinks to a block**: `search-backlinks <target-id>` → default output redirects first paragraph backlinks to the owning document, heading, or container; use `--noRedirect true` to inspect the exact referencing block.
+
 # Recovery
 
 **Block not found**: confirm workspace · re-resolve via `recipes/find-target.md` · check if id is from another workspace.

@@ -102,7 +102,8 @@ EOF
 
 ```bash
 siyuan api filetree.searchDocs --k "<keyword>"    # candidates; verify before writing
-siyuan tool get-block-info <id>                   # identity
+siyuan tool get-block-info <id>                   # identity, meta data (ref, toc, child etc.)
+siyuan tool search-backlinks <target-id>          # inbound refs; redirects first-block hits by default
 siyuan tool get-block-content <id> --range children --limit 50
 siyuan tool get-block-content <id> --range context --limit 7 --showId true
 siyuan tool locate-block --id <doc-id> --pattern "%keyword%"  # SQL LIKE, not regex
@@ -141,6 +142,7 @@ stderr = diagnostics; stdout = result.
 | config schema (behavior, rawApi, defaults, project-file) | `siyuan doc read cli-usage/workspace-config.md` |
 | locate user-named doc/block | `siyuan doc read recipes/find-target.md` |
 | read content ranges/paging/ids | `siyuan doc read recipes/read-content.md` |
+| reference/backlink navigation | `siyuan doc read recipes/read-content.md` + `siyuan doc read siyuan-guide/sql-query-guide.md` |
 | edit/move/delete/batch/create | `siyuan doc read recipes/edit-content.md` |
 | daily notes | `siyuan doc read siyuan-guide/dailynote-model.md` |
 | block/path/sql model | `siyuan doc read siyuan-guide/siyuan-block.md` |
