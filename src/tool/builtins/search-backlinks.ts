@@ -56,15 +56,15 @@ export const tool: ToolSchema = {
         properties: {
             id: {
                 type: 'string',
-                description: 'Target block ID'
+                description: 'Referenced target block ID'
             },
             limit: {
                 type: 'integer',
-                description: 'Max backlinks to return, default 64'
+                description: 'Max raw backlink rows before redirect, default 64'
             },
             noRedirect: {
                 type: 'boolean',
-                description: 'Disable first-block redirect. Default: false'
+                description: 'Show exact referencing blocks instead of redirected navigation anchors. Default: false'
             }
         }
     },

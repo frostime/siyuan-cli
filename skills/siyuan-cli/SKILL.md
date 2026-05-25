@@ -102,7 +102,8 @@ EOF
 
 ```bash
 siyuan api filetree.searchDocs --k "<keyword>"    # candidates; verify before writing
-siyuan tool get-block-info <id>                   # identity
+siyuan tool get-block-info <id>                   # identity; docs include outgoing refs
+siyuan tool search-backlinks <target-id>          # inbound refs; redirects first-block hits by default
 siyuan tool get-block-content <id> --range children --limit 50
 siyuan tool get-block-content <id> --range context --limit 7 --showId true
 siyuan tool locate-block --id <doc-id> --pattern "%keyword%"  # SQL LIKE, not regex
@@ -133,6 +134,12 @@ EOF
 
 stderr = diagnostics; stdout = result.
 
+## Reference navigation
+
+- `get-block-info <doc-id>` shows outgoing refs as `FROM <block in doc> -> TO <referenced block>`; use `FROM` for local context, `TO` for referenced content.
+- `search-backlinks <target-id>` answers “who references this block?”; default output redirects first paragraph backlinks to the owning document, heading, or container.
+- Use `search-backlinks <target-id> --noRedirect true` only when the exact referencing block is needed.
+
 ## Routing
 
 | Need | Read / do |
@@ -141,6 +148,7 @@ stderr = diagnostics; stdout = result.
 | config schema (behavior, rawApi, defaults, project-file) | `siyuan doc read cli-usage/workspace-config.md` |
 | locate user-named doc/block | `siyuan doc read recipes/find-target.md` |
 | read content ranges/paging/ids | `siyuan doc read recipes/read-content.md` |
+| reference/backlink navigation | `siyuan doc read recipes/read-content.md` + `siyuan doc read siyuan-guide/sql-query-guide.md` |
 | edit/move/delete/batch/create | `siyuan doc read recipes/edit-content.md` |
 | daily notes | `siyuan doc read siyuan-guide/dailynote-model.md` |
 | block/path/sql model | `siyuan doc read siyuan-guide/siyuan-block.md` |

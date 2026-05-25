@@ -212,7 +212,7 @@ function formatOutgoingRefs(rows: OutgoingRefRow[]): string[] {
 
 export const tool: ToolSchema = {
     id: 'get-block-info',
-    summary: 'Get metadata for one or more blocks (type, path, breadcrumb, TOC for docs, child count for containers)',
+    summary: 'Get metadata for blocks; document output includes TOC, child count, and outgoing refs',
     tags: ['read'],
     classification: { action: 'read', domain: 'content' },
     input: {
