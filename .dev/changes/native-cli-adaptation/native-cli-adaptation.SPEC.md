@@ -51,41 +51,59 @@ SiYuan v3.7.0（2026-06-30）起，思源官方在内核中内置了命令行接
 
 ## 需求（已与用户对齐的方向）
 
-1. **api 部分保持不变**：`siyuan api <endpoint>` 面（79 endpoint + guard 链）是稳定底座，不因本次调整而改动。
-2. **更新全局 bin name**：解决与原生 `siyuan` 的命令冲突。breaking change，需要同步更新 SKILL、内置文档、package.json bin、README。旧 bin 不保留（PATH 冲突无解）。新名字待定（候选：`siyuan-cli` / `syc`，需检查 npm 全局命令占用）。
-3. **原生 CLI 作为内部 backend（远期、可选）**：tool 层可基于 api 调用或原生 CLI 子进程（或其组合）实现功能，内部细节对用户透明。铁律：**写操作永不走 native**（native 路径绕过 permission/approval/响应过滤；只读能力如 `file grep`、离线场景才可走 native）。native 的价值集中在离线场景与独有能力，多数"补 tool 能力"的需求应优先走 API 封装。
-4. **落地顺序**：
-   - Phase 1：改名 + SKILL/docs/README/migration 更新（独立、低风险、优先做）。
-   - Phase 2：补封装缺失端点。首选 `history.createDocHistory`/`rollbackDocHistory`/`getDocHistoryContent`（文档级检查点）；候选 `repo` 组（createSnapshot/getRepoSnapshots/diffRepoSnapshots/rollbackRepoSnapshotFile/searchRepoFile）、`query/sql` 的 `mode=readonly`（可作默认只读策略）、`transactions/undo|redo`（tool 安全编辑撤销）。新端点自动获得 guard 链（schema 校验 + 权限规则 + 风险分级）。
-   - Phase 3：native backend 抽象（仅当确有离线/独有能力需求时启动；从只读能力起步）。
-   - Phase 4（远期）：`serve` 管理（启动/停止内核）作为审批型 tool。
+1. **api 部分保持不变**：现有 `api <endpoint>` 命令面（79 endpoint + guard 链）是稳定底座；N1 只改变其规范入口名称，不改变 endpoint 结构、参数和执行链。
+2. **建立无歧义的规范命令，同时保留旧环境兼容**：全局新增 `siyuan-cli`，作为本项目唯一写入 SKILL、内置文档、README、帮助和错误提示的规范命令；同时继续发布 `siyuan` 作为旧版兼容别名。兼容对象是 SiYuan `<3.7.0` 环境和既有 siyuan-cli 调用方，不是 npm 上其他同名或近似名称的包。SiYuan `>=3.7.0` 环境中，`siyuan` 可能由官方原生 CLI 或本项目提供，实际解析结果取决于 PATH，因此本项目在这些环境中只保证 `siyuan-cli` 无歧义可用。
+3. **在最小可用改造之后继承新版原生 CLI 能力**：后续由同一个工作节点评估 SiYuan 原生 CLI 的最新能力，并选择 HTTP API、原生 CLI 子进程或二者组合来补充本项目的 tool 能力；backend 选择对调用方透明。能够通过 HTTP API 实现的能力优先走现有 guard 链。铁律：**写操作永不走 native**，因为 native 路径绕过 permission、approval 和响应过滤。
+4. **版本门槛**：原生 CLI 补充能力只在确认 SiYuan 版本 `>=3.7.0` 时开放；SiYuan `<3.7.0` 继续使用本项目既有的 HTTP API 能力，不尝试调用不存在的官方原生 CLI。补充能力始终可在 `list/help` 中发现并标注最低版本，实际执行前检查版本，版本不足时返回明确的 unsupported-version 错误。N2 必须可靠定位官方原生二进制并检查其 `--version` 输出，不能盲目调用 PATH 中第一个 `siyuan`，因为该名称也可能解析到本项目的兼容别名。
+5. **两阶段交付**：
+   - N1（最小可用要求）：新增规范命令 `siyuan-cli`，保留 `siyuan` 兼容别名，并完成 SKILL、文档、帮助、迁移说明和兼容验证。N1 完成后即可独立发布，不等待后续能力整合。
+   - N2（能力补充）：合并原 API 补全与 native backend 方向。首批关注文档级 history 能力，以及原生 CLI 相比现有 tool/API 面能够带来的实际补充；在同一节点内完成能力选择、API/native 路由、安全边界和必要的 tool 整合。
+6. **不做 serve 管理**：本 change 不实现通过原生 CLI 启动、停止或管理 SiYuan 内核进程。
 
 ## 行为契约（预期用户可见结果）
 
-- 安装新版本后，全局命令不再与原生 `siyuan` 冲突；`siyuan api/tool/doc/skill/workspace/approval/extension` 全部迁移到新命令名下，命令结构与参数不变。
-- 升级为 breaking change（major bump），发布说明与文档提供迁移指引；已安装 SKILL 的 agent 通过重新 `skill install` 获得新命令引用。
-- Phase 2 完成后：`<新命令> api history.createDocHistory --id <doc-id>` 可直接为单文档创建检查点，受既有权限规则约束；`checkpoint-doc`/`brute-edit` 等 tool 可基于它实现"编辑前自动打点、出错回滚"（内部细节对用户透明）。
-- 任何新增 endpoint 遵守现有 EndpointSchema 约定（payload 校验、classification 风险分级、响应过滤兼容）。
+- 安装新版本后，`siyuan-cli api/tool/doc/skill/workspace/approval/extension` 是无歧义的规范入口，命令结构与参数保持不变。
+- 在未内置官方原生 CLI 的 SiYuan `<3.7.0` 环境中，既有 `siyuan ...` 调用仍可通过兼容别名使用本项目；`siyuan-cli ...` 同样可用。
+- 在 SiYuan `>=3.7.0` 环境中，本项目保证 `siyuan-cli ...` 调用本项目；裸命令 `siyuan ...` 由 PATH 顺序决定，可能调用官方原生 CLI，也可能调用本项目，不作为可靠入口。
+- 升级按 breaking change 发布，发布说明与文档提供迁移指引；已安装 SKILL 的 agent 通过重新 `skill install` 获得 `siyuan-cli` 命令引用。
+- N1 完成即满足本次调整的最小可用要求，可以独立发布；N2 不阻塞 N1。
+- N2 若纳入 history 能力，`siyuan-cli api history.createDocHistory --id <doc-id>` 可直接为单文档创建检查点并受既有权限规则约束；`checkpoint-doc`/`brute-edit` 如何使用它由 N2 统一确认。
+- N2 中任何新增 endpoint 遵守现有 EndpointSchema 约定（payload 校验、classification 风险分级、响应过滤兼容）。
+- N2 中任何原生 CLI 补充能力在 SiYuan `<3.7.0` 时保持关闭；能力仍可在 `list/help` 中发现并标注版本要求，执行时返回明确的 unsupported-version 错误；原有 HTTP API 命令不受影响。
+- 本 change 不新增启动、停止或管理 SiYuan 内核进程的命令或 tool。
 
 ## 实施决策
 
 **已定**：
-- api 面不动；改名是 Phase 1 的唯一内容。
-- 旧 bin 名不保留兼容。
-- Phase 2 端点封装走现有 endpoint 注册机制（`src/api/endpoints/<group>/<name>.ts` + `index.ts` 注册）。
-- 若做 Phase 3，写操作永不路由到 native。
+- api 面不动；命令入口调整是 N1 的唯一内容。
+- 全局同时发布 `siyuan-cli` 与 `siyuan` 两个 bin；`siyuan-cli` 是规范入口，`siyuan` 仅承担旧环境和既有调用方兼容。
+- SKILL、内置文档、README、CLI 帮助和错误提示统一使用 `siyuan-cli`，不继续传播有歧义的 `siyuan` 用法。
+- 项目内开发命令继续使用 `pnpm run siyuan ...`，不受全局 bin 命名调整影响。
+- 不考虑与 npm 上其他 `siyuan-cli`/`syc` 包的兼容或共存。
+- N1 是最小可用交付，完成后独立验收和发布准备。
+- N2 将 API 补全、tool 整合和只读 native backend 作为一个完整 Agent 工作包，不再拆成多个顶层节点。
+- N2 中的 endpoint 封装走现有注册机制（`src/api/endpoints/<group>/<name>.ts` + `index.ts` 注册）。
+- 原生 CLI 能力必须先通过 SiYuan `>=3.7.0` 的执行时版本门槛；版本不足时明确报错，不动态隐藏命令或 tool。
+- N2 必须区分官方原生 `siyuan` 与本项目 `siyuan` 兼容别名，不能直接信任 PATH 第一项。
+- 写操作永不路由到 native。
+- serve 生命周期管理不在本 change 范围内。
 
 **未决（需用户决策）**：
-- 新 bin 名最终选择。
-- Phase 2 端点清单与优先级（本文档给出首选与候选，未排期）。
-- Phase 3/Phase 4 是否启动、何时启动。
+- N2 具体继承哪些原生 CLI 能力，以及哪些能力通过 API 实现、哪些确需 native 子进程。
+- 官方原生二进制的跨平台定位与消歧策略；版本检查使用原生二进制的 `--version` 输出。
+- N2 首批 endpoint 清单与优先级。
 - `checkpoint-doc`/`brute-edit` 接入 createDocHistory 的具体交互设计（自动打点是否需审批、与现有恢复材料机制的关系）。
 
 ## 验收标准
 
-- [ ] Phase 1：新 bin 名生效；`npm i -g` 后全局命令可运行全部子命令；SKILL 与内置文档中无残留旧命令引用（rg 扫描）；major bump 发布。
-- [ ] Phase 2：新增 endpoint 通过 `endpoint-schemas.test.ts` 类 schema 校验；`--help` 输出正确；权限规则/风险分级可作用于新端点（`--dry-run` 验证）；dev 空间实测 createDocHistory 创建后 rollbackDocHistory 可回滚。
-- [ ] 全程：`pnpm run siyuan --help`（项目内）与全局新命令行为一致；CLI 内部文档保持英文。
+- [ ] N1：`npm i -g` 后同时生成 `siyuan-cli` 与 `siyuan` 两个入口，二者在没有官方原生 CLI 抢占时均可运行本项目全部子命令。
+- [ ] N1：SKILL、内置文档、README、CLI 帮助和错误提示中的用户命令统一为 `siyuan-cli`；仅迁移说明、兼容性说明和项目内 `pnpm run siyuan ...` 可保留旧名称。
+- [ ] N1：在 SiYuan `<3.7.0` 场景验证兼容别名预期；在 SiYuan `>=3.7.0` 场景验证 `siyuan-cli` 不受官方 `siyuan` 的 PATH 顺序影响；按 breaking change 发布。
+- [ ] N1 完成后无需等待 N2，即可安装、使用并准备发布。
+- [ ] N2：新增 endpoint 通过 `endpoint-schemas.test.ts` 类 schema 校验；`--help` 输出正确；权限规则/风险分级可作用于新端点（`--dry-run` 验证）；若纳入 history 能力，在 dev 空间实测创建与回滚。
+- [ ] N2：原生补充能力在 `list/help` 中标注 SiYuan `>=3.7.0` 要求；版本不足时执行返回明确错误且不调用原生能力。
+- [ ] N2：能区分官方原生二进制与本项目兼容别名；SiYuan `>=3.7.0` 时只有经过选择的只读能力可使用 native backend；所有写操作仍经过 HTTP API 与 guard 链。
+- [ ] 全程：`pnpm run siyuan --help`（项目内）与全局规范命令行为一致；CLI 内部文档保持英文；不存在 serve 管理功能。
 
 ## 术语表
 
@@ -96,6 +114,6 @@ SiYuan v3.7.0（2026-06-30）起，思源官方在内核中内置了命令行接
 | guard 链 | siyuan-cli 的请求执行链路：payload 校验 → 权限规则 → 审批 → kernel 调用 → 响应过滤（`src/api/guard.ts`） |
 | endpoint | siyuan-cli 对单个 kernel HTTP API 的封装（EndpointSchema，`src/api/endpoints/`） |
 | tool | siyuan-cli 的高层工作流（`src/tool/`），通过 ToolContext 调用 endpoint |
-| Phase 1/2/3/4 | 落地顺序：改名 / 补端点封装 / native backend / serve 管理 |
+| N1/N2 | 顶层 Agent 工作包：最小可用的命令入口兼容改造 / 新版原生 CLI 与 API 能力补充 |
 | 文档级检查点 | 通过 `history/createDocHistory` 为单个文档创建历史版本，供 AI 编辑前打点、出错回滚 |
 | native backend（草案） | 把原生 `siyuan` 命令作为子进程 backend 供 tool 调用（仅只读场景） |
