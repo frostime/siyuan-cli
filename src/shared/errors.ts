@@ -22,7 +22,7 @@
  *   exit 1 + KERNEL_ERROR           → data-level problem; show message as-is
  *   exit 1 other                    → generic failure; show message
  *
- * Error codes are scattered across modules. See .sspec/spec-docs/error-model.md
+ * Error codes are scattered across modules. See .dev/docs/error-model.md
  * for the full catalog and cross-module mapping.
  */
 

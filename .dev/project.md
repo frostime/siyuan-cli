@@ -97,22 +97,21 @@ One-liners only. If a convention needs multi-paragraph explanation → write a s
 - 错误使用 CliError(ExitCode, code, message) 抛出，ExitCode 定义在 shared/errors.ts
 - commit message 遵循 Conventional Commits + emoji prefix
 
-## Spec-Docs Index
-<!-- Quick reference to spec-docs in `.sspec/spec-docs/`.
-Spec-docs capture knowledge that code alone cannot adequately convey:
+## Docs Index
+<!-- Quick reference to docs in `.dev/docs/`.
+Docs capture knowledge that code alone cannot adequately convey:
   A) In code, but scattered or hard to reconstruct (cross-module architecture, UX requirements, design norms, trade-offs)
   B) Outside code entirely (platform rules, API quirks, business constraints, deployment assumptions)
 NOT a restating of code behavior — if readable from code+comments, it doesn't belong here.
-MUST keep entries in sync with actual spec-doc files.
-Format: `- [name](spec-docs/<file>) — one-line summary`
-create spec-docs with `sspec doc new "<name>"`
+MUST keep entries in sync with actual doc files.
+Format: `- [name](docs/<file>) — one-line summary`
 -->
 
-- [EndpointSchema](spec-docs/endpoint-schema.md) — Authored contract for endpoint identity, classification/severity metadata, guard coupling, CLI semantics, output precedence, and cache boundaries
-- [permission-model](spec-docs/permission-model.md) — Permission engine architecture: rule-list model, two-phase evaluation, tool-level enforcement, bypassPermission, rule cascade, project override semantics, and approval effect semantics
-- [approval-broker](spec-docs/approval-broker.md) — Approval broker architecture: lazy-spawn process model, token IPC, state file layout, lifecycle policy, HTTP API, and browser UI
-- [workspace-resolution](spec-docs/workspace-resolution.md) — Workspace resolution chain (flag → env → project-file → global-current), project-file discovery, permission override independence, workspaceDir port discovery, and IMPLICIT_WORKSPACE warning design
-- [error-model](spec-docs/error-model.md) — Error model architecture: exit code semantics, error-to-exit mapping across modules, agent-side error handling contract, and framework warning catalog
+- [EndpointSchema](docs/endpoint-schema.md) — Authored contract for endpoint identity, classification/severity metadata, guard coupling, CLI semantics, output precedence, and cache boundaries
+- [permission-model](docs/permission-model.md) — Permission engine architecture: rule-list model, two-phase evaluation, tool-level enforcement, bypassPermission, rule cascade, project override semantics, and approval effect semantics
+- [approval-broker](docs/approval-broker.md) — Approval broker architecture: lazy-spawn process model, token IPC, state file layout, lifecycle policy, HTTP API, and browser UI
+- [workspace-resolution](docs/workspace-resolution.md) — Workspace resolution chain (flag → env → project-file → global-current), project-file discovery, permission override independence, workspaceDir port discovery, and IMPLICIT_WORKSPACE warning design
+- [error-model](docs/error-model.md) — Error model architecture: exit code semantics, error-to-exit mapping across modules, agent-side error handling contract, and framework warning catalog
 
 ## Notes
 <!-- Project-level memory. Append-only log of learnings, gotchas, preferences.
@@ -123,5 +122,5 @@ Prune entries that become outdated or graduate to Conventions/spec-docs. -->
 - 2026-04-26: src/docs/ 和 skills/ 目录存放的是 bundled 文档和 agent skill 模板，不是代码；通过 `siyuan doc` 和 `siyuan skill install` 暴露给用户
 - 2026-04-26: approval 模块是独立的 HTTP broker 进程，通过 localhost 端口与 CLI 主进程通信；browser UI 在 approval-center.html
 - 2026-04-26: src/api/msys-path.ts 处理 MSYS/Git Bash 环境下的路径转换问题
-- 2026-04-29: EndpointSchema 的跨字段约束已沉淀到 `.sspec/spec-docs/endpoint-schema.md`；built-in 与 API extension 都应遵守同一套 registry-level 校验
+- 2026-04-29: EndpointSchema 的跨字段约束已沉淀到 `.dev/docs/endpoint-schema.md`；built-in 与 API extension 都应遵守同一套 registry-level 校验
 - 2026-05-11: `README.md` 是给人看的项目介绍页，不应改成 Agent 路由页；Agent 路由应主要留在 `skills/siyuan-cli/SKILL.md` 和 `src/docs/README.md`

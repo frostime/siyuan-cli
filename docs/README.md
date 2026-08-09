@@ -14,6 +14,6 @@ Step-by-step guides for adding new CLI capabilities:
 
 | Location | Audience | Purpose |
 |---|---|---|
-| `.sspec/spec-docs/` | Agent / maintainer | Architectural knowledge — design decisions, cross-module contracts, trade-offs |
+| `.dev/docs/` | Agent / maintainer | Architectural knowledge — design decisions, cross-module contracts, trade-offs |
 | `src/docs/` | Published CLI users | Bundled reference docs shipped with the package |
 | `docs/` (this directory) | Contributors | How-to guides, development workflows |
