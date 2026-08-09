@@ -1,9 +1,10 @@
 ---
 name: EndpointSchema
 description: Authored contract for siyuan-cli endpoint definitions, including identity derivation, classification metadata, permission guard coupling, CLI behavior, output semantics, and extension cache boundaries
-updated: 2026-05-15
+updated: 2026-08-09
 scope:
   - /src/shared/schema.ts
+  - /src/shared/kernel-version.ts
   - /src/api/registry.ts
   - /src/api/guard.ts
   - /src/shared/argv.ts
@@ -24,7 +25,7 @@ replacement: ""
 1. registry identity derivation,
 2. classification normalization and metadata derivation,
 3. CLI argument parsing,
-4. permission guard execution,
+4. permission, minimum-kernel-version, and response guard execution,
 5. compact output rendering and cache serialization.
 
 This spec defines the stable rules that built-in endpoints and API extensions must both satisfy.
@@ -338,7 +339,24 @@ cli: { skipFields: ['file'] }
 
 Code refs: `/src/shared/argv.ts#parsePayload`, `/src/api/command.ts#buildEndpointSubCommand`.
 
-### 7. Multipart switches transport semantics
+### 7. `minKernelVersion` is an executable compatibility gate
+
+When present, `minKernelVersion` MUST use a `major.minor.patch` version string.
+The registry rejects malformed values. For a real endpoint call,
+`executeEndpoint()` reads the connected kernel version and rejects versions
+below the declared minimum before sending the target request. Permission checks
+still run first, and write-like dry-runs still stop without sending either the
+version probe or target write.
+
+The minimum appears in endpoint help, grouped API help, API list output, and
+extension schema caches. Callers receive `UNSUPPORTED_KERNEL_VERSION` with the
+current and required versions in `details`; malformed kernel version responses
+use `KERNEL_VERSION_UNRECOGNIZED`.
+
+Code refs: `/src/shared/kernel-version.ts`, `/src/api/registry.ts#validateSchema`,
+`/src/api/guard.ts#executeEndpoint`.
+
+### 8. Multipart switches transport semantics
 
 When `multipart` is present:
 
@@ -357,7 +375,7 @@ This is a transport-mode switch, not a display hint.
 
 Code refs: `/src/api/guard.ts#executeEndpoint`, `/src/api/command.ts#buildEndpointSubCommand`.
 
-### 8. Output precedence is fixed
+### 9. Output precedence is fixed
 
 Compact rendering follows this order:
 
@@ -372,7 +390,7 @@ Rules:
 
 Code refs: `/src/api/command.ts#callEndpoint`, `/src/shared/output.ts#preparePrintedOutput`, `/src/shared/output.ts#applyFormatStrategy`.
 
-### 9. Cache serialization is intentionally lossy
+### 10. Cache serialization is intentionally lossy
 
 Extension schema cache files store only serializable metadata.
 
@@ -382,6 +400,7 @@ Cache-safe fields include:
 - `description`
 - `payload`
 - `classification`
+- `minKernelVersion`
 - declarative `guard` data
 - `cli`
 - `formatStrategy`
@@ -398,7 +417,7 @@ Consequence:
 
 Code refs: `/src/extension/cache.ts#extractEndpointCacheData`, `/src/extension/cache.ts#buildEndpointSchemaFromCache`, `/src/api/command.ts#resolveEndpointForExecution`.
 
-### 10. Registry parity requirement
+### 11. Registry parity requirement
 
 Built-in endpoints and API extensions MUST satisfy the same registry-level `EndpointSchema` rules.
 
@@ -466,6 +485,7 @@ When changing `EndpointSchema` semantics, update or verify tests for:
 - registry validation failures,
 - classification normalization and severity/tag derivation,
 - permission guard behavior,
+- minimum-kernel-version validation, comparison, help/list display, and pre-request rejection,
 - response filtering on global reads,
 - CLI parsing for `primary` and `allowSource`,
 - output precedence between `format` and `formatStrategy`,

@@ -280,6 +280,9 @@ export function buildEndpointHelp(endpoint: {
 
     lines.push('ENDPOINT');
     lines.push(`  POST ${schema.endpoint}`);
+    if (schema.minKernelVersion) {
+        lines.push(`  Requires SiYuan kernel >=${schema.minKernelVersion}`);
+    }
     const tags = meta?.tags;
     if (tags?.length) {
         lines.push(`  Tags: ${tags.join(', ')}`);

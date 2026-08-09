@@ -71,6 +71,37 @@ test('writeSchemaCache/readSchemaCache round-trip tool cache and stale detection
     rmSync(dir, { recursive: true, force: true });
 });
 
+test('endpoint schema cache preserves minimum kernel version metadata', () => {
+    const dir = makeTempDir('endpoint-version-cache');
+    const source = join(dir, 'versioned-endpoint.ts');
+    writeFileSync(source, 'export const schema = {}\n', 'utf-8');
+
+    try {
+        const cachePath = writeSchemaCache(source, {
+            endpoint: '/api/custom/versioned',
+            summary: 'Versioned',
+            payload: { type: 'object', properties: {} },
+            classification: {
+                action: 'read',
+                domain: 'meta',
+                cardinality: 'single'
+            },
+            minKernelVersion: '3.7.0'
+        });
+        assert.equal(existsSync(cachePath), true);
+
+        const cached = readSchemaCache<EndpointSchemaCache>(source);
+        assert.equal(cached.status, 'cached');
+        assert.equal(cached.data?.minKernelVersion, '3.7.0');
+        assert.equal(
+            buildEndpointSchemaFromCache(cached.data!).minKernelVersion,
+            '3.7.0'
+        );
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+});
+
 test('readSchemaCache marks legacy endpoint classification cache as incompatible', () => {
     const dir = makeTempDir('endpoint-cache');
     const source = join(dir, 'custom-endpoint.ts');
@@ -230,9 +261,11 @@ test('build schema from cache recreates registry-friendly shapes', () => {
         endpoint: '/api/custom/ping',
         summary: 'Ping',
         payload: { type: 'object', properties: {} },
-        classification: { mode: 'read', surface: 'meta', scope: 'single' }
+        classification: { mode: 'read', surface: 'meta', scope: 'single' },
+        minKernelVersion: '3.7.0'
     });
     assert.equal(endpoint.endpoint, '/api/custom/ping');
+    assert.equal(endpoint.minKernelVersion, '3.7.0');
 });
 
 test('unknown extension command suggests running extension cache when pending metadata exists', () => {

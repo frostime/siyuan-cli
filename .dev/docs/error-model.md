@@ -1,7 +1,7 @@
 ---
 name: error-model
 description: "Error model architecture: exit code semantics, error-to-exit mapping across modules, agent-side error handling contract, and framework warning catalog."
-updated: 2026-05-04
+updated: 2026-08-09
 scope:
   - /src/shared/errors.ts
   - /src/shared/permission.ts
@@ -11,6 +11,8 @@ scope:
   - /src/workspace/resolver.ts
   - /src/api/guard.ts
   - /src/api/command.ts
+  - /src/shared/kernel-version.ts
+  - /src/tool/builtins/checkpoint-doc.ts
   - /src/approval/errors.ts
 deprecated: false
 replacement: ""
@@ -72,6 +74,10 @@ General failures. The `error` field distinguishes subcategories.
 | `APPROVAL_CANCELLED` | `approval/errors.ts` | Broker shut down while CLI was waiting |
 | `APPROVAL_BROKER_UNAVAILABLE` | `approval/errors.ts` | Broker process not running or unreachable |
 | `ENDPOINT_NOT_FOUND` | `api/command.ts` | Unknown endpoint id |
+| `UNSUPPORTED_KERNEL_VERSION` | `api/guard.ts` | Connected kernel is below `EndpointSchema.minKernelVersion` |
+| `KERNEL_VERSION_UNRECOGNIZED` | `api/guard.ts` | Kernel version response cannot be compared with the endpoint minimum |
+| `CHECKPOINT_PARTIAL_FAILURE` | `tool/builtins/checkpoint-doc.ts` | Only one checkpoint layer completed; details report both layer states |
+| `CHECKPOINT_FAILED` | `tool/builtins/checkpoint-doc.ts` | No complete checkpoint layer was created |
 | `TOOL_NOT_FOUND` | `tool/command.ts` | Unknown tool id |
 
 ### Exit 2 — CONFIG
@@ -134,6 +140,8 @@ This is the behavioral contract for agent harnesses consuming siyuan-cli output:
 | exit 1 + `APPROVAL_UNAVAILABLE` | Broker unavailable — inspect state |
 | exit 1 + `PAYLOAD_INVALID` | Fix input and retry |
 | exit 1 + `KERNEL_ERROR` | Data-level problem — show message as-is |
+| exit 1 + `UNSUPPORTED_KERNEL_VERSION` | Use a compatible fallback or ask the user to upgrade SiYuan |
+| exit 1 + `CHECKPOINT_PARTIAL_FAILURE` | Preserve the reported successful layer; retry before editing |
 | exit 1 + other | Generic failure — show message |
 
 ---
@@ -167,5 +175,6 @@ Warnings go to stderr as JSON but do not affect exit code. Agents should parse t
 | `src/workspace/config.ts` | Config parse/version/workspace errors |
 | `src/workspace/project-config.ts` | Project config validation errors + smoke warnings |
 | `src/workspace/resolver.ts` | Port discovery / workspaceDir resolution errors |
-| `src/api/guard.ts` | `APPROVAL_UNAVAILABLE`, `CONTENT_FILTERED`, `IMPLICIT_WORKSPACE` |
+| `src/api/guard.ts` | `APPROVAL_UNAVAILABLE`, `UNSUPPORTED_KERNEL_VERSION`, `KERNEL_VERSION_UNRECOGNIZED`, `CONTENT_FILTERED`, `IMPLICIT_WORKSPACE` |
+| `src/tool/builtins/checkpoint-doc.ts` | `CHECKPOINT_PARTIAL_FAILURE`, `CHECKPOINT_FAILED` |
 | `src/approval/errors.ts` | `APPROVAL_REJECTED`, `APPROVAL_TIMEOUT`, `APPROVAL_CANCELLED` |

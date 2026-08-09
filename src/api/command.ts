@@ -153,6 +153,7 @@ export function listEndpoints(args: Record<string, unknown>): void {
             tags: e.meta.tags,
             classification: e.meta.classification,
             severity: e.meta.severity,
+            minKernelVersion: e.schema.minKernelVersion,
             source: registry.isExtension(e.id) ? 'extension' : 'builtin'
         })),
         ...pendingEndpoints
@@ -554,8 +555,14 @@ export function renderGroupedApiHelp(version?: string): string {
         { id: 'describe', description: 'Show full EndpointSchema for an endpoint.' },
         { id: 'raw', description: 'Call a config-allowed raw kernel API endpoint.' }
     ]);
-    printGroup('BUILT-IN', builtins.map((e) => ({ id: e.id, description: e.schema.summary })));
-    printGroup('USER EXTENSIONS', extensions.map((e) => ({ id: e.id, description: e.schema.summary })));
+    const endpointDescription = (entry: RegisteredEndpoint) =>
+        `${entry.schema.summary}${
+            entry.schema.minKernelVersion
+                ? ` (requires kernel >=${entry.schema.minKernelVersion})`
+                : ''
+        }`;
+    printGroup('BUILT-IN', builtins.map((e) => ({ id: e.id, description: endpointDescription(e) })));
+    printGroup('USER EXTENSIONS', extensions.map((e) => ({ id: e.id, description: endpointDescription(e) })));
 
     lines.push(`Use ${colors.cyan('siyuan-cli api <command> --help')} for more information about a command.`);
 

@@ -1,84 +1,71 @@
 # native-cli-adaptation 任务图
 
-> 状态：N1 已验收，N2 待启动。
+> 状态：N1、N2 已验收；实现完成，待提交与发布。
 > 目标权威文档：`native-cli-adaptation.SPEC.md`
 
 ## 图谱粒度
 
-本图中的一个 node 对应一个可由独立 Agent 完整承接的工作包。用户可以直接与该 Agent 讨论节点内部需求和方案。
-
-顶层只保留两个 node。需求维护、节点派发、验收和全局方向调整由主 Agent 负责，不另外拆成 node。局部调研、代码审计和测试可以委托 subagent，但不增加顶层节点。
+一个 node 对应一个可由独立 Agent 完整承接的工作包。用户可以直接与该 Agent 讨论节点内部实现选择。需求维护、节点派发、验收和全局方向调整由主 Agent 负责，不另外拆成 node。
 
 ## 顶层图
 
 ```text
-N1 最小可用的命令入口兼容改造                     [accepted；待发布]
+N1 最小可用的命令入口兼容改造        [accepted；待发布]
  │
  │ 已独立验收；不等待 N2
  ▼
-N2 继承新版原生 CLI 与 API 能力作为补充            [待启动]
+N2 文档检查点升级                    [accepted]
 ```
-
-N1 已解决当前发生的命令冲突，并达到整个 change 的最小可用要求。N2 在 N1 之后继续判断和实现能力补充，不影响 N1 独立发布。
 
 ## N1：最小可用的命令入口兼容改造
 
-**目的**：使本项目在 SiYuan 是否内置官方原生 CLI 的环境中都有明确可用的入口，同时尽量保持既有调用兼容。
+N1 已完成双 bin、规范命令迁移、文档与 SKILL 更新、测试和隔离安装验证。实际 npm 版本选择和发布仍属于发布阶段事项。完整结果见 `nodes/N1-command-entry-compat/TASK-NODE.SPEC.md`。
 
-**范围**：
+## N2：文档检查点升级
 
-- 全局同时提供 `siyuan-cli` 与 `siyuan` 两个 bin。
-- `siyuan-cli` 是规范入口；SKILL、README、内置文档、CLI 帮助、示例和错误提示统一使用它。
-- `siyuan` 作为兼容别名，服务于 SiYuan `<3.7.0` 环境和既有调用方。
-- 在 SiYuan `>=3.7.0` 环境中，不承诺裸命令 `siyuan` 解析到本项目；用户和 Agent 使用 `siyuan-cli`。
-- 项目内开发命令继续使用 `pnpm run siyuan ...`。
-- 提供迁移与版本兼容说明，完成命令行为、发布包、残留引用和兼容场景验证。
+**目的**：让 Agent 通过一次 `checkpoint-doc` 调用表达“为该文档创建恢复检查点”，由工具内部完成当前 SiYuan 版本能够提供的恢复机制。
 
-**交付边界**：N1 不新增 API、tool 或 native backend。N1 验收通过后，本次方向调整已经达到最小可用状态，可以独立发布。
+**行为契约**：
 
-**Agent 边界**：由一个独立 Agent 完成代码、文档、测试和发布准备；可另派只读 subagent 做残留引用与发布包审计。
+- 新增 `history.createDocHistory` endpoint，最低 SiYuan kernel 版本为 `3.7.0`。
+- SiYuan `>=3.7.0` 时，一次 `checkpoint-doc` 同时尝试创建：
+  - SiYuan 内部文档 history；
+  - 现有本地恢复包。
+- SiYuan `<3.7.0` 时，`checkpoint-doc` 保持本地恢复包能力并输出明确降级 warning。
+- `checkpoint-doc --dry-run` 不创建任何恢复材料。
+- `>=3.7.0` 时任一层失败都必须报告 partial failure 和已成功保留的材料；不声称两种存储之间具有原子事务。
+- `brute-edit` 不隐式创建 history。Agent 在一组高风险编辑开始前显式调用一次 `checkpoint-doc`。
 
-## N2：继承新版原生 CLI 与 API 能力作为补充
+**实现边界**：
 
-**目的**：评估 SiYuan `>=3.7.0` 提供的最新原生 CLI 和相关 API，将对本项目确有价值的能力补充进现有 tool/API 面，而不是机械复制官方命令。
+- 激活现有 `EndpointSchema.minKernelVersion` 所需的最小执行时版本检查和 help/list 呈现；不建立新的 capability framework。
+- history 创建必须走现有 endpoint guard、permission 和 approval 路径。
+- `checkpoint-doc` 对外保持一个统一 tool；内部允许分别封装 kernel history 与本地恢复包，以隐藏复杂性并清楚处理 partial failure。
+- 第一版只封装 `history.createDocHistory`；不实现完整历史搜索、读取、回滚工作流。
+- 不修改 `brute-edit` 行为，不增加跨进程编辑周期状态或自动回滚。
 
-**版本边界**：
+## 已关闭方向
 
-- 原生 CLI 补充能力仅在确认 SiYuan 版本 `>=3.7.0` 后开放。
-- SiYuan `<3.7.0` 时不尝试调用官方原生 CLI，继续使用本项目既有 HTTP API 能力。
-- 补充能力始终可在 `list/help` 中发现，并标注最低版本；实际执行前检查版本，版本不足时返回明确的 unsupported-version 错误。
-- N2 必须可靠定位官方原生二进制并通过其 `--version` 输出检查版本，不能盲目调用 PATH 中第一个 `siyuan`，因为该名称也可能解析到本项目的兼容别名。具体定位策略由 N2 继续确认。
+### Native search / grep / backend
 
-**工作范围**：
+评估结论：暂不实施。
 
-- 对照当前 siyuan-cli、SiYuan 最新原生 CLI 与相关 HTTP API，形成实际能力差异和候选清单。
-- 对每项候选能力选择实现路径：
-  - 能通过 HTTP API 实现时，优先复用现有 endpoint、permission 和 approval 链路；
-  - 只有离线读取或原生独有的只读能力才考虑 native 子进程；
-  - tool 可以组合 API 与 native backend，内部选择对调用方透明。
-- 首批重点候选包括文档级 history、安全编辑工作流以及原生 CLI 独有的只读能力；最终清单由 N2 内部 clarify 决定。
-- 若使用 native backend，在同一节点内处理二进制发现、版本门槛、workspace 选择、参数构造、输出解析和错误映射。
-- 新增 endpoint、tool、帮助、文档、测试和 dev workspace 实测均由该节点统一完成。
+- 原生 `search` 与现有 HTTP API 高度重叠。
+- `file grep` 的独有增量集中在低频原始文件诊断，对日常 Agent 笔记操作帮助有限。
+- 接入成本包括本地 workspace 限制、官方二进制定位、版本消歧、permission/approval、结果过滤和跨平台路径处理。
+- 当前没有足够价值支撑专门的 native backend；将来出现明确原始文件诊断需求时再作为新的 change 评估。
 
-**不可突破的边界**：
+### Serve 管理
 
-- 写操作永不走 native，必须继续经过 HTTP API 与 guard 链。
-- 不为了“支持原生 CLI”建立没有实际调用场景的抽象。
-- 不实现 `serve` 启动、停止或内核进程生命周期管理。
+不实现通过 CLI 启动、停止或管理 SiYuan kernel 进程。
 
-**Agent 边界**：N2 由一个独立 Agent 整体承接。该 Agent 可以直接与用户讨论候选能力、版本策略、history 和安全编辑行为，不再把这些讨论拆成新的顶层 node。N2 可以交付实际能力，也可以在调查后有证据地排除不值得继承的能力。
+## 验收结果
 
-## 主 Agent 的控制职责
-
-主 Agent 负责：
-
-1. 维护 `native-cli-adaptation.SPEC.md` 和本图，避免两个节点的目标漂移。
-2. 派发前为 N1、N2 分别建立独立 `TASK-NODE.SPEC.md`。
-3. 将节点交给新 session、独立 Agent 或 subagent，并向执行者提供最小充分上下文。
-4. 验收节点结果，确保 N2 不反向扩大或阻塞 N1。
-5. 控制公共文件写入，避免多个实现 Agent 同时修改相同代码和文档。
+- **N1**：`accepted`。双 bin、规范命令迁移、文档和隔离安装验证完成。
+- **N2**：`accepted`。endpoint 版本门槛、双层检查点、旧版降级、dry-run guard、partial failure、文档、完整测试和 dev workspace 实测通过。
+- workspaceDir resolver 与 SiYuan 3.7.3 的兼容发现已单独记录，不属于 N2，也不阻塞本 change。
 
 ## 当前前沿
 
-- **N1**：实现与验收修复已通过，节点状态为 `accepted`；实际 npm 版本选择和发布仍属发布阶段事项。
-- **N2**：成为当前前沿。方向、版本开放行为和硬边界已明确；启动前需建立节点工作区，具体能力清单与官方原生二进制定位策略由该节点继续 clarify。
+- 实现节点已清空。
+- 下一步是整理提交，并在发布阶段确定版本号与执行 npm 发布。

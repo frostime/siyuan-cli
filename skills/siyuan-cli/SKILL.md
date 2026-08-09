@@ -51,10 +51,13 @@ Small localized edit with known block ids
 
 Broad/complex/text-level edit
   → brute-edit <doc-id> --check true
-    SAFE   → --dry-run → inspect → --yes
-    UNSAFE → checkpoint-doc → block-level fallback
+    SAFE   → checkpoint-doc once → --dry-run → inspect → --yes
+    UNSAFE → block-level fallback
 
-checkpoint-doc = recovery material, not permission to bypass unsafe check.
+Before a group of high-risk edits, call checkpoint-doc explicitly once. Do not
+repeat it for later edits in the same group; brute-edit never creates a
+checkpoint automatically. A checkpoint is recovery material, not permission
+to bypass an unsafe check.
 ```
 
 Ask user when: no token/URL · wrong workspace · multiple plausible write targets · destructive operation lacks confirmation · daily-note notebook unknown.

@@ -44,6 +44,33 @@ test('root help identifies the canonical command', () => {
     assert.doesNotMatch(result.stdout, /\bsiyuan workspace\|api/);
 });
 
+test('history endpoint minimum kernel version appears in help and API list', () => {
+    const endpointHelp = runCli(
+        'api',
+        'history.createDocHistory',
+        '--help'
+    );
+    assert.equal(endpointHelp.status, 0, endpointHelp.stderr);
+    assert.match(endpointHelp.stdout, /Requires SiYuan kernel >=3\.7\.0/);
+
+    const groupedHelp = runCli('api', '-h');
+    assert.equal(groupedHelp.status, 0, groupedHelp.stderr);
+    assert.match(
+        groupedHelp.stdout,
+        /history\.createDocHistory.*requires kernel >=3\.7\.0/
+    );
+
+    const list = runCli('api', 'list');
+    assert.equal(list.status, 0, list.stderr);
+    const history = (
+        JSON.parse(list.stdout) as Array<{
+            id: string;
+            minKernelVersion?: string;
+        }>
+    ).find((entry) => entry.id === 'history.createDocHistory');
+    assert.equal(history?.minKernelVersion, '3.7.0');
+});
+
 test('custom API, tool, extension, endpoint, and tool help use the canonical command', () => {
     const cases = [
         {

@@ -47,6 +47,7 @@ export interface EndpointSchemaCache {
     description?: string;
     payload: JSONSchema;
     classification: AuthoredEndpointClassification;
+    minKernelVersion?: string;
     guard?: {
         payloadTargets?: PayloadTargetSpec[];
         response?: {
@@ -96,6 +97,9 @@ export function extractEndpointCacheData(
         ...(schema.description ? { description: schema.description } : {}),
         payload: schema.payload,
         classification: schema.classification,
+        ...(schema.minKernelVersion
+            ? { minKernelVersion: schema.minKernelVersion }
+            : {}),
         ...(schema.guard
             ? {
                   guard: {
@@ -245,6 +249,9 @@ export function buildEndpointSchemaFromCache(
         ...(cache.description ? { description: cache.description } : {}),
         payload: cache.payload,
         classification: cache.classification,
+        ...(cache.minKernelVersion
+            ? { minKernelVersion: cache.minKernelVersion }
+            : {}),
         ...(cache.guard ? { guard: cache.guard } : {}),
         ...(cache.cli ? { cli: cache.cli } : {}),
         ...(cache.formatStrategy

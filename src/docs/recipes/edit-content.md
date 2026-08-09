@@ -117,22 +117,28 @@ Use only when block-level edits are fragile/inefficient. Always check first.
 # 1. Check safety
 siyuan-cli tool brute-edit <doc-id> --check true --print json
 
-# UNSAFE → checkpoint + block-level fallback
-siyuan-cli tool checkpoint-doc <doc-id>
+# UNSAFE → use a block-level fallback; a checkpoint does not make brute-edit safe.
 
-# SAFE → preview, then execute
+# SAFE → checkpoint once before this high-risk edit group, then preview and execute.
+siyuan-cli tool checkpoint-doc <doc-id>
 siyuan-cli tool brute-edit <doc-id> --replacements @file:./replacements.json --dry-run
 siyuan-cli tool brute-edit <doc-id> --replacements @file:./replacements.json --yes
 ```
 
 `replacements.json`: `[{"search":"old text","replace":"new text"}, ...]`
 Each search must match exactly once. Overlapping or missing matches reject the operation.
+Call `checkpoint-doc` explicitly once before a group of high-risk edits. Do not
+repeat it before every edit in that group; `brute-edit` never creates one
+automatically. On SiYuan >=3.7.0, the checkpoint includes kernel document
+history and a local recovery package. Older kernels create the local package
+and emit a warning.
 
 ## Whole-document overwrite
 
 ```bash
 siyuan-cli tool brute-edit <doc-id> --check true --print json
-# If SAFE:
+# If SAFE, checkpoint once before this high-risk edit group:
+siyuan-cli tool checkpoint-doc <doc-id>
 siyuan-cli tool get-block-content <doc-id> --range children --limit=-1 --bodyOnly true > "$TMPDIR/doc.md"
 # ... edit $TMPDIR/doc.md locally ...
 siyuan-cli tool brute-edit <doc-id> --overwrite @file:$TMPDIR/doc.md --dry-run

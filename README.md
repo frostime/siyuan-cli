@@ -212,10 +212,10 @@ siyuan-cli tool get-block-info <block-id>
 
 # Guarded document-level rewrite: use only when block-level edits are fragile or inefficient
 siyuan-cli tool brute-edit <doc-id> --check true
-# If SAFE: dry-run before applying replacements or overwrite
-siyuan-cli tool brute-edit <doc-id> --overwrite @file:/tmp/doc.md --dry-run
-# If UNSAFE: create recovery material, then fall back to block-level APIs
+# If SAFE: checkpoint once before this high-risk edit group, then dry-run.
 siyuan-cli tool checkpoint-doc <doc-id>
+siyuan-cli tool brute-edit <doc-id> --overwrite @file:/tmp/doc.md --dry-run
+# If UNSAFE: fall back to block-level APIs; a checkpoint does not make brute-edit safe.
 # Next: locate stable child block ids, then use tool update-block
 siyuan-cli tool update-block --blocks @stdin --yes <<'EOF'
 [{"id":"<child-id>","data":"..."}]
