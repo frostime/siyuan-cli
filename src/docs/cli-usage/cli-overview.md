@@ -151,16 +151,16 @@ On Windows Git Bash / MSYS shells, arguments starting with `/` may be rewritten 
 Prefer disabling shell-side conversion for the command:
 
 ```bash
-MSYS_NO_PATHCONV=1 pnpm run siyuan api filetree.getIDsByHPath --notebook <id> --path "/TestDoc"
-MSYS_NO_PATHCONV=1 pnpm run siyuan api filetree.createDocWithMd --notebook <id> --path "/inbox/note" --markdown @file:./note.md
+MSYS_NO_PATHCONV=1 siyuan-cli api filetree.getIDsByHPath --notebook <id> --path "/TestDoc"
+MSYS_NO_PATHCONV=1 siyuan-cli api filetree.createDocWithMd --notebook <id> --path "/inbox/note" --markdown @file:./note.md
 ```
 
 A Git Bash / MSYS-specific escape also works: write the leading slash as `//` so the CLI receives `/...`.
 
 ```bash
-pnpm run siyuan api filetree.getIDsByHPath --notebook <id> --path //TestDoc
-pnpm run siyuan api filetree.createDocWithMd --notebook <id> --path //inbox/note --markdown @file:./note.md
-pnpm run siyuan api filetree.createDocWithMd --notebook <id> --path //note --markdown @file:./note.md
+siyuan-cli api filetree.getIDsByHPath --notebook <id> --path //TestDoc
+siyuan-cli api filetree.createDocWithMd --notebook <id> --path //inbox/note --markdown @file:./note.md
+siyuan-cli api filetree.createDocWithMd --notebook <id> --path //note --markdown @file:./note.md
 ```
 
 ## Error handling

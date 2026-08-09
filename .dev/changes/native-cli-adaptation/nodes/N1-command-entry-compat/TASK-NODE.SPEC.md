@@ -75,15 +75,17 @@
 - **实际改动**：
   - `package.json` 现将 `siyuan-cli`（规范入口）和 `siyuan`（兼容别名）同时映射到 `bin/siyuan.mjs`；项目内 `scripts.siyuan` 与 launcher 文件名保持不变。
   - `src/cli.ts` 以单一 `CLI_NAME = 'siyuan-cli'` 作为根命令身份和根级自定义帮助路由判断依据；根帮助、API/tool/extension 分组帮助及 endpoint/tool 细分帮助均显示规范命令。
-  - 源码帮助、错误、提示、endpoint/tool 示例，以及 `skills/siyuan-cli/`、`src/docs/`、README、项目级示例和贡献者文档中的本项目调用已改为 `siyuan-cli`；项目内 `pnpm run siyuan ...` 明确保留。
+  - 源码帮助、错误、提示、endpoint/tool 示例，以及 `skills/siyuan-cli/`、`src/docs/`、README、项目级示例和贡献者文档中的本项目调用已改为 `siyuan-cli`；仓库开发用的 npm script 名 `siyuan` 保持不变。
+  - 验收修复：将 bundled `src/docs/cli-usage/cli-overview.md` 中五个 MSYS 安装用户示例由 `pnpm run siyuan ...` 改为 `siyuan-cli ...`。
   - README、SKILL 与 CHANGELOG 增加迁移信息：SiYuan `<3.7.0` 可使用两个 package 入口；SiYuan `>=3.7.0` 时裸 `siyuan` 可能解析到官方原生 CLI，应使用 `siyuan-cli`。
   - 新增 `tests/cli-entry.test.ts`，验证双 bin 声明、规范根帮助，以及 API/tool/extension 和细分帮助路由；同步更新已有扩展提示断言。
 - **验证命令与结果**：
   - `pnpm run typecheck`：通过。
   - `pnpm test`：通过，99/99；之后仅格式化新增测试文件，并再次运行 `pnpm exec tsx --test tests/cli-entry.test.ts`，3/3 通过。
   - `pnpm run build`：通过；仅有 rolldown plugin timing 警告。
+  - 验收修复后运行 `pnpm exec tsx --test tests/doc-and-skill.test.ts tests/cli-entry.test.ts`：通过，14/14。
   - 隔离 package smoke test：通过。使用 `pnpm pack` 输出到临时目录、`npm install --ignore-scripts --prefix <temp>` 安装 tarball；临时安装中的显式 `siyuan-cli` 与 `siyuan` bin 均返回版本 `0.15.4`，两者的 `api -h` 均来自本项目且显示 `siyuan-cli`；另验证规范入口的 `tool -h`、`extension -h`、`api query.sql --help`、`tool get-block-content --help`。临时目录已删除，未修改全局安装。
-  - 残留审计：以 `rg` 检查非 `siyuan-cli` 的小写 `siyuan`；剩余命中属于兼容/原生 CLI 说明、package bin、本地 `pnpm run siyuan ...`、SiYuan URL/协议/路径/密钥标签、内部 header、临时目录命名或 launcher 文件名。
+  - 残留审计：重新以 `rg` 检查 bundled docs、SKILL 和 README；已无 `pnpm run siyuan`，剩余非 `siyuan-cli` 的小写 `siyuan` 命中均属于兼容/原生 CLI 说明、SiYuan URL/协议/路径/密钥标签或文档目录名。仓库其余残留另包括 package bin、本地 npm script、内部 header、临时目录命名或 launcher 文件名。
   - 全程未访问任何 SiYuan workspace。
 - **未运行项目**：无节点要求的未运行验证项。
 - **偏离契约**：无。
