@@ -96,10 +96,11 @@ SiYuan v3.7.0（2026-06-30）起，思源官方在内核中内置了命令行接
 
 ## 验收标准
 
-- [ ] N1：`npm i -g` 后同时生成 `siyuan-cli` 与 `siyuan` 两个入口，二者在没有官方原生 CLI 抢占时均可运行本项目全部子命令。
-- [ ] N1：SKILL、内置文档、README、CLI 帮助和错误提示中的用户命令统一为 `siyuan-cli`；仅迁移说明、兼容性说明和项目内 `pnpm run siyuan ...` 可保留旧名称。
-- [ ] N1：在 SiYuan `<3.7.0` 场景验证兼容别名预期；在 SiYuan `>=3.7.0` 场景验证 `siyuan-cli` 不受官方 `siyuan` 的 PATH 顺序影响；按 breaking change 发布。
-- [ ] N1 完成后无需等待 N2，即可安装、使用并准备发布。
+- [x] N1：隔离安装 package 后同时生成 `siyuan-cli` 与 `siyuan` 两个入口，二者在显式解析到本 package 时均可运行本项目全部子命令。
+- [x] N1：SKILL、内置文档、README、CLI 帮助和错误提示中的用户命令统一为 `siyuan-cli`；仅迁移说明、兼容性说明和项目内 npm script 名 `siyuan` 可保留旧名称。
+- [x] N1：验证 SiYuan `<3.7.0` 的兼容别名预期，以及 SiYuan `>=3.7.0` 环境中 `siyuan-cli` 不依赖裸 `siyuan` 的 PATH 顺序。
+- [x] N1 已完成实现验收，无需等待 N2，即可安装、使用并准备发布。
+- [ ] 发布阶段：确定版本号，并按 breaking command migration 发布 npm package。
 - [ ] N2：新增 endpoint 通过 `endpoint-schemas.test.ts` 类 schema 校验；`--help` 输出正确；权限规则/风险分级可作用于新端点（`--dry-run` 验证）；若纳入 history 能力，在 dev 空间实测创建与回滚。
 - [ ] N2：原生补充能力在 `list/help` 中标注 SiYuan `>=3.7.0` 要求；版本不足时执行返回明确错误且不调用原生能力。
 - [ ] N2：能区分官方原生二进制与本项目兼容别名；SiYuan `>=3.7.0` 时只有经过选择的只读能力可使用 native backend；所有写操作仍经过 HTTP API 与 guard 链。

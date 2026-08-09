@@ -1,6 +1,6 @@
 # N1：最小可用的命令入口兼容改造
 
-- **状态**：`awaiting_review`
+- **状态**：`accepted`
 - **执行者**：Pi 执行 Agent（N1）
 - **上游目标**：`../../native-cli-adaptation.SPEC.md`
 - **协作规则**：`../../THIS.RULE.md`
