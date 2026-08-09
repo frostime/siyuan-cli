@@ -91,11 +91,9 @@ General failures. The `error` field distinguishes subcategories.
 | `WORKSPACE_EXISTS` | `commands/workspace.ts` | Add with duplicate name, no `--force` |
 | `TOKEN_MODE_CONFLICT` | `commands/workspace.ts` | Multiple token sources specified |
 | `WORKSPACE_MISSING_CONNECTION` | `resolve.ts` | Workspace has neither baseUrl nor workspaceDir |
-| `WORKSPACE_NOT_FOUND_IN_KERNEL` | `resolver.ts` | workspaceDir not in running kernel's workspace list |
-| `WORKSPACE_CLOSED` | `resolver.ts` | Workspace closed in SiYuan |
 | `CONF_JSON_UNREADABLE` | `resolver.ts` | conf.json missing or corrupt |
 | `PORT_NOT_FOUND` | `resolver.ts` | No localhost address in serverAddrs |
-| `WORKSPACE_VERIFY_FAILED` | `resolver.ts` | Port doesn't match workspace at runtime |
+| `WORKSPACE_VERIFY_FAILED` | `resolver.ts` | Target port cannot be verified or its runtime workspace does not match |
 | `PROJECT_CONFIG_PARSE_ERROR` | `project-config.ts` | `.siyuan-cli.yaml` unreadable or invalid YAML |
 | `PROJECT_CONFIG_VERSION_UNSUPPORTED` | `project-config.ts` | Project file schemaVersion != current |
 | `PROJECT_CONFIG_REJECTED_FIELD` | `project-config.ts` | Project file contains `token`/`baseUrl`/`tokenSource`/`defaults` |
@@ -107,7 +105,6 @@ General failures. The `error` field distinguishes subcategories.
 |---|---|---|
 | `ECONNREFUSED` | `client.ts` | Kernel unreachable |
 | `ETIMEDOUT` | `client.ts` | Request timed out |
-| `SIYUAN_NOT_RUNNING` | `resolver.ts` | Seed port unreachable |
 | `VERIFY_FAILED` | `commands/workspace.ts` | Ping failed during `verify`/`add` |
 
 ### Exit 4 — AUTH

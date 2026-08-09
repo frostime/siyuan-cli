@@ -13,11 +13,7 @@ import {
 } from './project-config.js';
 import { CliError, ExitCode } from '../shared/errors.js';
 import { resolveWorkspaceDirToBaseUrl } from './resolver.js';
-import type {
-    AppConfig,
-    WorkspaceEntry,
-    TokenSource
-} from './config.js';
+import type { AppConfig, WorkspaceEntry, TokenSource } from './config.js';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -210,7 +206,12 @@ export async function materializeWorkspace(
             'Use `siyuan-cli workspace add` with --url or --workspace-dir.'
         );
     }
-    const resolved = await resolveWorkspaceDirToBaseUrl(workspace.workspaceDir);
+    const resolved = await resolveWorkspaceDirToBaseUrl(
+        workspace.workspaceDir,
+        {
+            token: workspace.token
+        }
+    );
     return {
         ...workspace,
         baseUrl: resolved.baseUrl

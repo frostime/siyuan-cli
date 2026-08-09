@@ -2,20 +2,25 @@
 
 - **记录日期**：2026-08-09
 - **发现环境**：SiYuan `3.7.3`，dev workspace `H:\Project_Active\SiYuanDevSpace`
-- **状态**：已复现，未在 N2 中修复
+- **状态**：已修复（N2 后续独立修复）
 - **影响范围**：配置使用 `workspaceDir`、需要经 `materializeWorkspace()` 自动解析 `baseUrl` 的调用
 
 ## 结论
 
-现有 workspace resolver 依赖 `/api/system/getConf` 返回非空的
+旧版 workspace resolver 依赖 `/api/system/getConf` 返回非空的
 `data.conf.system.workspaceDir`，再用它核验端口是否属于目标 workspace。
 在本次 dev 环境的 SiYuan 3.7.3 中，响应结构仍包含该字段，但字段值为空字符串。
 因此 resolver 把实际可用的 dev kernel 误判为 workspace 不匹配，并抛出
 `WORKSPACE_VERIFY_FAILED`。
 
-这不是 N2 的 `history.createDocHistory` 或 `checkpoint-doc` 故障。绕过
-`workspaceDir` 自动解析、直接使用已确认属于 dev workspace 的
-`http://127.0.0.1:1181` 后，N2 的真实双层检查点实测成功。
+该问题已通过后续独立修复解决：resolver 现在直接读取目标 workspace 的
+`conf/conf.json` 获取 localhost 端口，再调用该端口的
+`/api/system/getWorkspaceInfo` 验证运行时 workspace 路径；不再依赖
+`getWorkspaces` 或 `getConf`。验证请求携带 workspace token，并保留路径不匹配时的安全拒绝。
+
+这不是 N2 的 `history.createDocHistory` 或 `checkpoint-doc` 故障。修复后使用
+`workspaceDir` 自动解析的 dev 配置运行 `pnpm run siyuan workspace verify dev`
+已成功返回 `http://127.0.0.1:1181`。
 
 ## 复现证据
 
@@ -82,15 +87,13 @@ data.conf.system.workspaceDir = ""
 
 该绕行只用于验证 N2，不是建议的长期用户配置。
 
-## 建议的后续工作
+## 修复结果
 
-另建独立修复节点处理 workspace resolver 兼容性，不并入 N2。后续节点至少应确认：
-
-1. `workspaceDir` 为空是 SiYuan 3.7.x 的稳定行为、启动阶段行为，还是特定运行模式行为；
-2. 端口与 workspace 的替代核验依据，不能仅因端口可访问就放弃防串空间保护；
-3. 多个 workspace 同时打开时，替代方案仍能证明目标端口属于目标 workspace；
-4. `workspace verify` 抛错后的 `UV_HANDLE_CLOSING` assertion 是否可独立复现；
-5. 为旧版与新版 SiYuan 增加 resolver 合约测试，再决定兼容回退策略。
+- resolver 改为 `conf.json` 取端口、`getWorkspaceInfo` 做运行时身份核验。
+- 核验请求携带 workspace token；端口对应其他 workspace 时仍拒绝连接。
+- 新增 resolver 合约测试，覆盖正确 workspace 和不匹配 workspace。
+- 重新构建后，`pnpm run siyuan workspace verify dev` 成功返回 dev kernel 的 base URL。
+- 原先伴随出现的 `UV_HANDLE_CLOSING` assertion 在本次成功路径未复现；它仍未被证明与 resolver 原因相关，因此不单独处理。
 
 ## 相关代码
 

@@ -138,16 +138,15 @@ Each workspace needs a connection target. Two fields provide it:
 
 When both are present, `baseUrl` takes priority.
 
-### `workspaceDir` port discovery (4-step)
+### `workspaceDir` port discovery (3-step)
 
 Implemented in `resolver.ts`:
 
-1. POST `/api/system/getWorkspaces` via seed port (default 6806) → get all running workspace paths
-2. Match `workspaceDir` against returned paths (full path or basename; case-insensitive)
-3. Read `<workspaceDir>/conf/conf.json` → extract `serverAddrs` → pick localhost port
-4. Verify via `POST /api/system/getConf` on the discovered port (workspaceDir consistency check)
+1. Read `<workspaceDir>/conf/conf.json` → extract `serverAddrs` → pick the localhost port
+2. POST `/api/system/getWorkspaceInfo` on the discovered port → ask that kernel for its runtime workspace path
+3. Compare the returned `workspaceDir` with the configured path (case-insensitive, normalized)
 
-The `MaterializedWorkspace` always has a concrete `baseUrl` by the time `SiyuanClient` sees it.
+The resolver passes the workspace token to the verification request. It does not start SiYuan; an unreachable or mismatched port remains a resolution error. The `MaterializedWorkspace` always has a concrete `baseUrl` by the time `SiyuanClient` sees it.
 
 ---
 
@@ -178,5 +177,5 @@ The warning does not change exit code. Agents should treat it as a signal to add
 |---|---|
 | `src/workspace/resolve.ts` | `resolveWorkspace`, `resolveEffectiveWorkspace`, `materializeWorkspace` |
 | `src/workspace/project-config.ts` | `findProjectConfig`, `loadProjectConfig`, field validation, smoke warnings |
-| `src/workspace/resolver.ts` | `resolveWorkspaceDirToBaseUrl` (4-step port discovery) |
+| `src/workspace/resolver.ts` | `resolveWorkspaceDirToBaseUrl` (conf.json port discovery + runtime workspace verification) |
 | `src/workspace/config.ts` | `loadConfig`, `cascadePermission`, workspace entry management |
