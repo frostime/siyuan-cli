@@ -26,9 +26,9 @@ export const schema: EndpointSchema<Array<Record<string, unknown>>> = {
             stmt: ['literal', 'file', 'stdin']
         },
         examples: [
-            { command: 'siyuan api query.sql "SELECT id FROM blocks LIMIT 5"' },
-            { command: 'siyuan api query.sql --stmt @file:./query.sql' },
-            { command: 'cat query.sql | siyuan api query.sql --stmt @stdin' }
+            { command: 'siyuan-cli api query.sql "SELECT id FROM blocks LIMIT 5"' },
+            { command: 'siyuan-cli api query.sql --stmt @file:./query.sql' },
+            { command: 'cat query.sql | siyuan-cli api query.sql --stmt @stdin' }
         ]
     },
     guard: {

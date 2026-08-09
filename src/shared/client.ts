@@ -100,7 +100,7 @@ export class SiyuanClient {
                 ExitCode.AUTH,
                 'UNAUTHORIZED',
                 `Authentication failed for ${this.baseUrl}`,
-                'Check your token with `siyuan workspace show --reveal-token`.'
+                'Check your token with `siyuan-cli workspace show --reveal-token`.'
             );
         }
 

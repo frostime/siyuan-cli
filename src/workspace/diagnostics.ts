@@ -293,7 +293,7 @@ export async function diagnoseConnection(
             if (local) {
                 hints.push(
                     `No service is listening on ${host}:${port}.`,
-                    'Start SiYuan, or run `siyuan workspace show` to confirm the configured port.'
+                    'Start SiYuan, or run `siyuan-cli workspace show` to confirm the configured port.'
                 );
             } else {
                 hints.push(
@@ -347,7 +347,7 @@ export async function diagnoseConnection(
         if (http.status === 401) {
             hints.push(
                 `SiYuan kernel at ${baseUrl} requires authentication (HTTP 401).`,
-                'Check the token in `siyuan workspace show --reveal-token`, or refresh the tokenSource.'
+                'Check the token in `siyuan-cli workspace show --reveal-token`, or refresh the tokenSource.'
             );
         } else {
             hints.push(

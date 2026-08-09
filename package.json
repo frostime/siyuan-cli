@@ -16,6 +16,7 @@
     }
   },
   "bin": {
+    "siyuan-cli": "./bin/siyuan.mjs",
     "siyuan": "./bin/siyuan.mjs"
   },
   "files": [

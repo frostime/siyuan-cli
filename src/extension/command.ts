@@ -78,7 +78,7 @@ function renderList(root: string): string {
     if (pending > 0) {
         lines.push('');
         lines.push(
-            `[!] ${pending} extension(s) have stale/uncached/incompatible cache metadata. Run \`siyuan extension cache\` to refresh.`
+            `[!] ${pending} extension(s) have stale/uncached/incompatible cache metadata. Run \`siyuan-cli extension cache\` to refresh.`
         );
     }
     return lines.join('\n');
@@ -159,10 +159,10 @@ const cacheCommand = defineCommand({
 export function renderExtensionHelp(version?: string): string {
     const root = getExtensionDir();
     const lines: string[] = [];
-    const title = `Manage user extensions. (siyuan extension${version ? ` v${version}` : ''})`;
+    const title = `Manage user extensions. (siyuan-cli extension${version ? ` v${version}` : ''})`;
     lines.push(colors.gray(title));
     lines.push('');
-    lines.push(`${colors.underline(colors.bold('USAGE'))} ${colors.cyan('siyuan extension <command>')}`);
+    lines.push(`${colors.underline(colors.bold('USAGE'))} ${colors.cyan('siyuan-cli extension <command>')}`);
     lines.push('');
     lines.push(colors.underline(colors.bold('COMMANDS')));
     lines.push('');
@@ -183,16 +183,16 @@ export function renderExtensionHelp(version?: string): string {
     lines.push('');
     lines.push(colors.underline(colors.bold('COLD-START WORKFLOW')));
     lines.push('');
-    lines.push(`  1. ${colors.cyan('siyuan extension init')}`);
+    lines.push(`  1. ${colors.cyan('siyuan-cli extension init')}`);
     lines.push(`  2. create ${colors.cyan('apis/foo.ts')} or ${colors.cyan('tools/bar.ts')}`);
-    lines.push(`  3. ${colors.cyan('siyuan extension cache')}`);
-    lines.push(`  4. ${colors.cyan('siyuan extension list')}`);
-    lines.push(`  5. ${colors.cyan('siyuan api|tool describe <id>')}`);
-    lines.push(`  6. ${colors.cyan('siyuan api|tool <id> ...')}`);
+    lines.push(`  3. ${colors.cyan('siyuan-cli extension cache')}`);
+    lines.push(`  4. ${colors.cyan('siyuan-cli extension list')}`);
+    lines.push(`  5. ${colors.cyan('siyuan-cli api|tool describe <id>')}`);
+    lines.push(`  6. ${colors.cyan('siyuan-cli api|tool <id> ...')}`);
     lines.push('');
     lines.push(colors.underline(colors.bold('DOCS')));
     lines.push('');
-    lines.push(`  ${colors.cyan('siyuan doc read extension.md')}`);
+    lines.push(`  ${colors.cyan('siyuan-cli doc read extension.md')}`);
     return lines.join('\n');
 }
 

@@ -136,11 +136,11 @@ permission:
 
 Passing `--yes` bypasses approval when `behavior.allowYes` is true. Set `behavior.allowYes: false` to enforce the approval flow (see `workspace-config.md`).
 
-Every endpoint also has a `classification` and derived `severity` for display and warnings. `severity` is not an approval gate. Run `siyuan api list` to see endpoint classification and severity labels.
+Every endpoint also has a `classification` and derived `severity` for display and warnings. `severity` is not an approval gate. Run `siyuan-cli api list` to see endpoint classification and severity labels.
 
 ## Raw API boundary
 
-`siyuan api raw <endpoint>` bypasses endpoint schemas entirely:
+`siyuan-cli api raw <endpoint>` bypasses endpoint schemas entirely:
 
 - no payload schema validation
 - no `guard.payloadTargets` → notebook/path-scoped rules cannot be enforced
@@ -217,13 +217,13 @@ Final rule chain for workspace `main`: workspace rules (5) ++ defaults rules (3)
 
 ## Debugging permissions
 
-1. `siyuan workspace which` — see the complete rule list and resolution source
-2. `siyuan api <id> --debug` — see endpoint id and assembled payload
+1. `siyuan-cli workspace which` — see the complete rule list and resolution source
+2. `siyuan-cli api <id> --debug` — see endpoint id and assembled payload
 3. Read the error message: `ENDPOINT_DENIED` includes the rule index or "default deny" when the fallback `permission.default` is `deny`; `CONTENT_DENIED` includes resource kind/value and matching rule index
 4. Common fixes:
    - `ENDPOINT_DENIED` → add an `allow` rule for this endpoint, or check glob pattern
    - `CONTENT_DENIED` → add an `allow` rule scoped to the target notebook/path
-   - `APPROVAL_UNAVAILABLE` → inspect broker state with `siyuan approval status`
+   - `APPROVAL_UNAVAILABLE` → inspect broker state with `siyuan-cli approval status`
 
 ## Config smoke warnings
 

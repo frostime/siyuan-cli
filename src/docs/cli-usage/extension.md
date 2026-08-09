@@ -20,7 +20,7 @@ Extensions are written in TypeScript, loaded via `jiti` at execution time, and c
 | You need... | Build... | Why |
 |-------------|----------|-----|
 | A reusable endpoint contract with schema, classification, guards, help, and formatting | API extension (`apis/*.ts`) | It becomes a CLI endpoint and participates in validation/permission behavior. |
-| A reusable multi-call operation that should run as one CLI command | Tool extension (`tools/*.ts`) | It lives in the CLI runtime and is discoverable through `siyuan tool list/describe`. |
+| A reusable multi-call operation that should run as one CLI command | Tool extension (`tools/*.ts`) | It lives in the CLI runtime and is discoverable through `siyuan-cli tool list/describe`. |
 | User-specific workflow policy, notebook defaults, templates, naming rules, or review cadence | Downstream Agent SKILL | It is guidance for an agent, not reusable CLI runtime code. |
 
 If the reusable part is **code**, use an extension. If the reusable part is **decisions about when/where/how to use the CLI**, use a downstream Agent SKILL.
@@ -44,9 +44,9 @@ If the reusable part is **code**, use an extension. If the reusable part is **de
 ## Getting Started
 
 ```bash
-siyuan extension init               # scaffold the directory
-siyuan extension list               # show discovered extensions + cache status
-siyuan extension cache              # batch-generate all schema.json files
+siyuan-cli extension init               # scaffold the directory
+siyuan-cli extension list               # show discovered extensions + cache status
+siyuan-cli extension cache              # batch-generate all schema.json files
 ```
 
 ## Authoring Contract
@@ -59,17 +59,17 @@ siyuan extension cache              # batch-generate all schema.json files
 Notes:
 - Built-in ID/endpoint conflicts are skipped with a warning.
 - Discovery reads `*.schema.json` cache files; execution loads the real module.
-- `siyuan extension cache` is the fastest way to refresh metadata after edits.
+- `siyuan-cli extension cache` is the fastest way to refresh metadata after edits.
 
 ## Cold-start Workflow
 
 ```text
-1. siyuan extension init
+1. siyuan-cli extension init
 2. create apis/foo.ts or tools/bar.ts
-3. siyuan extension cache
-4. siyuan extension list
-5. siyuan api|tool describe <id>
-6. siyuan api|tool <id> ...
+3. siyuan-cli extension cache
+4. siyuan-cli extension list
+5. siyuan-cli api|tool describe <id>
+6. siyuan-cli api|tool <id> ...
 ```
 
 Use `describe` immediately after `cache` to confirm that the CLI recognized your extension contract before trying to execute it.
@@ -99,7 +99,7 @@ export const schema: EndpointSchema = {
 Run it:
 
 ```bash
-siyuan api custom.echo --text "hello"
+siyuan-cli api custom.echo --text "hello"
 ```
 
 ### Where is the definition of SiYuan Kernel API
@@ -145,7 +145,7 @@ export const tool: ToolSchema = {
 Run it:
 
 ```bash
-siyuan tool hello-ext --name Alice
+siyuan-cli tool hello-ext --name Alice
 ```
 
 ### Tool-level permission guards
@@ -185,16 +185,16 @@ The `guard.payloadTargets` schema is the same as for endpoints (see "Permission 
 
 On first execution of an extension, siyuan-cli writes a sidecar `*.schema.json` next to the `.ts` file. This cache is used for:
 
-- `siyuan api list` / `siyuan tool list` — fast discovery without importing `.ts`
-- `siyuan api -h` / `siyuan tool -h` — showing command metadata
+- `siyuan-cli api list` / `siyuan-cli tool list` — fast discovery without importing `.ts`
+- `siyuan-cli api -h` / `siyuan-cli tool -h` — showing command metadata
 
-If you see `[uncached]` in `list` output, run `siyuan extension cache` to populate all caches without executing logic.
+If you see `[uncached]` in `list` output, run `siyuan-cli extension cache` to populate all caches without executing logic.
 
 The cache is invalidated automatically when the `.ts` file mtime changes.
 
 ## TypeScript Configuration
 
-`siyuan extension init` generates a `tsconfig.json` with `paths` pointing to the global siyuan-cli installation. The key entry is:
+`siyuan-cli extension init` generates a `tsconfig.json` with `paths` pointing to the global siyuan-cli installation. The key entry is:
 
 ```json
 "@frostime/siyuan-cli/schema": ["<pkg>/shared/schema.d.mts"]
@@ -277,7 +277,7 @@ https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go
 
 ## Package-local reference
 
-`cli-usage/extension.md` is shipped inside the same installed package as the runtime code. Use `siyuan doc list` / `siyuan doc read cli-usage/extension.md` to locate the docs root, then inspect the sibling `dist/` directory in that package when documentation is incomplete.
+`cli-usage/extension.md` is shipped inside the same installed package as the runtime code. Use `siyuan-cli doc list` / `siyuan-cli doc read cli-usage/extension.md` to locate the docs root, then inspect the sibling `dist/` directory in that package when documentation is incomplete.
 
 | File | What it contains |
 |------|-----------------|
@@ -374,7 +374,7 @@ For `api raw` config: see `workspace-config.md` §Raw API fallback.
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `Cannot find module '@frostime/siyuan-cli/schema'` | Missing explicit `paths` entry | Regenerate with `siyuan extension init` |
-| Extension not showing in `list` | Missing or stale cache | Run `siyuan extension cache` |
+| `Cannot find module '@frostime/siyuan-cli/schema'` | Missing explicit `paths` entry | Regenerate with `siyuan-cli extension init` |
+| Extension not showing in `list` | Missing or stale cache | Run `siyuan-cli extension cache` |
 | `conflicts with builtin` warning | Extension ID collides with built-in | Rename your extension endpoint/tool id |
-| `[uncached]` in `list` output | `.ts` never executed | Run the extension once, or `siyuan extension cache` |
+| `[uncached]` in `list` output | `.ts` never executed | Run the extension once, or `siyuan-cli extension cache` |

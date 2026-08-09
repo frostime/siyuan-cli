@@ -88,7 +88,7 @@ test('readSchemaCache marks legacy endpoint classification cache as incompatible
 
     const result = readSchemaCache<EndpointSchemaCache>(source);
     assert.equal(result.status, 'incompatible');
-    assert.match(result.error ?? '', /siyuan extension cache/);
+    assert.match(result.error ?? '', /siyuan-cli extension cache/);
 
     rmSync(dir, { recursive: true, force: true });
 });
@@ -265,7 +265,7 @@ test('unknown extension command suggests running extension cache when pending me
 
     assert.equal(result.status, 1);
     assert.match(result.stderr, /Unknown command `hello-ext`/);
-    assert.match(result.stderr, /Run `siyuan extension cache` and retry\./);
+    assert.match(result.stderr, /Run `siyuan-cli extension cache` and retry\./);
 
     rmSync(root, { recursive: true, force: true });
 });

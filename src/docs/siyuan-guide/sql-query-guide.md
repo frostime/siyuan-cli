@@ -116,8 +116,8 @@ LIMIT 10
 Prefer the Agent-oriented tool first:
 
 ```bash
-siyuan tool search-backlinks <target-block-id>
-siyuan tool search-backlinks <target-block-id> --noRedirect true  # exact source blocks
+siyuan-cli tool search-backlinks <target-block-id>
+siyuan-cli tool search-backlinks <target-block-id> --noRedirect true  # exact source blocks
 ```
 
 Use SQL only for custom filtering or joins. Raw `refs.block_id` is the exact block containing the reference; the tool's default output may redirect first-paragraph hits to the owning document, heading, or container for easier navigation.
@@ -135,7 +135,7 @@ LIMIT 32
 
 ### Find references used inside a document
 
-Prefer `siyuan tool get-block-info <document-id>` for the default Agent view. It reports outgoing refs as `FROM <block in document> -> TO <referenced block>`.
+Prefer `siyuan-cli tool get-block-info <document-id>` for the default Agent view. It reports outgoing refs as `FROM <block in document> -> TO <referenced block>`.
 
 Use SQL only when you need custom filtering, joins, or more than the compact display limit.
 

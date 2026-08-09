@@ -444,7 +444,7 @@ export interface EndpointSchema<TResponseData = unknown> {
     guard?: FilterSpec;
     /** Pre-built compact format strategy. Ignored when `format` is present. */
     formatStrategy?: FormatStrategy;
-    /** Optional compact renderer for `siyuan api <id> --print compact`. Takes precedence over formatStrategy. */
+    /** Optional compact renderer for `siyuan-cli api <id> --print compact`. Takes precedence over formatStrategy. */
     format?: (ctx: EndpointFormatContext<TResponseData>) => string;
 }
 

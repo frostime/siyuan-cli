@@ -34,11 +34,11 @@ Supports --dry-run to preview which blocks exist and what attrs would be preserv
         examples: [
             {
                 command:
-                    "siyuan tool update-block --blocks @stdin <<'EOF'\n[{\"id\":\"20241016135347-zlrn2cz\",\"data\":\"New content\"}]\nEOF",
+                    "siyuan-cli tool update-block --blocks @stdin <<'EOF'\n[{\"id\":\"20241016135347-zlrn2cz\",\"data\":\"New content\"}]\nEOF",
                 description: 'Update a single block via heredoc'
             },
             {
-                command: 'siyuan tool update-block --blocks @file:./updates.json',
+                command: 'siyuan-cli tool update-block --blocks @file:./updates.json',
                 description: 'Batch update from file'
             }
         ]

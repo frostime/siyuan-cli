@@ -6,7 +6,7 @@ summary: Walkthrough for writing a composition tool under src/tool/builtins/.
 
 # Adding a Tool
 
-GATE: the user-facing action requires **more than one endpoint call**, **formatting**, or **resolution logic**. If one endpoint does the job, just document it as `siyuan api <id>` and stop. See `20-tool-schema.md` for the type reference.
+GATE: the user-facing action requires **more than one endpoint call**, **formatting**, or **resolution logic**. If one endpoint does the job, just document it as `siyuan-cli api <id>` and stop. See `20-tool-schema.md` for the type reference.
 
 ## Checklist
 
@@ -191,7 +191,7 @@ Throw plain `Error` for input problems. The CLI layer wraps it into `{error: "ER
 
 ## Anti-patterns
 
-- **tool that just forwards one endpoint call**: delete it, use `siyuan api <id>` directly
+- **tool that just forwards one endpoint call**: delete it, use `siyuan-cli api <id>` directly
 - **bypassing `callEndpoint` to hit `ctx.client.call` directly**: skips all guards; almost always wrong
 - **content > 200 lines**: truncate; put full data in details
 - **silent truncation without a meta flag**: set `meta.truncated = true` or add a warning

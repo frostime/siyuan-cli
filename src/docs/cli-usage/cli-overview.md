@@ -25,18 +25,18 @@ summary: Command structure, flags, input sources, and error handling for siyuan-
 | `skill` | install · read · uninstall | Manage bundled agent skill |
 | `extension` | init · list · cache | Manage user extensions |
 
-Full flags and usage: `siyuan --help`, `siyuan <group> --help`, `siyuan <group> <sub> --help`.
+Full flags and usage: `siyuan-cli --help`, `siyuan-cli <group> --help`, `siyuan-cli <group> <sub> --help`.
 
 ## Calling kernel APIs
 
 Endpoint id: `<group>.<name>` (derived from kernel path `/api/<group>/<name>`).
 
 ```bash
-siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"  # positional
-siyuan api block.getBlockKramdown --id 20260417120000-abcdefg                 # named flags
+siyuan-cli api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"  # positional
+siyuan-cli api block.getBlockKramdown --id 20260417120000-abcdefg                 # named flags
 ```
 
-Discovery: `siyuan api list` · `siyuan api list --group block` · `siyuan api describe <id>` · `<id> --help`
+Discovery: `siyuan-cli api list` · `siyuan-cli api list --group block` · `siyuan-cli api describe <id>` · `<id> --help`
 
 ### Raw fallback
 
@@ -50,7 +50,7 @@ behavior:
 ```
 
 ```bash
-siyuan api raw asset.getDocAssets -j '{"id":"20240922152051-7dpjfpv"}'
+siyuan-cli api raw asset.getDocAssets -j '{"id":"20240922152051-7dpjfpv"}'
 ```
 
 Raw stdout is pure JSON `data` (pipe to `jq`); warnings go to stderr. Bypasses schema validation, guards, response filtering, and compact formatting. → `workspace-config.md` §Raw API fallback.
@@ -60,12 +60,12 @@ Raw stdout is pure JSON `data` (pipe to `jq`); warnings go to stderr. Bypasses s
 Tools compose multiple API calls into one command.
 
 ```bash
-siyuan tool list
-siyuan tool list-doc-tree --entry <notebook-or-doc-id> --depth 2
-siyuan tool get-block-content <id> --range context --limit 7 --showId true
+siyuan-cli tool list
+siyuan-cli tool list-doc-tree --entry <notebook-or-doc-id> --depth 2
+siyuan-cli tool get-block-content <id> --range context --limit 7 --showId true
 ```
 
-Discovery: `siyuan tool list` · `siyuan tool describe <id>` · `<id> --help`
+Discovery: `siyuan-cli tool list` · `siyuan-cli tool describe <id>` · `<id> --help`
 
 ### Output modes
 
@@ -80,7 +80,7 @@ Both `api` and `tool` default to compact human-readable text. Override with:
 
 ## Global flags
 
-All `siyuan api <id>` and `siyuan tool <id>` commands accept:
+All `siyuan-cli api <id>` and `siyuan-cli tool <id>` commands accept:
 
 | Flag | Short | Meaning |
 |------|-------|---------|
@@ -122,17 +122,17 @@ Usage examples:
 
 ```bash
 # pipe
-echo "SELECT id FROM blocks LIMIT 5" | siyuan api query.sql --stmt @stdin
+echo "SELECT id FROM blocks LIMIT 5" | siyuan-cli api query.sql --stmt @stdin
 
 # shell heredoc (bash) / here-string (PowerShell @'...'@) — no temp file needed, preferred for multiline input
-siyuan api query.sql --stmt @stdin <<'EOF'
+siyuan-cli api query.sql --stmt @stdin <<'EOF'
 SELECT id, content
 FROM blocks
 WHERE type = 'd' AND content LIKE '%keyword%'
 LIMIT 10
 EOF
 
-siyuan api block.appendBlock --parentID <id> --data @stdin <<'EOF'
+siyuan-cli api block.appendBlock --parentID <id> --data @stdin <<'EOF'
 ## New section
 
 Paragraph content here.
@@ -141,7 +141,7 @@ EOF
 # append endpoints default `dataType` to `markdown`; pass `--dataType dom` only when needed.
 
 # multiple long inputs in one command — use @file: for each
-siyuan tool update-block --blocks @file:./updates.json --yes
+siyuan-cli tool update-block --blocks @file:./updates.json --yes
 ```
 
 ## Git Bash / MSYS path conversion
@@ -168,7 +168,7 @@ pnpm run siyuan api filetree.createDocWithMd --notebook <id> --path //note --mar
 Warnings and errors are written to stderr as single-line JSON, stdout remains clean:
 
 ```json
-{"error":"WORKSPACE_NOT_FOUND","message":"...","hint":"Run `siyuan workspace list`..."}
+{"error":"WORKSPACE_NOT_FOUND","message":"...","hint":"Run `siyuan-cli workspace list`..."}
 ```
 
 ### Exit codes
@@ -201,8 +201,8 @@ Warnings and errors are written to stderr as single-line JSON, stdout remains cl
 | `APPROVAL_UNAVAILABLE` | 1 | Approval flow was unavailable; retry with `--yes` (if `behavior.allowYes` is `true`) or inspect broker state |
 | `KERNEL_ERROR` | 1 | Show message as-is; likely a data-level problem |
 | `BLOCK_NOT_FOUND` | 1 | Verify the block id exists |
-| `NO_WORKSPACE` | 2 | Run `siyuan workspace add` |
-| `WORKSPACE_NOT_FOUND` | 2 | Check name with `siyuan workspace list` |
+| `NO_WORKSPACE` | 2 | Run `siyuan-cli workspace add` |
+| `WORKSPACE_NOT_FOUND` | 2 | Check name with `siyuan-cli workspace list` |
 | `ECONNREFUSED` | 3 | Start SiYuan kernel |
 | `UNAUTHORIZED` | 4 | Check token |
 | `ENDPOINT_DENIED` | 5 | Review permission rules |
@@ -224,19 +224,19 @@ exit 5          → permission policy blocks this; check config rules
 See `permission.md` for the full reference. Quick diagnostic:
 
 ```bash
-siyuan workspace which              # see resolved workspace + full rule list
-siyuan api <id> --debug             # see assembled payload
+siyuan-cli workspace which              # see resolved workspace + full rule list
+siyuan-cli api <id> --debug             # see assembled payload
 ```
 
 Common fixes:
-- `ENDPOINT_DENIED` → `siyuan workspace which` to see rules, add an allow rule
+- `ENDPOINT_DENIED` → `siyuan-cli workspace which` to see rules, add an allow rule
 - `CONTENT_DENIED` → rules may restrict writes to this notebook/path; inspect rule list
 - `APPROVAL_UNAVAILABLE` → broker not running; retry with `--yes` only when safe
 
 ## Skill install targets
 
 ```bash
-siyuan skill install [--target agents|claude|.pi] [--local]
+siyuan-cli skill install [--target agents|claude|.pi] [--local]
 ```
 
 `agents`/`claude` are home-directory shortcuts; generic names normalize to leading-dot form; `--local` uses project directory.
@@ -244,11 +244,11 @@ siyuan skill install [--target agents|claude|.pi] [--local]
 ## Debugging
 
 ```bash
-siyuan workspace which              # resolution for current directory
-siyuan workspace verify             # verify effective workspace (cwd-aware)
-siyuan workspace verify --global-current  # verify global config.current only
-siyuan api <id> --debug             # curl-equivalent to stderr
-siyuan api <id> ... --dry-run       # preview writes
+siyuan-cli workspace which              # resolution for current directory
+siyuan-cli workspace verify             # verify effective workspace (cwd-aware)
+siyuan-cli workspace verify --global-current  # verify global config.current only
+siyuan-cli api <id> --debug             # curl-equivalent to stderr
+siyuan-cli api <id> ... --dry-run       # preview writes
 ```
 
-Approval commands: `siyuan approval status|list|open|approve|reject`. Broker config and lifecycle → `workspace-config.md` §Behavior. Permission rules → `permission.md`.
+Approval commands: `siyuan-cli approval status|list|open|approve|reject`. Broker config and lifecycle → `workspace-config.md` §Behavior. Permission rules → `permission.md`.

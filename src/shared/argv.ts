@@ -54,7 +54,7 @@ function readStdin(): string {
             ExitCode.GENERAL,
             'STDIN_IS_TTY',
             '@stdin requested but stdin is a terminal (nothing is piped in).',
-            'Pipe a value via `command | siyuan ...` or use @file:<path> instead.'
+            'Pipe a value via `command | siyuan-cli ...` or use @file:<path> instead.'
         );
     }
     stdinConsumed = true;
@@ -271,11 +271,11 @@ export function buildEndpointHelp(endpoint: {
     lines.push('USAGE');
 
     if (schema.cli?.primary) {
-        lines.push(`  siyuan api ${id} <${schema.cli.primary}>`);
+        lines.push(`  siyuan-cli api ${id} <${schema.cli.primary}>`);
     }
-    lines.push(`  siyuan api ${id} [--<field> <value>...]`);
-    lines.push(`  siyuan api ${id} -j '<json>'`);
-    lines.push(`  siyuan api ${id} -f <file>`);
+    lines.push(`  siyuan-cli api ${id} [--<field> <value>...]`);
+    lines.push(`  siyuan-cli api ${id} -j '<json>'`);
+    lines.push(`  siyuan-cli api ${id} -f <file>`);
     lines.push('');
 
     lines.push('ENDPOINT');

@@ -159,8 +159,8 @@ export function buildToolHelp(tool: ToolSchema): string {
     lines.push('');
     lines.push('USAGE');
     if (tool.cli?.primary)
-        lines.push(`  siyuan tool ${tool.id} <${tool.cli.primary}>`);
-    lines.push(`  siyuan tool ${tool.id} [--<field> <value>...]`);
+        lines.push(`  siyuan-cli tool ${tool.id} <${tool.cli.primary}>`);
+    lines.push(`  siyuan-cli tool ${tool.id} [--<field> <value>...]`);
     lines.push('');
     lines.push('PARAMETERS');
     const required = new Set(tool.input.required ?? []);

@@ -4,6 +4,7 @@ All notable changes to `@frostime/siyuan-cli` are documented here.
 
 ## Unreleased
 
+- Breaking command migration: use `siyuan-cli` as the canonical command; `siyuan` remains a compatibility alias but may resolve to SiYuan's native CLI starting with SiYuan 3.7.0
 - `get-block-content` 新增 `--bodyOnly true`，用于输出无 header 的干净 Markdown body
 - `brute-edit` 新增 `--overwrite @file:/path.md` / `@stdin` 整文档覆盖模式，保留文档 ID
 - 移除内置 `push-md` tool；新建文档使用 `filetree.createDocWithMd` / `import.importStdMd`，覆盖已有文档使用 `brute-edit --overwrite`

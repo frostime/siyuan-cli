@@ -71,31 +71,31 @@ Uses global --dry-run to preview without writing.`,
         },
         examples: [
             {
-                command: 'siyuan tool brute-edit 20241016135347-zlrn2cz --check true'
+                command: 'siyuan-cli tool brute-edit 20241016135347-zlrn2cz --check true'
             },
             {
                 command:
-                    'siyuan tool brute-edit 20241016135347-zlrn2cz --replacements \'[{"search":"old","replace":"new"}]\' --dry-run',
+                    'siyuan-cli tool brute-edit 20241016135347-zlrn2cz --replacements \'[{"search":"old","replace":"new"}]\' --dry-run',
                 description: 'Run only after --check true reports SAFE.'
             },
             {
-                command: 'siyuan tool brute-edit 20241016135347-zlrn2cz --replacements @file:./replacements.json --dry-run',
+                command: 'siyuan-cli tool brute-edit 20241016135347-zlrn2cz --replacements @file:./replacements.json --dry-run',
                 description: 'Run only after --check true reports SAFE.'
             },
             {
-                command: 'cat replacements.json | siyuan tool brute-edit 20241016135347-zlrn2cz --replacements @stdin --dry-run',
+                command: 'cat replacements.json | siyuan-cli tool brute-edit 20241016135347-zlrn2cz --replacements @stdin --dry-run',
                 description: 'Run only after --check true reports SAFE.'
             },
             {
-                command: 'siyuan tool brute-edit 20241016135347-zlrn2cz --replacements \'[...]\' --maxSize 102400 --dry-run',
+                command: 'siyuan-cli tool brute-edit 20241016135347-zlrn2cz --replacements \'[...]\' --maxSize 102400 --dry-run',
                 description: 'Run only after --check true reports SAFE.'
             },
             {
-                command: 'siyuan tool brute-edit 20241016135347-zlrn2cz --overwrite @file:/tmp/doc.md --dry-run',
+                command: 'siyuan-cli tool brute-edit 20241016135347-zlrn2cz --overwrite @file:/tmp/doc.md --dry-run',
                 description: 'Run only after --check true reports SAFE.'
             },
             {
-                command: 'cat /tmp/doc.md | siyuan tool brute-edit 20241016135347-zlrn2cz --overwrite @stdin --dry-run',
+                command: 'cat /tmp/doc.md | siyuan-cli tool brute-edit 20241016135347-zlrn2cz --overwrite @stdin --dry-run',
                 description: 'Run only after --check true reports SAFE.'
             }
         ]

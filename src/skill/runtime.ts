@@ -168,20 +168,20 @@ export function checkInstalledSkillVersion(cliVersion: string): string | null {
     const targetFile = join(targetDir, 'SKILL.md');
 
     if (!existsSync(targetFile)) {
-        return `SKILL file not found at ${targetFile}. Run \`siyuan skill install\` to install it.`;
+        return `SKILL file not found at ${targetFile}. Run \`siyuan-cli skill install\` to install it.`;
     }
 
     try {
         const content = readFileSync(targetFile, 'utf-8');
         const installedVersion = parseSkillVersion(content);
         if (!installedVersion) {
-            return `Cannot read version from ${targetFile}. Run \`siyuan skill install\` to reinstall.`;
+            return `Cannot read version from ${targetFile}. Run \`siyuan-cli skill install\` to reinstall.`;
         }
         if (installedVersion !== cliVersion) {
-            return `SKILL version mismatch: installed ${installedVersion}, CLI ${cliVersion}. Run \`siyuan skill install\` to update.`;
+            return `SKILL version mismatch: installed ${installedVersion}, CLI ${cliVersion}. Run \`siyuan-cli skill install\` to update.`;
         }
     } catch {
-        return `Failed to read ${targetFile}. Run \`siyuan skill install\` to reinstall.`;
+        return `Failed to read ${targetFile}. Run \`siyuan-cli skill install\` to reinstall.`;
     }
 
     return null;

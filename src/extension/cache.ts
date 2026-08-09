@@ -190,7 +190,7 @@ export function readSchemaCache<T>(source: string): ReadSchemaCacheResult<T> {
             status: 'incompatible',
             cachePath,
             envelope,
-            error: 'Extension schema cache is incompatible with the current classification model. Run `siyuan extension cache` to regenerate it.'
+            error: 'Extension schema cache is incompatible with the current classification model. Run `siyuan-cli extension cache` to regenerate it.'
         };
     }
 

@@ -46,7 +46,7 @@ export class ApprovalBrokerUnavailableError extends CliError {
             ExitCode.GENERAL,
             'APPROVAL_BROKER_UNAVAILABLE',
             message,
-            'Run `siyuan approval status` to inspect the local approval broker.',
+            'Run `siyuan-cli approval status` to inspect the local approval broker.',
             details
         );
     }

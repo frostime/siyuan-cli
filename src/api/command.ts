@@ -1,5 +1,5 @@
 /**
- * `siyuan api` command — direct kernel API calls.
+ * `siyuan-cli api` command — direct kernel API calls.
  */
 import { defineCommand } from 'citty';
 import { colors } from 'consola/utils';
@@ -160,7 +160,7 @@ export function listEndpoints(args: Record<string, unknown>): void {
 
     if (pendingEndpoints.length > 0) {
         process.stderr.write(
-            `[!] ${pendingEndpoints.length} extension(s) have stale/uncached/incompatible cache metadata. Run \`siyuan extension cache\` to refresh.\n`
+            `[!] ${pendingEndpoints.length} extension(s) have stale/uncached/incompatible cache metadata. Run \`siyuan-cli extension cache\` to refresh.\n`
         );
     }
 }
@@ -173,7 +173,7 @@ export function describeEndpoint(id: string): void {
             ExitCode.GENERAL,
             'ENDPOINT_NOT_FOUND',
             `Endpoint "${id}" not found.`,
-            'Run `siyuan api list` to see all endpoints.'
+            'Run `siyuan-cli api list` to see all endpoints.'
         );
     }
     const { schema } = entry;
@@ -248,7 +248,7 @@ export async function callRawEndpoint(rawArgs: Record<string, unknown>): Promise
             ExitCode.GENERAL,
             'RAW_API_INVALID_ENDPOINT',
             'Raw endpoint is required.',
-            'Use `siyuan api raw <endpoint> -j <json>`.'
+            'Use `siyuan-cli api raw <endpoint> -j <json>`.'
         );
     }
 
@@ -528,10 +528,10 @@ const rawCommand = defineCommand({
 export function renderGroupedApiHelp(version?: string): string {
     ensureEndpointDiscovery();
     const lines: string[] = [];
-    const title = `Call SiYuan kernel API endpoints directly. (siyuan api${version ? ` v${version}` : ''})`;
+    const title = `Call SiYuan kernel API endpoints directly. (siyuan-cli api${version ? ` v${version}` : ''})`;
     lines.push(colors.gray(title));
     lines.push('');
-    lines.push(`${colors.underline(colors.bold('USAGE'))} ${colors.cyan('siyuan api [OPTIONS] <command>')}`);
+    lines.push(`${colors.underline(colors.bold('USAGE'))} ${colors.cyan('siyuan-cli api [OPTIONS] <command>')}`);
     lines.push('');
 
     const all = registry.list();
@@ -557,7 +557,7 @@ export function renderGroupedApiHelp(version?: string): string {
     printGroup('BUILT-IN', builtins.map((e) => ({ id: e.id, description: e.schema.summary })));
     printGroup('USER EXTENSIONS', extensions.map((e) => ({ id: e.id, description: e.schema.summary })));
 
-    lines.push(`Use ${colors.cyan('siyuan api <command> --help')} for more information about a command.`);
+    lines.push(`Use ${colors.cyan('siyuan-cli api <command> --help')} for more information about a command.`);
 
     return lines.join('\n');
 }

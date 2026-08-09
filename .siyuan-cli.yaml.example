@@ -1,7 +1,7 @@
 # .siyuan-cli.yaml — project-level siyuan-cli config
 #
 # Copy this file to `.siyuan-cli.yaml` in your project root and edit to taste.
-# Once present, `siyuan api ...` and `siyuan tool ...` invoked from this directory
+# Once present, `siyuan-cli api ...` and `siyuan-cli tool ...` invoked from this directory
 # (or any subdirectory) will use the settings below to resolve workspace and
 # enforce permissions — overriding the global config.current.
 #

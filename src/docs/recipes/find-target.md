@@ -11,7 +11,7 @@ Turn a user-visible hint into a stable SiYuan target: document id, block id, not
 
 Do not write to a target found only by title, keyword, or hpath. Resolve candidates → inspect → stabilize to id.
 
-If you reached this recipe directly: confirm workspace first (`siyuan workspace which`).
+If you reached this recipe directly: confirm workspace first (`siyuan-cli workspace which`).
 
 ```text
 user hint → workspace/scope → candidate search → inspect → stable id → read/write
@@ -35,8 +35,8 @@ user hint → workspace/scope → candidate search → inspect → stable id →
 If user mentioned a notebook or parent document:
 
 ```bash
-siyuan api notebook.lsNotebooks
-siyuan tool list-doc-tree --entry <notebook-or-doc-id> --depth 2
+siyuan-cli api notebook.lsNotebooks
+siyuan-cli tool list-doc-tree --entry <notebook-or-doc-id> --depth 2
 ```
 
 Use bounded depth. Do not load entire workspace tree.
@@ -44,7 +44,7 @@ Use bounded depth. Do not load entire workspace tree.
 ## 2. Search by document title
 
 ```bash
-siyuan api filetree.searchDocs --k "<title-or-keyword>"
+siyuan-cli api filetree.searchDocs --k "<title-or-keyword>"
 ```
 
 Results are candidates, not final targets. `searchDocs` searches document names/paths globally; narrow by notebook with `list-doc-tree`, SQL `box`, or post-filtering returned `box` values.
@@ -54,14 +54,14 @@ Results are candidates, not final targets. `searchDocs` searches document names/
 Global search:
 
 ```bash
-siyuan api search.fullTextSearchBlock "<phrase>"
+siyuan-cli api search.fullTextSearchBlock "<phrase>"
 ```
 
 Scoped block grep in a known document/notebook:
 
 ```bash
-siyuan tool locate-block --id <doc-id> --pattern "%phrase%"
-siyuan tool locate-block --box <notebook-id> --pattern "%A%|%B%" --all true
+siyuan-cli tool locate-block --id <doc-id> --pattern "%phrase%"
+siyuan-cli tool locate-block --box <notebook-id> --pattern "%A%|%B%" --all true
 ```
 
 Use `locate-block` when editing long documents: it returns matching block ids with breadcrumb/sibling context. Its pattern is SQLite `LIKE`, not regex: wrap substrings with `%...%`; `_` matches one char; multiple patterns use `|`.
@@ -69,7 +69,7 @@ Use `locate-block` when editing long documents: it returns matching block ids wi
 ## 4. Use SQL for structured constraints
 
 ```bash
-siyuan api query.sql "SELECT id, hpath, box FROM blocks WHERE type='d' AND content LIKE '%keyword%' LIMIT 10"
+siyuan-cli api query.sql "SELECT id, hpath, box FROM blocks WHERE type='d' AND content LIKE '%keyword%' LIMIT 10"
 ```
 
 Always `LIMIT`. Narrow with `box`/`root_id`/`type` before fuzzy `LIKE`.
@@ -77,8 +77,8 @@ Always `LIMIT`. Narrow with `box`/`root_id`/`type` before fuzzy `LIKE`.
 ## 5. Inspect candidate before use
 
 ```bash
-siyuan tool get-block-info <candidate-id>
-siyuan tool get-block-content <candidate-id> --range context --limit 7 --showId true
+siyuan-cli tool get-block-info <candidate-id>
+siyuan-cli tool get-block-content <candidate-id> --range context --limit 7 --showId true
 ```
 
 Confirm: title/content matches intent · notebook/scope correct · id is stable · for edits, exact child block id known.
@@ -102,8 +102,8 @@ Convert hpath to id before writes.
 → `get-block-info` → context read
 
 **User asks for a daily note**:
-→ `siyuan tool list-dailynote --atDate yyyy-MM-dd [--notebookId <id>]`
-→ For full model: `siyuan doc read siyuan-guide/dailynote-model.md`
+→ `siyuan-cli tool list-dailynote --atDate yyyy-MM-dd [--notebookId <id>]`
+→ For full model: `siyuan-cli doc read siyuan-guide/dailynote-model.md`
 
 **Document has ref links about user's topic**:
 → `get-block-info <doc-id>` → use outgoing refs: `FROM` is the block inside the document, `TO` is the referenced block → read the needed `TO` block by id

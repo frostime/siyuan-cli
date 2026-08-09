@@ -23,24 +23,28 @@ pnpm add -g @frostime/siyuan-cli
 
 Requires **Node.js ≥ 20**.
 
+### Command name compatibility
+
+Use `siyuan-cli` as the canonical command. The package also installs `siyuan` as a compatibility alias: on SiYuan versions earlier than 3.7.0, either entry can run this package. Starting with SiYuan 3.7.0, SiYuan provides its own native `siyuan` command, so the program selected by a bare `siyuan` depends on PATH order and is not guaranteed to be this package. Existing scripts and Agent instructions should migrate to `siyuan-cli`.
+
 ### 2. Connect a SiYuan workspace
 
 ```bash
-siyuan workspace add local --url http://127.0.0.1:6806 --token <your-token>  # Settings → About in SiYuan
-siyuan workspace verify local
-siyuan workspace which
+siyuan-cli workspace add local --url http://127.0.0.1:6806 --token <your-token>  # Settings → About in SiYuan
+siyuan-cli workspace verify local
+siyuan-cli workspace which
 ```
 
 If you don't know the port, use workspace directory auto-discovery (local only):
 
 ```bash
-siyuan workspace add devspace --workspace-dir /path/to/SiYuanDevSpace --token <token>
+siyuan-cli workspace add devspace --workspace-dir /path/to/SiYuanDevSpace --token <token>
 ```
 
 ### 3. Test the connection
 
 ```bash
-siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
+siyuan-cli api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
 ```
 
 Output (compact format, default):
@@ -56,12 +60,12 @@ Output (compact format, default):
 ### 4. Install the agent SKILL
 
 ```bash
-siyuan skill install
+siyuan-cli skill install
 ```
 
 By default, it installs the built-in SKILL to `~/.agents/skills/`.
 
-Use `--target` to specify a different location, for example: `siyuan skill install --target claude`.
+Use `--target` to specify a different location, for example: `siyuan-cli skill install --target claude`.
 
 If you update `siyuan-cli`, run the command again to update the skill.
 
@@ -71,9 +75,9 @@ Launch an agent that can read skill files, read local files, and run shell comma
 
 Say to your agent:
 
-> "Help me use siyuan-cli. Read the installed `siyuan-cli` SKILL, then use `siyuan doc list` for built-in docs when needed."
+> "Help me use siyuan-cli. Read the installed `siyuan-cli` SKILL, then use `siyuan-cli doc list` for built-in docs when needed."
 
-The README is a human-facing overview. Detailed operational guidance lives in the installed SKILL and built-in docs exposed by `siyuan doc list`.
+The README is a human-facing overview. Detailed operational guidance lives in the installed SKILL and built-in docs exposed by `siyuan-cli doc list`.
 
 ## How to think about siyuan-cli
 
@@ -85,15 +89,15 @@ For repeated workflows such as literature ingestion, daily review, project knowl
 
 ## Calling Kernel APIs
 
-Every registered SiYuan endpoint becomes a subcommand under `siyuan api`. The endpoint id format is `<group>.<name>`, derived from the kernel path `/api/<group>/<name>`.
+Every registered SiYuan endpoint becomes a subcommand under `siyuan-cli api`. The endpoint id format is `<group>.<name>`, derived from the kernel path `/api/<group>/<name>`.
 
 ```bash
 # List all endpoints, optionally filter by group or tag
-siyuan api --help
-siyuan api list --group block
+siyuan-cli api --help
+siyuan-cli api list --group block
 
 # View parameter schema and usage examples
-siyuan api block.updateBlock --help
+siyuan-cli api block.updateBlock --help
 ```
 ![API Help](asset/20260501162353.png)
 
@@ -103,19 +107,19 @@ siyuan api block.updateBlock --help
 
 ```bash
 # Positional primary field (the first required string parameter)
-siyuan api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
+siyuan-cli api query.sql "SELECT id, hpath FROM blocks WHERE type='d' LIMIT 5"
 
 # Named flags
-siyuan api block.getBlockKramdown --id 20260425162235-pnpy21c
+siyuan-cli api block.getBlockKramdown --id 20260425162235-pnpy21c
 
 # Entire payload as inline JSON
-siyuan api attr.setBlockAttrs -j '{"id":"...","attrs":{"custom-key":"value"}}'
+siyuan-cli api attr.setBlockAttrs -j '{"id":"...","attrs":{"custom-key":"value"}}'
 
 # Entire payload from a JSON file (useful for complex payloads)
-siyuan api attr.setBlockAttrs -f payload.json
+siyuan-cli api attr.setBlockAttrs -f payload.json
 
 # Payload from stdin
-cat payload.json | siyuan api attr.setBlockAttrs -f -
+cat payload.json | siyuan-cli api attr.setBlockAttrs -f -
 ```
 ![Invoke Demo](asset/20260501162653.png)
 
@@ -135,13 +139,13 @@ This is particularly useful for write operations where the content is long or co
 
 ```bash
 # Write a markdown file's content into a block
-siyuan tool update-block --blocks @file:./updates.json --yes
+siyuan-cli tool update-block --blocks @file:./updates.json --yes
 
 # Pipe SQL from another command
-echo "SELECT id FROM blocks WHERE type='d' LIMIT 3" | siyuan api query.sql @stdin
+echo "SELECT id FROM blocks WHERE type='d' LIMIT 3" | siyuan-cli api query.sql @stdin
 
 # Read token from environment at runtime
-siyuan workspace add ci --url http://ci-host:6806 --token @env:SIYUAN_TOKEN
+siyuan-cli workspace add ci --url http://ci-host:6806 --token @env:SIYUAN_TOKEN
 ```
 
 For agents, `@file:` is especially valuable — the agent can write content to a temporary file first, then pass it to the CLI, avoiding shell escaping issues entirely. Agent guidance recommends using the system temp directory and cleaning temporary files afterwards.
@@ -150,16 +154,16 @@ For agents, `@file:` is especially valuable — the agent can write content to a
 
 ```bash
 # Default: compact human-readable output (when the endpoint defines a formatter)
-siyuan api query.sql "SELECT id, hpath FROM blocks LIMIT 5"
+siyuan-cli api query.sql "SELECT id, hpath FROM blocks LIMIT 5"
 
 # Raw JSON from the kernel
-siyuan api query.sql "SELECT id, hpath FROM blocks LIMIT 5" --print json
+siyuan-cli api query.sql "SELECT id, hpath FROM blocks LIMIT 5" --print json
 
 # Preview a write operation without sending it to the kernel
-siyuan api block.deleteBlock --id <id> --dry-run
+siyuan-cli api block.deleteBlock --id <id> --dry-run
 
 # Print the equivalent curl command to stderr
-siyuan api attr.setBlockAttrs --id <id> --attrs '{"custom-key":"val"}' --debug
+siyuan-cli api attr.setBlockAttrs --id <id> --attrs '{"custom-key":"val"}' --debug
 ```
 
 Dry-run output includes a `wouldRequestApproval` field, telling you whether the current permission config would trigger the Approval Center for this operation.
@@ -168,17 +172,17 @@ Dry-run output includes a `wouldRequestApproval` field, telling you whether the 
 
 ## High-Level Tools
 
-Many real tasks require multiple API calls, extra safety checks, or agent-friendly output shaping. Tools wrap these workflows into single commands. Simple one-step operations should use `siyuan api` directly.
+Many real tasks require multiple API calls, extra safety checks, or agent-friendly output shaping. Tools wrap these workflows into single commands. Simple one-step operations should use `siyuan-cli api` directly.
 
 ```bash
 # Append to today's daily note (markdown is the default dataType)
-siyuan api block.appendDailyNoteBlock --notebook <notebook-id> --data "## Today's notes\nNew content here"
+siyuan-cli api block.appendDailyNoteBlock --notebook <notebook-id> --data "## Today's notes\nNew content here"
 
 # Append under a known document/block
-siyuan api block.appendBlock --parentID <doc-or-block-id> --data @file:./notes.md
+siyuan-cli api block.appendBlock --parentID <doc-or-block-id> --data @file:./notes.md
 
 # Document tree listing
-siyuan tool list-doc-tree --entry <notebook-id> --depth 2
+siyuan-cli tool list-doc-tree --entry <notebook-id> --depth 2
 ```
 
 ```
@@ -190,35 +194,35 @@ siyuan tool list-doc-tree --entry <notebook-id> --depth 2
 
 ```bash
 # Daily notes by date range
-siyuan tool list-dailynote --afterDate 2026-04-01
+siyuan-cli tool list-dailynote --afterDate 2026-04-01
 
 # Bounded document content read
-siyuan tool get-block-content <doc-id> --range children --limit 30
+siyuan-cli tool get-block-content <doc-id> --range children --limit 30
 # Full document content read
-siyuan tool get-block-content <doc-id> --range children --limit=-1
+siyuan-cli tool get-block-content <doc-id> --range children --limit=-1
 # Clean body-only read for local edit/write-back workflows
-siyuan tool get-block-content <doc-id> --range children --limit=-1 --bodyOnly true > /tmp/doc.md
+siyuan-cli tool get-block-content <doc-id> --range children --limit=-1 --bodyOnly true > /tmp/doc.md
 # Context read around a specific block
-siyuan tool get-block-content <block-id> --range context --limit 7 --showId true
+siyuan-cli tool get-block-content <block-id> --range context --limit 7 --showId true
 # Grep blocks by pattern
-siyuan tool locate-block "%keyword%" --id <doc-id>
+siyuan-cli tool locate-block "%keyword%" --id <doc-id>
 
 # Block metadata inspection (includes TOC for document blocks)
-siyuan tool get-block-info <block-id>
+siyuan-cli tool get-block-info <block-id>
 
 # Guarded document-level rewrite: use only when block-level edits are fragile or inefficient
-siyuan tool brute-edit <doc-id> --check true
+siyuan-cli tool brute-edit <doc-id> --check true
 # If SAFE: dry-run before applying replacements or overwrite
-siyuan tool brute-edit <doc-id> --overwrite @file:/tmp/doc.md --dry-run
+siyuan-cli tool brute-edit <doc-id> --overwrite @file:/tmp/doc.md --dry-run
 # If UNSAFE: create recovery material, then fall back to block-level APIs
-siyuan tool checkpoint-doc <doc-id>
+siyuan-cli tool checkpoint-doc <doc-id>
 # Next: locate stable child block ids, then use tool update-block
-siyuan tool update-block --blocks @stdin --yes <<'EOF'
+siyuan-cli tool update-block --blocks @stdin --yes <<'EOF'
 [{"id":"<child-id>","data":"..."}]
 EOF
 ```
 
-Tools support `--help` and `--print json`; workflow/write tools support `--dry-run` when previewing is meaningful. Run `siyuan tool list` for the full list.
+Tools support `--help` and `--print json`; workflow/write tools support `--dry-run` when previewing is meaningful. Run `siyuan-cli tool list` for the full list.
 
 ![Tool Demo](asset/20260501162956.png)
 
@@ -231,11 +235,11 @@ Tools support `--help` and `--print json`; workflow/write tools support `--dry-r
 Workspace connections are stored in `~/.config/siyuan-cli/config.yaml` (also respects `$XDG_CONFIG_HOME` and `$SIYUAN_CLI_CONFIG`), created automatically by `workspace add`.
 
 ```bash
-siyuan workspace add local  --url http://127.0.0.1:6806 --token <token>
-siyuan workspace add remote --url http://192.168.1.100:6806 --token <token>
-siyuan workspace use local          # set global default
-siyuan workspace list               # list all configured workspaces
-siyuan workspace verify local       # test connection and auth
+siyuan-cli workspace add local  --url http://127.0.0.1:6806 --token <token>
+siyuan-cli workspace add remote --url http://192.168.1.100:6806 --token <token>
+siyuan-cli workspace use local          # set global default
+siyuan-cli workspace list               # list all configured workspaces
+siyuan-cli workspace verify local       # test connection and auth
 ```
 
 Tokens can be stored literally or sourced from environment variables at runtime:
@@ -265,7 +269,7 @@ The full resolution chain:
 --workspace flag  →  $SIYUAN_CLI_WORKSPACE  →  .siyuan-cli.yaml  →  config.current
 ```
 
-Use `siyuan workspace which` at any time to inspect how the current directory resolves — it shows the resolved workspace, its source, the base URL, whether a token is present, and the full permission rule list.
+Use `siyuan-cli workspace which` at any time to inspect how the current directory resolves — it shows the resolved workspace, its source, the base URL, whether a token is present, and the full permission rule list.
 
 ---
 
@@ -310,7 +314,7 @@ Rules match on `endpoint`/`tool`/`action` (evaluated immediately from the reques
 **Blocked endpoint** — `system.exit` is hard-denied:
 
 ```
-$ siyuan api system.exit
+$ siyuan-cli api system.exit
 
 {"error":"ENDPOINT_DENIED","message":"endpoint \"system.exit\" denied: denied by rule #0"}
 exit code: 5
@@ -319,7 +323,7 @@ exit code: 5
 **Accessing a doc in a denied notebook** — the CLI resolves the block's owning notebook before sending the request:
 
 ```
-$ siyuan api block.getBlockKramdown --id 20240416110608-8pr45e1
+$ siyuan-cli api block.getBlockKramdown --id 20240416110608-8pr45e1
 
 {"error":"CONTENT_DENIED","message":"id \"20240416110608-8pr45e1\" (access: read) denied by rule #3"}
 exit code: 5
@@ -328,7 +332,7 @@ exit code: 5
 **Response filtering** — query results from denied notebooks are automatically stripped. Here, one notebook is denied; `lsNotebooks` drops it and reports what was removed:
 
 ```
-$ siyuan api notebook.lsNotebooks
+$ siyuan-cli api notebook.lsNotebooks
 
 {"warning":"CONTENT_FILTERED","removed":1,"reasons":"1x: rule #3"}
 10 notebooks [id, name, ...]
@@ -340,7 +344,7 @@ $ siyuan api notebook.lsNotebooks
 The same applies to SQL queries — rows from restricted notebooks are filtered before reaching stdout:
 
 ```
-$ siyuan api query.sql "SELECT id, hpath, box FROM blocks WHERE type='d' LIMIT 10"
+$ siyuan-cli api query.sql "SELECT id, hpath, box FROM blocks WHERE type='d' LIMIT 10"
 
 {"warning":"CONTENT_FILTERED","removed":5,"reasons":"5x: rule #3"}
 5 rows [box, hpath, id]
@@ -351,7 +355,7 @@ $ siyuan api query.sql "SELECT id, hpath, box FROM blocks WHERE type='d' LIMIT 1
 **Approval flow** — when a rule sets `approval` (or the operation is auto-classified as destructive), the CLI starts a local broker and opens a WebUI for human sign-off:
 
 ```
-$ siyuan api system.getConf
+$ siyuan-cli api system.getConf
 
 {"event":"APPROVAL_PENDING","requestId":"apr_f0f32b2a8bbd492d","url":"http://127.0.0.1:1548/approval?token=...","summary":"Approve: system.getConf"}
 ```
@@ -359,14 +363,14 @@ $ siyuan api system.getConf
 ![Approval Center](asset/approval-center.png)
 
 ```bash
-siyuan approval list             # pending and recent requests
-siyuan approval approve <id>     # approve from terminal
-siyuan approval reject <id>      # reject from terminal
+siyuan-cli approval list             # pending and recent requests
+siyuan-cli approval approve <id>     # approve from terminal
+siyuan-cli approval reject <id>      # reject from terminal
 ```
 
 Independent of user-configured rules, endpoints classified as `destructive` or `critical` risk — batch deletes, system-level writes, runtime invocations — **automatically require approval even if your rules say `allow`**. This is a built-in safety net that cannot be bypassed by permission rules alone; only `--yes` (or `behavior.allowYes: false` to disable `--yes` entirely) controls it.
 
-Use `siyuan workspace which` to inspect the resolved rule list, or `--dry-run` on any command to preview whether it would be blocked or gated. For the complete rule reference: `siyuan doc read permission`.
+Use `siyuan-cli workspace which` to inspect the resolved rule list, or `--dry-run` on any command to preview whether it would be blocked or gated. For the complete rule reference: `siyuan-cli doc read permission`.
 
 ---
 
@@ -376,11 +380,11 @@ Use `siyuan workspace which` to inspect the resolved rule list, or `--dry-run` o
 
 Agents discover capabilities incrementally:
 
-- `siyuan --help` for the command tree;
-- `siyuan api list` for endpoints;
-- `siyuan api <id> --help` for one endpoint;
-- `siyuan doc list` and `siyuan doc read <topic>` for deeper docs;
-- `siyuan tool list` for higher-level workflows.
+- `siyuan-cli --help` for the command tree;
+- `siyuan-cli api list` for endpoints;
+- `siyuan-cli api <id> --help` for one endpoint;
+- `siyuan-cli doc list` and `siyuan-cli doc read <topic>` for deeper docs;
+- `siyuan-cli tool list` for higher-level workflows.
 
 This keeps context disclosure **explicit, local, and task-driven**.
 
@@ -397,12 +401,12 @@ The built-in doc set is organized in three layers:
 | Task recipes | `recipes/` | Step-by-step workflows: connect workspace, find documents, read content, safely edit content |
 
 ```bash
-siyuan doc list                          # list all docs with file paths and summaries
-siyuan doc read README.md                # read a doc by path or unique name
-siyuan doc read recipes/edit-content.md  # task-oriented operation recipes
+siyuan-cli doc list                          # list all docs with file paths and summaries
+siyuan-cli doc read README.md                # read a doc by path or unique name
+siyuan-cli doc read recipes/edit-content.md  # task-oriented operation recipes
 ```
 
-The docs root path is printed by `siyuan --help`, so agents with file system access can read files directly without going through the CLI.
+The docs root path is printed by `siyuan-cli --help`, so agents with file system access can read files directly without going through the CLI.
 
 ---
 
@@ -420,9 +424,9 @@ The docs root path is printed by `siyuan --help`, so agents with file system acc
 Install the skill:
 
 ```bash
-siyuan skill install                       # default: ~/.agents/skills/
-siyuan skill install --target claude       # → ~/.claude/skills/
-siyuan skill install --target .copilot --local  # → ./.copilot/skills/ (project-local)
+siyuan-cli skill install                       # default: ~/.agents/skills/
+siyuan-cli skill install --target claude       # → ~/.claude/skills/
+siyuan-cli skill install --target .copilot --local  # → ./.copilot/skills/ (project-local)
 ```
 
 Tip: install `skill-creator`, then ask your agent:
@@ -438,14 +442,14 @@ Tip: install `skill-creator`, then ask your agent:
 Extensions live in `~/.config/siyuan-cli/extensions/` and are written in TypeScript, loaded via `jiti` at execution time:
 
 ```bash
-siyuan extension init          # scaffold the directory with tsconfig.json and examples
-siyuan extension list          # show discovered extensions + cache status
-siyuan extension cache         # batch-generate schema.json caches
+siyuan-cli extension init          # scaffold the directory with tsconfig.json and examples
+siyuan-cli extension list          # show discovered extensions + cache status
+siyuan-cli extension cache         # batch-generate schema.json caches
 ```
 
 > **Tip**: You can tell your agent:
 > "I want to extend the siyuan-cli API. Please read the siyuan-cli docs and help me write an extension for `<endpoint>`."
-> The agent can read `siyuan doc read cli-usage/extension`, visit the website (if it is capable), and generate the extension file for you.
+> The agent can read `siyuan-cli doc read cli-usage/extension`, visit the website (if it is capable), and generate the extension file for you.
 >
 > **Reference**
 >
@@ -482,14 +486,14 @@ export const schema: EndpointSchema = {
 **Step 2** — Cache and verify:
 
 ```bash
-siyuan extension cache
-siyuan api lute.copyStdMarkdown --help
+siyuan-cli extension cache
+siyuan-cli api lute.copyStdMarkdown --help
 ```
 
 **Step 3** — Use it:
 
 ```bash
-siyuan api lute.copyStdMarkdown --id 20240401175210-c2iabsn
+siyuan-cli api lute.copyStdMarkdown --id 20240401175210-c2iabsn
 ```
 
 The extension gets the same CLI surface as built-ins: `--help`, `--dry-run`, `--print json`, parameter validation, and permission checks.
@@ -516,13 +520,13 @@ export const tool: ToolSchema = {
 ```
 
 ```bash
-siyuan extension cache
-siyuan tool hello-ext --name Alice
+siyuan-cli extension cache
+siyuan-cli tool hello-ext --name Alice
 ```
 
 Tool extensions receive a `ToolContext` with `callEndpoint()` for calling registered endpoints (with full permission and guard logic) and `callEndpointRaw()` for calling arbitrary kernel paths directly.
 
-For the full authoring guide: `siyuan doc read cli-usage/extension`.
+For the full authoring guide: `siyuan-cli doc read cli-usage/extension`.
 
 ---
 
@@ -534,26 +538,26 @@ Arguments starting with `/` may be rewritten into Windows paths by the shell bef
 
 ```bash
 # Disable path conversion for this command
-MSYS_NO_PATHCONV=1 siyuan api filetree.getIDsByHPath --notebook <id> --path "/TestDoc"
+MSYS_NO_PATHCONV=1 siyuan-cli api filetree.getIDsByHPath --notebook <id> --path "/TestDoc"
 
 # Or use double-slash as a Git Bash / MSYS escape
-siyuan api filetree.getIDsByHPath --notebook <id> --path //TestDoc
+siyuan-cli api filetree.getIDsByHPath --notebook <id> --path //TestDoc
 ```
 
 ### Auth failures
 
-- Verify the token with `siyuan workspace verify <name>`
+- Verify the token with `siyuan-cli workspace verify <name>`
 - Check that SiYuan's kernel is running and reachable at the configured URL
 - Tokens from `tokenSource: env` are resolved at call time; ensure the env var is set in the calling shell
 
 ### Wrong workspace
 
-Run `siyuan workspace which` to inspect the resolved workspace and its resolution source. Use `--workspace <name>` to override for a single command.
+Run `siyuan-cli workspace which` to inspect the resolved workspace and its resolution source. Use `--workspace <name>` to override for a single command.
 
 ### Permission denied
 
-- Run `siyuan api <id> --dry-run` to see if the operation would be blocked
-- Run `siyuan workspace which` to review the full rule list
+- Run `siyuan-cli api <id> --dry-run` to see if the operation would be blocked
+- Run `siyuan-cli workspace which` to review the full rule list
 - Edit the `siyuan-cli/config.yaml` file
 
 ---

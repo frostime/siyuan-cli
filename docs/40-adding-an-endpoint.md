@@ -18,7 +18,7 @@ GATE: you have a documented kernel API (`/api/<group>/<n>`) with known payload a
 [ ] 5. Consider cli (primary / allowSource / examples)
 [ ] 6. Consider compact `format` for read-heavy output
 [ ] 7. Register in src/api/endpoints/index.ts
-[ ] 8. Verify: pnpm typecheck && pnpm build && siyuan api <id> --help
+[ ] 8. Verify: pnpm typecheck && pnpm build && siyuan-cli api <id> --help
 ```
 
 ## Step-by-step example
@@ -194,7 +194,7 @@ response is a scalar or a fixed-shape object with no lists?
 - **forgetting `pattern` on id fields**: lets garbage through to the kernel, producing cryptic errors
 - **guarding the wrong kind**: `{ path: "hpath", kind: "path", ... }` — `path` kind expects a SiYuan id-based path, not an hpath
 - **setting `additionalProperties: true` to hush an error**: find the missing property declaration instead
-- **skipping registration**: file exists, `pnpm build` passes, but `siyuan api list` doesn't show it → add to `src/api/endpoints/index.ts`
+- **skipping registration**: file exists, `pnpm build` passes, but `siyuan-cli api list` doesn't show it → add to `src/api/endpoints/index.ts`
 
 ## After adding
 

@@ -123,12 +123,12 @@ Output contract:
     cli: {
         primary: 'id',
         examples: [
-            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz' },
-            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range context --limit 7' },
-            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range before --limit 5' },
-            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range children --limit 30 --showId true' },
-            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range children --limit=-1' },
-            { command: 'siyuan tool get-block-content 20241016135347-zlrn2cz --range children --limit=-1 --bodyOnly true > /tmp/doc.md' }
+            { command: 'siyuan-cli tool get-block-content 20241016135347-zlrn2cz' },
+            { command: 'siyuan-cli tool get-block-content 20241016135347-zlrn2cz --range context --limit 7' },
+            { command: 'siyuan-cli tool get-block-content 20241016135347-zlrn2cz --range before --limit 5' },
+            { command: 'siyuan-cli tool get-block-content 20241016135347-zlrn2cz --range children --limit 30 --showId true' },
+            { command: 'siyuan-cli tool get-block-content 20241016135347-zlrn2cz --range children --limit=-1' },
+            { command: 'siyuan-cli tool get-block-content 20241016135347-zlrn2cz --range children --limit=-1 --bodyOnly true > /tmp/doc.md' }
         ]
     },
     async run(ctx, input) {
@@ -288,10 +288,10 @@ Output contract:
         if (truncated && blocks.length > 0) {
             if (range === 'before') {
                 const firstId = blocks[0]!.id;
-                header.push(`next: siyuan tool get-block-content ${firstId} --range before --limit ${displayLimit(limit)}${showId ? ' --showId true' : ''}`);
+                header.push(`next: siyuan-cli tool get-block-content ${firstId} --range before --limit ${displayLimit(limit)}${showId ? ' --showId true' : ''}`);
             } else if (range === 'children' || range === 'after') {
                 const lastId = blocks[blocks.length - 1]!.id;
-                header.push(`next: siyuan tool get-block-content ${lastId} --range after --limit ${displayLimit(limit)}${showId ? ' --showId true' : ''}`);
+                header.push(`next: siyuan-cli tool get-block-content ${lastId} --range after --limit ${displayLimit(limit)}${showId ? ' --showId true' : ''}`);
             } else if (range === 'context') {
                 header.push(`hint: context truncated; increase --limit if more neighboring blocks are needed.`);
             }

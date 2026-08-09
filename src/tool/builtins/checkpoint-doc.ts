@@ -148,8 +148,8 @@ important metadata if a high-risk edit rewrites child block IDs.`,
     cli: {
         primary: 'id',
         examples: [
-            { command: 'siyuan tool checkpoint-doc 20241016135347-zlrn2cz' },
-            { command: 'siyuan tool checkpoint-doc 20241016135347-zlrn2cz --outDir ./checkpoints' }
+            { command: 'siyuan-cli tool checkpoint-doc 20241016135347-zlrn2cz' },
+            { command: 'siyuan-cli tool checkpoint-doc 20241016135347-zlrn2cz --outDir ./checkpoints' }
         ]
     },
     async run(ctx, input) {
