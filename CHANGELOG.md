@@ -2,45 +2,105 @@
 
 All notable changes to `@frostime/siyuan-cli` are documented here.
 
-## Unreleased
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-- Breaking command migration: use `siyuan-cli` as the canonical command; `siyuan` remains a compatibility alias but may resolve to SiYuan's native CLI starting with SiYuan 3.7.0
-- `get-block-content` 新增 `--bodyOnly true`，用于输出无 header 的干净 Markdown body
-- `brute-edit` 新增 `--overwrite @file:/path.md` / `@stdin` 整文档覆盖模式，保留文档 ID
-- 移除内置 `push-md` tool；新建文档使用 `filetree.createDocWithMd` / `import.importStdMd`，覆盖已有文档使用 `brute-edit --overwrite`
+## [Unreleased]
 
-## [0.12.3] — 2026-05-07
+## [0.16.0] - 2026-08-10
 
-- `--print json` 输出统一为信封模式，approval 诊断信息走 stderr
-- `brute-edit` 支持 `@stdin` 输入
-- fix: `moveBlock` 文档用法修正
-- fix: `get-block-info` CLI 参数与 `getChildBlocks` 响应守卫
+### Added
 
-## [0.12.0] — 2026-05-07
+- Added the `history.createDocHistory` Kernel endpoint. It requires SiYuan Kernel `3.7.0` or newer, and the CLI now enforces declared minimum Kernel versions before requests.
+- Upgraded `checkpoint-doc` to create both a Kernel document history entry and a local recovery package. Dry-run previews permission and approval behavior without writing either layer, and partial failures report the state of both layers.
 
-- 内置 SKILL 新增 `batchUpdateBlock`
-- sspec 工具链更新
-- spec-doc 审计修正
+### Changed
 
-## [0.11.3] — 2026-05-06
+- **Breaking:** `siyuan-cli` is now the canonical command. `siyuan` remains a compatibility alias, but on SiYuan `3.7.0` or newer a bare `siyuan` command may resolve to SiYuan's native CLI instead.
+- On older Kernels without document history support, `checkpoint-doc` creates the local recovery package and reports the missing Kernel layer instead of silently claiming a complete checkpoint.
 
-- permission 规则新增 `root_id` 字段，`.sy` 后缀写入时发出警告
+### Fixed
 
-## [0.11.2] — 2026-05-06
+- Fixed `workspaceDir` auto-resolution by reading the configured local port and verifying the runtime workspace through `getWorkspaceInfo`, rather than relying on the masked `getConf` workspace field.
 
-- fix: permission 审批门控穿透资源级授权检查
-- SKILL 支持版本号标记
+## [0.15.4] - 2026-05-25
 
-## [0.11.0] — 2026-05-05
+### Added
 
-- 新增 `brute-edit` 和 `push-md` 写入工具
-- fix: `workspace verify` 用法修正
+- Added `get-block-content --bodyOnly true` for clean Markdown body output without a document header.
+- Added full-document overwrite support to `brute-edit` via `--overwrite @file:/path.md` and `@stdin`, while preserving the document ID.
 
-## [0.10.2] — 2026-05-05
+### Removed
 
-- permission 审批流程完善
-- 文档整理与 README 更新
+- Removed the built-in `push-md` tool. Use `filetree.createDocWithMd` or `import.importStdMd` for new documents, and `brute-edit --overwrite` for existing documents.
 
-## [0.10.0] — 2026-05-04
+## [0.12.3] - 2026-05-07
 
-- 初始功能集：workspace 管理、kernel API 代理、工具链、agent skill 安装
+### Added
+
+- Added `@stdin` input support to `brute-edit`.
+
+### Changed
+
+- Standardized `--print json` output as an envelope and moved approval diagnostics to stderr.
+
+### Fixed
+
+- Corrected the `moveBlock` documentation usage.
+- Corrected `get-block-info` CLI parameters and the `getChildBlocks` response guard.
+
+## [0.12.0] - 2026-05-07
+
+### Added
+
+- Added `batchUpdateBlock` to the bundled SKILL.
+
+## [0.11.3] - 2026-05-06
+
+### Added
+
+- Added the `root_id` permission rule alias, normalized to an ID-based `.sy` path.
+
+## [0.11.2] - 2026-05-06
+
+### Added
+
+- Added version markers for the bundled SKILL.
+
+### Fixed
+
+- Fixed permission approval handling across resource-level authorization checks.
+
+## [0.11.0] - 2026-05-05
+
+### Added
+
+- Added the `brute-edit` and `push-md` write tools.
+
+### Fixed
+
+- Corrected `workspace verify` usage.
+
+## [0.10.2] - 2026-05-05
+
+### Changed
+
+- Improved the permission approval workflow.
+- Reorganized project documentation and the README.
+
+## [0.10.0] - 2026-05-04
+
+### Added
+
+- Initial feature set: workspace management, Kernel API proxying, workflow tools, and Agent SKILL installation.
+
+[Unreleased]: https://github.com/frostime/siyuan-cli/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/frostime/siyuan-cli/compare/v0.15.4...v0.16.0
+[0.15.4]: https://github.com/frostime/siyuan-cli/compare/v0.15.3...v0.15.4
+[0.12.3]: https://github.com/frostime/siyuan-cli/compare/v0.12.0...v0.12.3
+[0.12.0]: https://github.com/frostime/siyuan-cli/compare/v0.11.3...v0.12.0
+[0.11.3]: https://github.com/frostime/siyuan-cli/compare/v0.11.2...v0.11.3
+[0.11.2]: https://github.com/frostime/siyuan-cli/compare/v0.11.0...v0.11.2
+[0.11.0]: https://github.com/frostime/siyuan-cli/compare/v0.10.2...v0.11.0
+[0.10.2]: https://github.com/frostime/siyuan-cli/compare/v0.10.0...v0.10.2
+[0.10.0]: https://github.com/frostime/siyuan-cli/releases/tag/v0.10.0
