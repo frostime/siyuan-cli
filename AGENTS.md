@@ -37,4 +37,4 @@ Read `.dev/docs/` for project-wise development documentation.
 
 ## Change Based Development
 
-Place change dir under `.dev/changes/<slug>` if user instructs, with the spec in `.dev/changes/<slug>/<slug>.SPEC.md`.
+Place change dir under `.dev/changes/<slug>` if user instructs.

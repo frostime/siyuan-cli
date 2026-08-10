@@ -67,7 +67,7 @@ permission:
 
 `root_id` is a convenience alias for `path: "**/<docId>.sy"`. It matches any block whose owning document has the given `root_id`, regardless of where the document sits in the notebook tree.
 
-If both `root_id` and `path` are set on the same rule, `root_id` takes precedence and `path` is ignored (a `ROOT_ID_OVERRIDES_PATH` warning is emitted).
+If both `root_id` and `path` are set on the same rule, `root_id` takes precedence and `path` is ignored.
 
 ```yaml
 # These two rules are equivalent:
@@ -232,7 +232,6 @@ On load, the CLI warns (stderr, non-fatal) about likely mistakes:
 - `LIKELY_HPATH_NOT_ID`: `notebook`/`root_id` value doesn't match `^\d{14}-[0-9a-z]{7}$`
 - `LIKELY_HPATH_NOT_ID_IN_PATH`: `path` value contains no id segment
 - `LIKELY_PATH_MISSING_SY_SUFFIX`: `path` ends on id without `.sy`
-- `ROOT_ID_OVERRIDES_PATH`: both `root_id` and `path` set; `path` ignored
 
 ## Related docs
 

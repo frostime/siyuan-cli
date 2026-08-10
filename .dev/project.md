@@ -109,9 +109,13 @@ Format: `- [name](docs/<file>) — one-line summary`
 
 - [EndpointSchema](docs/endpoint-schema.md) — Authored contract for endpoint identity, classification/severity metadata, guard coupling, CLI semantics, output precedence, and cache boundaries
 - [permission-model](docs/permission-model.md) — Permission engine architecture: rule-list model, two-phase evaluation, tool-level enforcement, bypassPermission, rule cascade, project override semantics, and approval effect semantics
-- [approval-broker](docs/approval-broker.md) — Approval broker architecture: lazy-spawn process model, token IPC, state file layout, lifecycle policy, HTTP API, and browser UI
-- [workspace-resolution](docs/workspace-resolution.md) — Workspace resolution chain (flag → env → project-file → global-current), project-file discovery, permission override independence, workspaceDir port discovery, and IMPLICIT_WORKSPACE warning design
-- [error-model](docs/error-model.md) — Error model architecture: exit code semantics, error-to-exit mapping across modules, agent-side error handling contract, and framework warning catalog
+- [error-model](docs/error-model.md) — Process-level error contract: structured stderr output, exit categories, agent handling, and framework warnings
+- [contributing](docs/contributing/README.md) — Contributor workflows for adding documented/private endpoints and multi-step tools; read when changing `src/api/endpoints/**` or `src/tool/**`
+
+## Module SPEC Index
+
+- [approval-broker.SPEC](../src/approval/approval-broker.SPEC.md) — Approval broker protocol, lifecycle, persistence, and change constraints
+- [workspace-resolution.SPEC](../src/workspace/workspace-resolution.SPEC.md) — Workspace selection, project overlays, credentials, and workspaceDir materialization
 
 ## Notes
 <!-- Project-level memory. Append-only log of learnings, gotchas, preferences.
