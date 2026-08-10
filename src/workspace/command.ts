@@ -1,5 +1,5 @@
 /**
- * `siyuan workspace` subcommands.
+ * `siyuan-cli workspace` subcommands.
  * See design.md §5 for output formats.
  */
 import { defineCommand } from 'citty';
@@ -262,7 +262,7 @@ const useCommand = defineCommand({
                     ExitCode.CONFIG,
                     'WORKSPACE_NOT_FOUND',
                     `Workspace "${args.name}" not found.`,
-                    `Run \`siyuan workspace list\` to see available workspaces.`
+                    `Run \`siyuan-cli workspace list\` to see available workspaces.`
                 );
             }
 
@@ -357,7 +357,7 @@ const verifyCommand = defineCommand({
                             throw new CliError(
                                 ExitCode.CONFIG,
                                 'NO_WORKSPACE',
-                                'No active workspace. Run `siyuan workspace add <name> --url <url>` first.',
+                                'No active workspace. Run `siyuan-cli workspace add <name> --url <url>` first.',
                                 'Or pass --workspace <name> to specify one explicitly.'
                             );
                         }
@@ -474,7 +474,7 @@ const removeCommand = defineCommand({
                 process.stderr.write(
                     JSON.stringify({
                         warning:
-                            'Removed the active workspace. Run `siyuan workspace use <name>` to set a new one.'
+                            'Removed the active workspace. Run `siyuan-cli workspace use <name>` to set a new one.'
                     }) + '\n'
                 );
             }

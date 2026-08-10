@@ -2,6 +2,7 @@
  * Endpoint registry — collects all EndpointSchema definitions and provides lookup.
  * Schemas are registered from src/api/endpoints/index.ts at startup.
  */
+import { isAuthoredKernelVersion } from '../shared/kernel-version.js';
 import {
     deriveEndpointId,
     isTerminalFilterCompatiblePointerPath,
@@ -126,6 +127,14 @@ function validateSchema(
 ): void {
     if (!schema.classification) {
         throw new Error(`Endpoint "${entry.id}" must declare classification.`);
+    }
+    if (
+        schema.minKernelVersion !== undefined &&
+        !isAuthoredKernelVersion(schema.minKernelVersion)
+    ) {
+        throw new Error(
+            `Endpoint "${entry.id}" minKernelVersion must use major.minor.patch format.`
+        );
     }
 
     const c = entry.meta.classification;

@@ -51,7 +51,7 @@ const readCommand = defineCommand({
                         ExitCode.CONFIG,
                         'DOC_NOT_FOUND',
                         `Built-in doc "${target}" not found.`,
-                        'Run `siyuan doc list` to see available docs and real file paths.'
+                        'Run `siyuan-cli doc list` to see available docs and real file paths.'
                     )
                 );
             }
@@ -65,7 +65,7 @@ const readCommand = defineCommand({
                         ExitCode.CONFIG,
                         'DOC_AMBIGUOUS',
                         'Multiple built-in docs match that name.',
-                        'Use one of the candidate relative paths from `siyuan doc list`.',
+                        'Use one of the candidate relative paths from `siyuan-cli doc list`.',
                         { candidates }
                     )
                 );

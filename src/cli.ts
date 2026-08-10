@@ -16,6 +16,8 @@ import {
 } from './extension/command.js';
 import { buildEndpointHelp } from './shared/argv.js';
 
+const CLI_NAME = 'siyuan-cli';
+
 function getVersion(): string {
     try {
         const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json');
@@ -28,7 +30,7 @@ function getVersion(): string {
 
 const main = defineCommand({
     meta: {
-        name: 'siyuan',
+        name: CLI_NAME,
         version: getVersion(),
         description: 'Agent-first CLI for SiYuan Note'
     },
@@ -55,25 +57,25 @@ async function customShowUsage<T extends Record<string, unknown>>(
             : await parent.meta
         : undefined;
 
-    // Detect bare `siyuan api -h`
-    if (meta?.name === 'api' && parentMeta?.name === 'siyuan') {
+    // Detect bare `siyuan-cli api -h`
+    if (meta?.name === 'api' && parentMeta?.name === CLI_NAME) {
         process.stdout.write(renderGroupedApiHelp(parentMeta?.version) + '\n');
         return;
     }
 
-    // Detect bare `siyuan tool -h`
-    if (meta?.name === 'tool' && parentMeta?.name === 'siyuan') {
+    // Detect bare `siyuan-cli tool -h`
+    if (meta?.name === 'tool' && parentMeta?.name === CLI_NAME) {
         process.stdout.write(renderGroupedToolHelp(parentMeta?.version) + '\n');
         return;
     }
 
-    // Detect bare `siyuan extension -h`
+    // Detect bare `siyuan-cli extension -h`
     if (meta?.name === 'extension') {
         process.stdout.write(renderExtensionHelp(parentMeta?.version) + '\n');
         return;
     }
 
-    // Detect `siyuan api <endpoint-id> --help`
+    // Detect `siyuan-cli api <endpoint-id> --help`
     if (parentMeta?.name === 'api' && meta?.name) {
         const entry = getEndpointHelpEntry(meta.name);
         if (entry) {
@@ -82,7 +84,7 @@ async function customShowUsage<T extends Record<string, unknown>>(
         }
     }
 
-    // Detect `siyuan tool <tool-id> --help`
+    // Detect `siyuan-cli tool <tool-id> --help`
     if (parentMeta?.name === 'tool' && meta?.name) {
         const help = getToolHelpText(meta.name);
         if (help) {
@@ -98,7 +100,7 @@ async function customShowUsage<T extends Record<string, unknown>>(
     }
 
     // Append SKILL version warning if the installed skill is missing or outdated.
-    if (!parent || meta?.name === 'siyuan') {
+    if (!parent || meta?.name === CLI_NAME) {
         const mainMeta = await resolveValue(main.meta);
         const cliVersion = mainMeta?.version;
         if (cliVersion) {
@@ -153,7 +155,7 @@ function getUnknownCommandHint(rawArgs: string[], error: unknown): string | unde
         return undefined;
     }
     const label = command === 'api' ? 'API' : 'tool';
-    return `Found ${pending} uncached or stale ${label} extension(s). Run \`siyuan extension cache\` and retry.`;
+    return `Found ${pending} uncached or stale ${label} extension(s). Run \`siyuan-cli extension cache\` and retry.`;
 }
 
 async function runCli(): Promise<void> {

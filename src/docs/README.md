@@ -1,7 +1,7 @@
 ---
 title: SiYuan CLI Docs
 slug: docs-index
-summary: Agent-facing reference shipped with siyuan-cli. Start here when using `siyuan doc read README.md`.
+summary: Agent-facing reference shipped with siyuan-cli. Start here when using `siyuan-cli doc read README.md`.
 ---
 
 # SiYuan CLI Docs
@@ -33,13 +33,13 @@ If you are an Agent with the installed `siyuan-cli` SKILL, read the SKILL first 
 ## Help discovery
 
 ```bash
-siyuan --help                    # command overview + docs root path
-siyuan doc list                  # list built-in docs with real file paths
-siyuan doc read <path>           # read a doc by path or unique basename
-siyuan api list                  # all available endpoints
-siyuan api <id> --help           # endpoint parameters, input sources, examples
-siyuan tool list                 # all available tools
-siyuan tool <id> --help          # tool parameters, examples, behavior
+siyuan-cli --help                    # command overview + docs root path
+siyuan-cli doc list                  # list built-in docs with real file paths
+siyuan-cli doc read <path>           # read a doc by path or unique basename
+siyuan-cli api list                  # all available endpoints
+siyuan-cli api <id> --help           # endpoint parameters, input sources, examples
+siyuan-cli tool list                 # all available tools
+siyuan-cli tool <id> --help          # tool parameters, examples, behavior
 ```
 
 ## Built-in docs

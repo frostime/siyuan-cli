@@ -71,8 +71,8 @@ export const tool: ToolSchema = {
     cli: {
         primary: 'id',
         examples: [
-            { command: 'siyuan tool search-backlinks 20241016135347-zlrn2cz' },
-            { command: 'siyuan tool search-backlinks 20241016135347-zlrn2cz --noRedirect true' }
+            { command: 'siyuan-cli tool search-backlinks 20241016135347-zlrn2cz' },
+            { command: 'siyuan-cli tool search-backlinks 20241016135347-zlrn2cz --noRedirect true' }
         ]
     },
     async run(ctx, input) {

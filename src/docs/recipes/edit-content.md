@@ -14,10 +14,10 @@ Use for: append/insert, block update, batch update, document rewrite, create/mov
 For any non-append write:
 
 ```bash
-siyuan workspace which
-siyuan tool get-block-info <id>
-siyuan tool get-block-content <id> --range context --limit 7 --showId true
-siyuan tool locate-block --id <doc-id> --pattern "%target text%"  # SQL LIKE, not regex
+siyuan-cli workspace which
+siyuan-cli tool get-block-info <id>
+siyuan-cli tool get-block-content <id> --range context --limit 7 --showId true
+siyuan-cli tool locate-block --id <doc-id> --pattern "%target text%"  # SQL LIKE, not regex
 ```
 
 Direct-entry checklist: confirm workspace · stabilize target id · inspect before modify. Full rationale: SKILL §Safety anchors.
@@ -39,11 +39,11 @@ Direct-entry checklist: confirm workspace · stabilize target id · inspect befo
 | Move a document | `filetree.moveDocsByID` | hpath changes; id preserved. |
 | Delete a document | `filetree.removeDocByID` | Prefer over deleting document block. |
 
-Run `siyuan api <command> --help` for parameters and INPUT SOURCES.
+Run `siyuan-cli api <command> --help` for parameters and INPUT SOURCES.
 
 # Side effects
 
-> ⚠️ **Raw `updateBlock` / `batchUpdateBlock` erases all `custom-*` attributes on the target block.** Always use `siyuan tool update-block` instead — it preserves custom attributes automatically.
+> ⚠️ **Raw `updateBlock` / `batchUpdateBlock` erases all `custom-*` attributes on the target block.** Always use `siyuan-cli tool update-block` instead — it preserves custom attributes automatically.
 
 > ⚠️ `updateBlock` on a document block (`type='d'`) replaces the entire child tree. Child ids, refs, and custom attrs are invalidated. For document rewrites, prefer `brute-edit --check true`.
 
@@ -64,7 +64,7 @@ Run `siyuan api <command> --help` for parameters and INPUT SOURCES.
 Fast path for append-only operations.
 
 ```bash
-siyuan api block.appendBlock --parentID <id> --data @stdin --yes <<'EOF'
+siyuan-cli api block.appendBlock --parentID <id> --data @stdin --yes <<'EOF'
 ## New section
 Content.
 EOF
@@ -78,12 +78,12 @@ Daily notes are per-notebook: `block.appendDailyNoteBlock --notebook <id>`. If n
 
 ```bash
 # Single block via heredoc
-siyuan tool update-block --blocks @stdin --yes <<'EOF'
+siyuan-cli tool update-block --blocks @stdin --yes <<'EOF'
 [{"id":"<block-id>","data":"Replacement content."}]
 EOF
 
 # Multiple blocks from file
-siyuan tool update-block --blocks @file:./updates.json --yes
+siyuan-cli tool update-block --blocks @file:./updates.json --yes
 ```
 
 `updates.json`: `[{"id":"...","data":"..."}, ...]`. dataType is always markdown.
@@ -92,7 +92,7 @@ siyuan tool update-block --blocks @file:./updates.json --yes
 
 ```bash
 # Insert after a sibling
-siyuan api block.insertBlock --parentID <parent-id> --previousID <sibling-id> \
+siyuan-cli api block.insertBlock --parentID <parent-id> --previousID <sibling-id> \
   --dataType markdown --data @stdin --yes <<'EOF'
 Inserted content.
 EOF
@@ -103,7 +103,7 @@ Use `--nextID` to insert before. Full params: `block.insertBlock --help`.
 ## Create a document
 
 ```bash
-siyuan api filetree.createDocWithMd --notebook <notebook-id> --path "/path/to/doc" \
+siyuan-cli api filetree.createDocWithMd --notebook <notebook-id> --path "/path/to/doc" \
   --markdown @file:./content.md
 ```
 
@@ -115,28 +115,34 @@ Use only when block-level edits are fragile/inefficient. Always check first.
 
 ```bash
 # 1. Check safety
-siyuan tool brute-edit <doc-id> --check true --print json
+siyuan-cli tool brute-edit <doc-id> --check true --print json
 
-# UNSAFE → checkpoint + block-level fallback
-siyuan tool checkpoint-doc <doc-id>
+# UNSAFE → use a block-level fallback; a checkpoint does not make brute-edit safe.
 
-# SAFE → preview, then execute
-siyuan tool brute-edit <doc-id> --replacements @file:./replacements.json --dry-run
-siyuan tool brute-edit <doc-id> --replacements @file:./replacements.json --yes
+# SAFE → checkpoint once before this high-risk edit group, then preview and execute.
+siyuan-cli tool checkpoint-doc <doc-id>
+siyuan-cli tool brute-edit <doc-id> --replacements @file:./replacements.json --dry-run
+siyuan-cli tool brute-edit <doc-id> --replacements @file:./replacements.json --yes
 ```
 
 `replacements.json`: `[{"search":"old text","replace":"new text"}, ...]`
 Each search must match exactly once. Overlapping or missing matches reject the operation.
+Call `checkpoint-doc` explicitly once before a group of high-risk edits. Do not
+repeat it before every edit in that group; `brute-edit` never creates one
+automatically. On SiYuan >=3.7.0, the checkpoint includes kernel document
+history and a local recovery package. Older kernels create the local package
+and emit a warning.
 
 ## Whole-document overwrite
 
 ```bash
-siyuan tool brute-edit <doc-id> --check true --print json
-# If SAFE:
-siyuan tool get-block-content <doc-id> --range children --limit=-1 --bodyOnly true > "$TMPDIR/doc.md"
+siyuan-cli tool brute-edit <doc-id> --check true --print json
+# If SAFE, checkpoint once before this high-risk edit group:
+siyuan-cli tool checkpoint-doc <doc-id>
+siyuan-cli tool get-block-content <doc-id> --range children --limit=-1 --bodyOnly true > "$TMPDIR/doc.md"
 # ... edit $TMPDIR/doc.md locally ...
-siyuan tool brute-edit <doc-id> --overwrite @file:$TMPDIR/doc.md --dry-run
-siyuan tool brute-edit <doc-id> --overwrite @file:$TMPDIR/doc.md --yes
+siyuan-cli tool brute-edit <doc-id> --overwrite @file:$TMPDIR/doc.md --dry-run
+siyuan-cli tool brute-edit <doc-id> --overwrite @file:$TMPDIR/doc.md --yes
 rm "$TMPDIR/doc.md"
 ```
 
@@ -145,14 +151,14 @@ Never overwrite from `--showId true` output; markers are not source text.
 ## Move a block
 
 ```bash
-siyuan api block.moveBlock --id <block-id> --previousID <sibling-id> --parentID <parent-id>
+siyuan-cli api block.moveBlock --id <block-id> --previousID <sibling-id> --parentID <parent-id>
 # Move to first child: --previousID ""
 ```
 
 ## Move a document
 
 ```bash
-siyuan api filetree.moveDocsByID --fromIDs '["<doc-id>"]' --toID <target-parent-id>
+siyuan-cli api filetree.moveDocsByID --fromIDs '["<doc-id>"]' --toID <target-parent-id>
 ```
 
 `--toID`: document id (move inside) or notebook id (move to root). Block ids preserved; hpath changes.
@@ -162,7 +168,7 @@ siyuan api filetree.moveDocsByID --fromIDs '["<doc-id>"]' --toID <target-parent-
 After writing:
 
 ```bash
-siyuan tool get-block-content <id> --range context --limit 7 --showId true
+siyuan-cli tool get-block-content <id> --range context --limit 7 --showId true
 ```
 
 Confirm: intended target changed · neighbors unchanged · follow-up ids known · correct workspace/notebook.
@@ -171,7 +177,7 @@ Confirm: intended target changed · neighbors unchanged · follow-up ids known �
 
 **Wrong target**: re-run `workspace which` + `get-block-info` + bounded read; narrow to stable block id before retry.
 
-**Denied / approval required**: inspect rules with `workspace which`; approve/reject in Approval Center or `siyuan approval list`. Retry with `--yes` only when intended and allowed.
+**Denied / approval required**: inspect rules with `workspace which`; approve/reject in Approval Center or `siyuan-cli approval list`. Retry with `--yes` only when intended and allowed.
 
 # Related docs
 

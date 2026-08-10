@@ -13,7 +13,7 @@ If the target is not already a stable id → `recipes/find-target.md` first.
 
 Choose the smallest read that satisfies the task.
 
-If you reached this recipe directly: confirm workspace first (`siyuan workspace which`); ensure target is a stable id (see `recipes/find-target.md`).
+If you reached this recipe directly: confirm workspace first (`siyuan-cli workspace which`); ensure target is a stable id (see `recipes/find-target.md`).
 
 ```text
 known id → get-block-info → choose bounded range → read → report partiality if filtered/truncated
@@ -30,11 +30,11 @@ known id → get-block-info → choose bounded range → read → report partial
 | `after` | Siblings after anchor | — |
 
 ```bash
-siyuan tool get-block-content <id> --range self
-siyuan tool get-block-content <id> --range children --limit 50
-siyuan tool get-block-content <id> --range context --limit 7 --showId true
-siyuan tool get-block-content <id> --range children --limit=-1              # full read
-siyuan tool get-block-content <id> --range children --limit=-1 --bodyOnly true > /tmp/doc.md
+siyuan-cli tool get-block-content <id> --range self
+siyuan-cli tool get-block-content <id> --range children --limit 50
+siyuan-cli tool get-block-content <id> --range context --limit 7 --showId true
+siyuan-cli tool get-block-content <id> --range children --limit=-1              # full read
+siyuan-cli tool get-block-content <id> --range children --limit=-1 --bodyOnly true > /tmp/doc.md
 ```
 
 Use `--limit=-1` only when the task needs the full range. Run `get-block-content --help` for all parameters.
@@ -56,8 +56,8 @@ Use when piping clean Markdown to a local file for round-trip editing. Removes t
 # Exact source reads
 
 ```bash
-siyuan api block.getBlockKramdown --id <id>              # exact Kramdown source
-siyuan api block.getBlockKramdowns --ids '["<id1>","<id2>"]'  # batch
+siyuan-cli api block.getBlockKramdown --id <id>              # exact Kramdown source
+siyuan-cli api block.getBlockKramdowns --ids '["<id1>","<id2>"]'  # batch
 ```
 
 Use when exact markup, block refs, or attributes matter. Prefer batch for multiple known ids.

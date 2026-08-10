@@ -119,7 +119,7 @@ function describeTool(id: string): void {
             ExitCode.GENERAL,
             'TOOL_NOT_FOUND',
             `Tool "${id}" not found.`,
-            'Run `siyuan tool list` to see all tools.'
+            'Run `siyuan-cli tool list` to see all tools.'
         );
     }
     process.stdout.write(JSON.stringify(tool, null, 2) + '\n');
@@ -136,7 +136,7 @@ async function runTool(
             ExitCode.GENERAL,
             'TOOL_NOT_FOUND',
             `Tool "${id}" not found.`,
-            'Run `siyuan tool list` to see all tools.'
+            'Run `siyuan-cli tool list` to see all tools.'
         );
     }
 
@@ -292,7 +292,7 @@ function listTools(args: Record<string, unknown>): void {
 
     if (uncachedTools.length > 0) {
         process.stderr.write(
-            `[!] ${uncachedTools.length} uncached extension(s). Run \`siyuan extension cache\` to populate metadata.\n`
+            `[!] ${uncachedTools.length} uncached extension(s). Run \`siyuan-cli extension cache\` to populate metadata.\n`
         );
     }
 }
@@ -316,10 +316,10 @@ const describeCommand = defineCommand({
 export function renderGroupedToolHelp(version?: string): string {
     ensureToolDiscovery();
     const lines: string[] = [];
-    const title = `Run built-in and user workflow tools. (siyuan tool${version ? ` v${version}` : ''})`;
+    const title = `Run built-in and user workflow tools. (siyuan-cli tool${version ? ` v${version}` : ''})`;
     lines.push(colors.gray(title));
     lines.push('');
-    lines.push(`${colors.underline(colors.bold('USAGE'))} ${colors.cyan('siyuan tool [OPTIONS] <command>')}`);
+    lines.push(`${colors.underline(colors.bold('USAGE'))} ${colors.cyan('siyuan-cli tool [OPTIONS] <command>')}`);
     lines.push('');
 
     const all = toolRegistry.list();
@@ -344,7 +344,7 @@ export function renderGroupedToolHelp(version?: string): string {
     printGroup('BUILT-IN', builtins.map((t) => ({ id: t.id, description: t.summary })));
     printGroup('USER EXTENSIONS', extensions.map((t) => ({ id: t.id, description: t.summary })));
 
-    lines.push(`Use ${colors.cyan('siyuan tool <command> --help')} for more information about a command.`);
+    lines.push(`Use ${colors.cyan('siyuan-cli tool <command> --help')} for more information about a command.`);
 
     return lines.join('\n');
 }

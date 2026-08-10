@@ -230,8 +230,8 @@ export const tool: ToolSchema = {
     cli: {
         primary: 'id',
         examples: [
-            { command: 'siyuan tool get-block-info 20241016135347-zlrn2cz' },
-            { command: 'siyuan tool get-block-info --id "id1,id2"' }
+            { command: 'siyuan-cli tool get-block-info 20241016135347-zlrn2cz' },
+            { command: 'siyuan-cli tool get-block-info --id "id1,id2"' }
         ]
     },
     async run(ctx, input) {

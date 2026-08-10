@@ -13,11 +13,7 @@ import {
 } from './project-config.js';
 import { CliError, ExitCode } from '../shared/errors.js';
 import { resolveWorkspaceDirToBaseUrl } from './resolver.js';
-import type {
-    AppConfig,
-    WorkspaceEntry,
-    TokenSource
-} from './config.js';
+import type { AppConfig, WorkspaceEntry, TokenSource } from './config.js';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -101,7 +97,7 @@ export function resolveWorkspace(
         throw new CliError(
             ExitCode.CONFIG,
             'NO_WORKSPACE',
-            'No active workspace. Run `siyuan workspace add <name> --url <url>` first.',
+            'No active workspace. Run `siyuan-cli workspace add <name> --url <url>` first.',
             'Or pass --workspace <name> to specify one explicitly.'
         );
     }
@@ -112,7 +108,7 @@ export function resolveWorkspace(
             ExitCode.CONFIG,
             'WORKSPACE_NOT_FOUND',
             `Workspace "${name}" not found in config.`,
-            'Run `siyuan workspace list` to see available workspaces.'
+            'Run `siyuan-cli workspace list` to see available workspaces.'
         );
     }
 
@@ -207,10 +203,15 @@ export async function materializeWorkspace(
             ExitCode.CONFIG,
             'WORKSPACE_MISSING_CONNECTION',
             `Workspace "${workspace.name}" has neither baseUrl nor workspaceDir configured. Add one.`,
-            'Use `siyuan workspace add` with --url or --workspace-dir.'
+            'Use `siyuan-cli workspace add` with --url or --workspace-dir.'
         );
     }
-    const resolved = await resolveWorkspaceDirToBaseUrl(workspace.workspaceDir);
+    const resolved = await resolveWorkspaceDirToBaseUrl(
+        workspace.workspaceDir,
+        {
+            token: workspace.token
+        }
+    );
     return {
         ...workspace,
         baseUrl: resolved.baseUrl

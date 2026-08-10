@@ -16,7 +16,7 @@ Resolution order:
 2. `$XDG_CONFIG_HOME/siyuan-cli/config.yaml`
 3. `~/.config/siyuan-cli/config.yaml` (all platforms, including Windows)
 
-Created automatically by `siyuan workspace add`. File mode `0600` on POSIX.
+Created automatically by `siyuan-cli workspace add`. File mode `0600` on POSIX.
 
 ## Workspace connection strategies
 
@@ -32,7 +32,7 @@ At least one must be present per workspace. When both are given, `baseUrl` wins.
 Add with `--workspace-dir`:
 
 ```bash
-siyuan workspace add devspace --workspace-dir /path/to/SiYuanDevSpace --token <token>
+siyuan-cli workspace add devspace --workspace-dir /path/to/SiYuanDevSpace --token <token>
 ```
 
 ## Config structure
@@ -114,7 +114,7 @@ Optional `behavior` section controls how the CLI handles approval-gated writes. 
 | `approval.autoOpen` | boolean | `true` | Whether to auto-open the Approval Center in the browser |
 | `approval.openDebounceMs` | number (ms) | `1000` | Suppress repeated browser opens for rapid consecutive approval requests; `0` disables debounce |
 | `rawApi.enabled` | boolean | `false` | Enables the raw kernel API fallback command |
-| `rawApi.allow` | string[] | `[]` | Endpoint-id glob patterns allowed through `siyuan api raw` |
+| `rawApi.allow` | string[] | `[]` | Endpoint-id glob patterns allowed through `siyuan-cli api raw` |
 
 All fields are optional. Omitted fields inherit from the next level in the cascade.
 
@@ -128,7 +128,7 @@ Merge is field-level for `allowYes` and `approval`. `rawApi` resolves as a whole
 
 ### Raw API fallback
 
-Raw API is disabled by default. To use `siyuan api raw`, configure both `enabled: true` and at least one allowed endpoint pattern:
+Raw API is disabled by default. To use `siyuan-cli api raw`, configure both `enabled: true` and at least one allowed endpoint pattern:
 
 ```yaml
 behavior:
@@ -153,7 +153,7 @@ behavior:
 Example call:
 
 ```bash
-siyuan api raw block.getDocInfo -j '{"id":"20230315180000-abcdefg"}'
+siyuan-cli api raw block.getDocInfo -j '{"id":"20230315180000-abcdefg"}'
 ```
 
 Raw output is always pure JSON on stdout so it can be piped to `jq`. Raw safety warnings are written to stderr.
@@ -213,7 +213,7 @@ behavior:                    # optional; merged with workspace/defaults behavior
 ### Inspect
 
 ```bash
-siyuan workspace which
+siyuan-cli workspace which
 ```
 
 Output includes `source`, active workspace, project config path (if found), and the full resolved rule list (if permission rules are configured).
@@ -221,11 +221,11 @@ Output includes `source`, active workspace, project config path (if found), and 
 ## Quick verification
 
 ```bash
-siyuan workspace list                    # all configured workspaces
-siyuan workspace which                   # current resolution (no network)
-siyuan workspace verify                  # verify effective workspace for current directory
-siyuan workspace verify <name>           # verify an explicit workspace by name
-siyuan workspace verify --global-current # verify global config.current only
+siyuan-cli workspace list                    # all configured workspaces
+siyuan-cli workspace which                   # current resolution (no network)
+siyuan-cli workspace verify                  # verify effective workspace for current directory
+siyuan-cli workspace verify <name>           # verify an explicit workspace by name
+siyuan-cli workspace verify --global-current # verify global config.current only
 ```
 
 `workspace verify` (no args) follows effective resolution for the current directory:

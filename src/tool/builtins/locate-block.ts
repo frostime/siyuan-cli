@@ -132,9 +132,9 @@ Scope: --id (document), --box (notebook), or omit both for global search.`,
             pattern: ['literal', 'stdin']
         },
         examples: [
-            { command: 'siyuan tool locate-block "%keyword%"' },
-            { command: 'siyuan tool locate-block --id 20241016135347-zlrn2cz --pattern "%**bold**%"' },
-            { command: 'siyuan tool locate-block --box 20210808180117-czj9bvb --pattern "%A%|%B%" --all true' }
+            { command: 'siyuan-cli tool locate-block "%keyword%"' },
+            { command: 'siyuan-cli tool locate-block --id 20241016135347-zlrn2cz --pattern "%**bold**%"' },
+            { command: 'siyuan-cli tool locate-block --box 20210808180117-czj9bvb --pattern "%A%|%B%" --all true' }
         ]
     },
 

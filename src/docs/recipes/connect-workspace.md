@@ -41,8 +41,8 @@ Do not silently switch to another configured workspace for writes.
 ## 1. Inspect current configuration
 
 ```bash
-siyuan workspace list
-siyuan workspace which
+siyuan-cli workspace list
+siyuan-cli workspace which
 ```
 
 `workspace which` shows the effective workspace after resolving flag/env/project/global precedence.
@@ -52,9 +52,9 @@ siyuan workspace which
 Use this when the kernel URL and token are known.
 
 ```bash
-siyuan workspace add main --url http://127.0.0.1:6806 --token <token>
-siyuan workspace verify main
-siyuan workspace which
+siyuan-cli workspace add main --url http://127.0.0.1:6806 --token <token>
+siyuan-cli workspace verify main
+siyuan-cli workspace which
 ```
 
 ## 3. Add a local workspace by directory
@@ -62,9 +62,9 @@ siyuan workspace which
 Use this when the local workspace path is known but the kernel port is not.
 
 ```bash
-siyuan workspace add devspace --workspace-dir /path/to/SiYuanDevSpace --token <token>
-siyuan workspace verify devspace
-siyuan workspace which
+siyuan-cli workspace add devspace --workspace-dir /path/to/SiYuanDevSpace --token <token>
+siyuan-cli workspace verify devspace
+siyuan-cli workspace which
 ```
 
 The CLI resolves the runtime base URL from local workspace metadata when possible.
@@ -81,7 +81,7 @@ workspace: main
 Then confirm:
 
 ```bash
-siyuan workspace which
+siyuan-cli workspace which
 ```
 
 # First smoke tests
@@ -89,8 +89,8 @@ siyuan workspace which
 After verification, run a read-only command before any write.
 
 ```bash
-siyuan api notebook.lsNotebooks
-siyuan tool list-doc-tree --entry <notebook-id> --depth 1
+siyuan-cli api notebook.lsNotebooks
+siyuan-cli tool list-doc-tree --entry <notebook-id> --depth 1
 ```
 
 If these fail, fix connection/auth/workspace resolution before continuing.
@@ -109,7 +109,7 @@ If these fail, fix connection/auth/workspace resolution before continuing.
 - confirm SiYuan is running
 - confirm the base URL and token
 - if using `workspace-dir`, confirm the workspace path and that the target workspace is started
-- retry with `siyuan workspace verify <name>`
+- retry with `siyuan-cli workspace verify <name>`
 
 ## Auth failed
 
@@ -119,13 +119,13 @@ If these fail, fix connection/auth/workspace resolution before continuing.
 
 ## Wrong workspace selected
 
-- inspect precedence with `siyuan workspace which`
+- inspect precedence with `siyuan-cli workspace which`
 - check whether `.siyuan-cli.yaml` overrides the current directory
 - set the intended workspace explicitly with `--workspace <name>` for one command, or fix the project/global config
 
 ## Multiple agents share the machine
 
-- avoid relying on global `siyuan workspace use` for project work
+- avoid relying on global `siyuan-cli workspace use` for project work
 - commit `.siyuan-cli.yaml` only when it contains safe fields (`schemaVersion`, `workspace`, permission overrides)
 - never store token/baseUrl in `.siyuan-cli.yaml`
 

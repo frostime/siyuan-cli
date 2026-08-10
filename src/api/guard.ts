@@ -21,6 +21,11 @@ import {
 import type { SiyuanClient } from '../shared/client.js';
 import { resolveEffectiveBehavior, type AppConfig, type ResolvedWorkspace } from '../workspace/config.js';
 import type { JsonPrintExtra } from '../shared/output.js';
+import { CliError, ExitCode } from '../shared/errors.js';
+import {
+    compareKernelVersions,
+    extractKernelVersion
+} from '../shared/kernel-version.js';
 
 function emitWarning(jsonExtra: JsonPrintExtra | undefined, warning: Record<string, unknown>): void {
     if (jsonExtra) {
@@ -202,6 +207,44 @@ function isWriteLike(entry: RegisteredEndpoint): boolean {
     return entry.meta.classification.action !== 'read';
 }
 
+async function assertSupportedKernelVersion(
+    schema: EndpointSchema,
+    client: SiyuanClient
+): Promise<void> {
+    const requiredVersion = schema.minKernelVersion;
+    if (!requiredVersion) return;
+
+    const responseData = await client.call<unknown>('/api/system/version', {});
+    let currentVersion: string;
+    let comparison: number;
+    try {
+        currentVersion = extractKernelVersion(responseData);
+        comparison = compareKernelVersions(currentVersion, requiredVersion);
+    } catch (error) {
+        throw new CliError(
+            ExitCode.GENERAL,
+            'KERNEL_VERSION_UNRECOGNIZED',
+            error instanceof Error ? error.message : String(error),
+            'Verify the connected SiYuan kernel version.',
+            { requiredKernelVersion: requiredVersion, responseData }
+        );
+    }
+
+    if (comparison < 0) {
+        throw new CliError(
+            ExitCode.GENERAL,
+            'UNSUPPORTED_KERNEL_VERSION',
+            `Endpoint requires SiYuan kernel >=${requiredVersion}; connected kernel is ${currentVersion}.`,
+            'Upgrade SiYuan or use a compatible command.',
+            {
+                endpoint: schema.endpoint,
+                currentKernelVersion: currentVersion,
+                requiredKernelVersion: requiredVersion
+            }
+        );
+    }
+}
+
 export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
     const {
         entry,
@@ -252,6 +295,8 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
             wouldRequestApproval
         };
     }
+
+    await assertSupportedKernelVersion(schema, client);
 
     // Resolve effective behavior: Project > Workspace > Defaults > Built-in
     const behavior = resolveEffectiveBehavior(

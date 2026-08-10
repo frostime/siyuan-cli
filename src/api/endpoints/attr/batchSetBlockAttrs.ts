@@ -43,7 +43,7 @@ export const schema: EndpointSchema<BatchSetBlockAttrsData> = {
         allowSource: { blockAttrs: ['literal', 'file', 'stdin'] },
         examples: [
             {
-                command: 'siyuan api attr.batchSetBlockAttrs --blockAttrs @file:./attrs.json',
+                command: 'siyuan-cli api attr.batchSetBlockAttrs --blockAttrs @file:./attrs.json',
                 description: 'attrs.json contains an array of {id,attrs}'
             }
         ]

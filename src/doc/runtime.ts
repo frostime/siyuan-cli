@@ -148,7 +148,7 @@ export function formatDocsHint(): string {
         `\nBuilt-in docs root\n` +
         `  ${root}\n` +
         `\nStart here\n` +
-        `  siyuan doc list\n` +
+        `  siyuan-cli doc list\n` +
         `\nBuilt-in docs\n` +
         `  ${join(root, 'README.md')}\n` +
         `  ${join(root, 'recipes', '*.md')}\n` +

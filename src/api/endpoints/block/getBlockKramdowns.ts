@@ -34,7 +34,7 @@ export const schema: EndpointSchema<GetBlockKramdownsData> = {
         allowSource: { ids: ['literal', 'file', 'stdin'] },
         examples: [
             {
-                command: 'siyuan api block.getBlockKramdowns --ids @file:./ids.json',
+                command: 'siyuan-cli api block.getBlockKramdowns --ids @file:./ids.json',
                 description: 'ids.json contains an array of block IDs'
             }
         ]

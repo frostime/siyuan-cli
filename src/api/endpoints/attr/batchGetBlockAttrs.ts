@@ -29,7 +29,7 @@ export const schema: EndpointSchema<BatchGetBlockAttrsData> = {
         allowSource: { ids: ['literal', 'file', 'stdin'] },
         examples: [
             {
-                command: 'siyuan api attr.batchGetBlockAttrs --ids @file:./ids.json',
+                command: 'siyuan-cli api attr.batchGetBlockAttrs --ids @file:./ids.json',
                 description: 'ids.json contains an array of block IDs'
             }
         ]

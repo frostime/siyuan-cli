@@ -47,13 +47,13 @@ export const schema: EndpointSchema = {
         examples: [
             {
                 command:
-                    'siyuan api block.batchUpdateBlock --blocks @file:./blocks.json',
+                    'siyuan-cli api block.batchUpdateBlock --blocks @file:./blocks.json',
                 description:
                     'blocks.json contains an array of {id,data,dataType}; use dataType="markdown" by default'
             },
             {
                 command:
-                    'siyuan api block.batchUpdateBlock --blocks @stdin <<\'EOF\'\n[{"id":"20230315180000-abcdefg","data":"New markdown","dataType":"markdown"}]\nEOF'
+                    'siyuan-cli api block.batchUpdateBlock --blocks @stdin <<\'EOF\'\n[{"id":"20230315180000-abcdefg","data":"New markdown","dataType":"markdown"}]\nEOF'
             }
         ],
         allowSource: { blocks: ['literal', 'file', 'stdin'] }

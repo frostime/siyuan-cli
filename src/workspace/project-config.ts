@@ -255,7 +255,7 @@ export function loadProjectConfig(
             ExitCode.CONFIG,
             'PROJECT_CONFIG_WORKSPACE_NOT_FOUND',
             `Project config at ${location.path} references workspace "${workspace}" which is not defined in the global config.`,
-            `Run \`siyuan workspace add ${workspace} --url <url>\` to register it.`
+            `Run \`siyuan-cli workspace add ${workspace} --url <url>\` to register it.`
         );
     }
 

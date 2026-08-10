@@ -1,36 +1,36 @@
 ---
 name: siyuan-cli
-description: "Manage SiYuan Note with the `siyuan` CLI. Use this whenever the user mentions SiYuan, notebooks, documents, blocks, or wants to query/update a SiYuan knowledge base."
+description: "Manage SiYuan Note with the `siyuan-cli` CLI. Use this whenever the user mentions SiYuan, notebooks, documents, blocks, or wants to query/update a SiYuan knowledge base."
 metadata:
   version: "{{VERSION}}"
 ---
 
 # SiYuan CLI
 
-Agent-first CLI for SiYuan Note. This SKILL is the entry point; built-in docs provide task playbooks (`siyuan doc list/read`).
+Agent-first CLI for SiYuan Note. This SKILL is the entry point; built-in docs provide task playbooks (`siyuan-cli doc list/read`).
 
 ## Bootstrap
 
 ```bash
-siyuan --help
-siyuan workspace which
+siyuan-cli --help
+siyuan-cli workspace which
 ```
 
-If `siyuan` is missing: `npm install -g @frostime/siyuan-cli`. If skill version differs from CLI version: `siyuan skill install`, then `siyuan skill read`. If no workspace is configured: `siyuan doc read recipes/connect-workspace.md`. If URL/token/workspace are unknown: stop and ask user.
+If `siyuan-cli` is missing: `npm install -g @frostime/siyuan-cli`. Always invoke this package as `siyuan-cli`; on SiYuan 3.7.0 or later, `siyuan` may resolve to SiYuan's native CLI instead. If skill version differs from CLI version: `siyuan-cli skill install`, then `siyuan-cli skill read`. If no workspace is configured: `siyuan-cli doc read recipes/connect-workspace.md`. If URL/token/workspace are unknown: stop and ask user.
 
 ## Command discovery
 
 Docs = decision map. `--help` = parameter syntax.
 
 ```bash
-siyuan api <id> --help       # params, INPUT SOURCES, examples
-siyuan tool <id> --help      # params, examples, behavior
-siyuan api list              # endpoints + classification/severity labels
-siyuan tool list             # tools
-siyuan doc list              # docs + real paths
+siyuan-cli api <id> --help       # params, INPUT SOURCES, examples
+siyuan-cli tool <id> --help      # params, examples, behavior
+siyuan-cli api list              # endpoints + classification/severity labels
+siyuan-cli tool list             # tools
+siyuan-cli doc list              # docs + real paths
 ```
 
-Before using `@file:`/`@stdin`/`@env:` on a parameter, check `--help` → `INPUT SOURCES`. If absent, use literal or whole-payload `-j`/`-f`. Doc paths here are read via `siyuan doc read <path>`.
+Before using `@file:`/`@stdin`/`@env:` on a parameter, check `--help` → `INPUT SOURCES`. If absent, use literal or whole-payload `-j`/`-f`. Doc paths here are read via `siyuan-cli doc read <path>`.
 
 ## Safety anchors
 
@@ -51,10 +51,13 @@ Small localized edit with known block ids
 
 Broad/complex/text-level edit
   → brute-edit <doc-id> --check true
-    SAFE   → --dry-run → inspect → --yes
-    UNSAFE → checkpoint-doc → block-level fallback
+    SAFE   → checkpoint-doc once → --dry-run → inspect → --yes
+    UNSAFE → block-level fallback
 
-checkpoint-doc = recovery material, not permission to bypass unsafe check.
+Before a group of high-risk edits, call checkpoint-doc explicitly once. Do not
+repeat it for later edits in the same group; brute-edit never creates a
+checkpoint automatically. A checkpoint is recovery material, not permission
+to bypass an unsafe check.
 ```
 
 Ask user when: no token/URL · wrong workspace · multiple plausible write targets · destructive operation lacks confirmation · daily-note notebook unknown.
@@ -70,19 +73,19 @@ Check `--help` INPUT SOURCES first.
 
 ```bash
 # heredoc (bash) / here-string (PowerShell @'...'@): parameter supports stdin
-siyuan api block.appendBlock --parentID <id> --data @stdin --yes <<'EOF'
+siyuan-cli api block.appendBlock --parentID <id> --data @stdin --yes <<'EOF'
 Content here.
 EOF
 
 # @file: parameter supports file
-siyuan tool update-block --blocks @file:./updates.json --yes
+siyuan-cli tool update-block --blocks @file:./updates.json --yes
 
 # pipe: parameter supports stdin
-cat query.sql | siyuan api query.sql --stmt @stdin
+cat query.sql | siyuan-cli api query.sql --stmt @stdin
 
 # whole payload: all commands support -j / -f
-siyuan api attr.setBlockAttrs -j '{"id":"<id>","attrs":{"custom-key":"value"}}'
-siyuan api attr.batchSetBlockAttrs -f ./attrs.json --yes
+siyuan-cli api attr.setBlockAttrs -j '{"id":"<id>","attrs":{"custom-key":"value"}}'
+siyuan-cli api attr.batchSetBlockAttrs -f ./attrs.json --yes
 ```
 
 ## Hot paths
@@ -93,7 +96,7 @@ Use `block.appendBlock` with §Canonical input patterns. Daily note example:
 
 ```bash
 # Notebook id must be known; if unknown, list notebooks or ask.
-siyuan api block.appendDailyNoteBlock --notebook <notebook-id> --data @stdin --yes <<'EOF'
+siyuan-cli api block.appendDailyNoteBlock --notebook <notebook-id> --data @stdin --yes <<'EOF'
 Entry.
 EOF
 ```
@@ -101,12 +104,12 @@ EOF
 ### Search/read
 
 ```bash
-siyuan api filetree.searchDocs --k "<keyword>"    # candidates; verify before writing
-siyuan tool get-block-info <id>                   # identity, meta data (ref, toc, child etc.)
-siyuan tool search-backlinks <target-id>          # inbound refs; redirects first-block hits by default
-siyuan tool get-block-content <id> --range children --limit 50
-siyuan tool get-block-content <id> --range context --limit 7 --showId true
-siyuan tool locate-block --id <doc-id> --pattern "%keyword%"  # SQL LIKE, not regex
+siyuan-cli api filetree.searchDocs --k "<keyword>"    # candidates; verify before writing
+siyuan-cli tool get-block-info <id>                   # identity, meta data (ref, toc, child etc.)
+siyuan-cli tool search-backlinks <target-id>          # inbound refs; redirects first-block hits by default
+siyuan-cli tool get-block-content <id> --range children --limit 50
+siyuan-cli tool get-block-content <id> --range context --limit 7 --showId true
+siyuan-cli tool locate-block --id <doc-id> --pattern "%keyword%"  # SQL LIKE, not regex
 ```
 
 ### Update known block
@@ -114,7 +117,7 @@ siyuan tool locate-block --id <doc-id> --pattern "%keyword%"  # SQL LIKE, not re
 Fast command, slow pre-flight. Required: workspace confirmed; stable block id; current content inspected; user intent maps exactly to block. Else read `recipes/edit-content.md`.
 
 ```bash
-siyuan tool update-block --blocks @stdin --yes <<'EOF'
+siyuan-cli tool update-block --blocks @stdin --yes <<'EOF'
 [{"id":"<block-id>","data":"Replacement."}]
 EOF
 ```
@@ -127,10 +130,10 @@ EOF
 |------|---------|--------|
 | 0 | success | parse stdout |
 | 1 | general/kernel/approval/not found | read stderr JSON |
-| 2 | config/workspace | `siyuan workspace which` |
+| 2 | config/workspace | `siyuan-cli workspace which` |
 | 3 | network/kernel down | ask user to start SiYuan |
 | 4 | auth/token | ask user for token |
-| 5 | permission denied | `siyuan workspace which` |
+| 5 | permission denied | `siyuan-cli workspace which` |
 
 stderr = diagnostics; stdout = result.
 
@@ -138,17 +141,17 @@ stderr = diagnostics; stdout = result.
 
 | Need | Read / do |
 |------|-----------|
-| workspace connect/debug | `siyuan doc read recipes/connect-workspace.md` |
-| config schema (behavior, rawApi, defaults, project-file) | `siyuan doc read cli-usage/workspace-config.md` |
-| locate user-named doc/block | `siyuan doc read recipes/find-target.md` |
-| read content ranges/paging/ids | `siyuan doc read recipes/read-content.md` |
-| reference/backlink navigation | `siyuan doc read recipes/read-content.md` + `siyuan doc read siyuan-guide/sql-query-guide.md` |
-| edit/move/delete/batch/create | `siyuan doc read recipes/edit-content.md` |
-| daily notes | `siyuan doc read siyuan-guide/dailynote-model.md` |
-| block/path/sql model | `siyuan doc read siyuan-guide/siyuan-block.md` |
-| permissions/approval config | `siyuan doc read cli-usage/permission.md` |
-| custom API/tool extension | `siyuan doc read cli-usage/extension.md` |
-| deep CLI mechanics: flags, input-source edge cases, stdout/stderr, Approval Center, MSYS | `siyuan doc read cli-usage/cli-overview.md` |
+| workspace connect/debug | `siyuan-cli doc read recipes/connect-workspace.md` |
+| config schema (behavior, rawApi, defaults, project-file) | `siyuan-cli doc read cli-usage/workspace-config.md` |
+| locate user-named doc/block | `siyuan-cli doc read recipes/find-target.md` |
+| read content ranges/paging/ids | `siyuan-cli doc read recipes/read-content.md` |
+| reference/backlink navigation | `siyuan-cli doc read recipes/read-content.md` + `siyuan-cli doc read siyuan-guide/sql-query-guide.md` |
+| edit/move/delete/batch/create | `siyuan-cli doc read recipes/edit-content.md` |
+| daily notes | `siyuan-cli doc read siyuan-guide/dailynote-model.md` |
+| block/path/sql model | `siyuan-cli doc read siyuan-guide/siyuan-block.md` |
+| permissions/approval config | `siyuan-cli doc read cli-usage/permission.md` |
+| custom API/tool extension | `siyuan-cli doc read cli-usage/extension.md` |
+| deep CLI mechanics: flags, input-source edge cases, stdout/stderr, Approval Center, MSYS | `siyuan-cli doc read cli-usage/cli-overview.md` |
 
 ## Layer choice
 
@@ -164,7 +167,7 @@ stderr = diagnostics; stdout = result.
 
 ## First response rules
 
-- Content tasks: use installed `siyuan`; do not inspect repo source unless modifying siyuan-cli internals.
+- Content tasks: use installed `siyuan-cli`; do not inspect repo source unless modifying siyuan-cli internals.
 - User-named targets: `recipes/find-target.md` first.
 - Writes beyond append-only: also `recipes/edit-content.md`.
 
@@ -184,6 +187,6 @@ stderr = diagnostics; stdout = result.
 
 ## Internals
 
-For extension typing: `siyuan doc read cli-usage/extension.md`, then inspect installed `dist/shared/schema.d.mts`.
+For extension typing: `siyuan-cli doc read cli-usage/extension.md`, then inspect installed `dist/shared/schema.d.mts`.
 
 GitHub: [siyuan-cli](https://github.com/frostime/siyuan-cli) · [SiYuan kernel API](https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go)

@@ -9,6 +9,9 @@ import { schema as systemGetConf } from './system/getConf.js';
 import { schema as systemExit } from './system/exit.js';
 import { schema as systemLogoutAuth } from './system/logoutAuth.js';
 
+// History APIs
+import { schema as historyCreateDocHistory } from './history/createDocHistory.js';
+
 // Query APIs
 import { schema as querySql } from './query/sql.js';
 
@@ -122,6 +125,8 @@ const schemas: EndpointSchema<any>[] = [
     systemGetConf,
     systemExit,
     systemLogoutAuth,
+    // History
+    historyCreateDocHistory,
     // Query
     querySql,
     // Notebook
