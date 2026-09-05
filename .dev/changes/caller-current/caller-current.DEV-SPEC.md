@@ -73,15 +73,15 @@ siyuan-cli current bind home
 
 siyuan-cli current confirm <nonce>
   → 再取祖先链，与 bind 那次求最近共同祖先
-  → 选择两次调用最近的、稳定且属于该调用者作用域的共同祖先
-  → 如果只能落到 WT、VS Code、Codex 宿主或整台机器/整个图形会话共用的进程，则拒绝
+  → 选择两次调用最近且仍可识别的共同进程实例
+  → 将该进程实例作为 process binding 锚点；不根据进程名称猜测它是否承载多个逻辑调用者
   → 拒绝在同一次进程调用里 confirm
   → 保存 (pid + 创建时间) → home
 ```
 
 之后同一进程作用域中的 `api` / `tool` 不再需要 `--workspace`。锚点进程退出，绑定失效。新的 bind/confirm 覆盖这个进程作用域上一次绑定。多个逻辑 Agent 若共享同一锚点进程，也会看到同一个绑定；CLI 不宣称能在该进程拓扑下区分它们。
 
-共同祖先不够独占时 bind 失败，不假装绑上；选择退回项目文件 / `config.current` / `NO_WORKSPACE`。不同 Agent 的快照不得被配成同一次 bind/confirm，nonce 只用于严格配对两次调用。
+如果两次调用没有可匹配的共同进程实例，bind 失败，不假装绑上；选择退回项目文件 / `config.current` / `NO_WORKSPACE`。同一 OS 进程承载多个逻辑调用者时，它们共享该 process binding；不同 Agent 的快照不得被配成同一次 bind/confirm，nonce 只用于严格配对两次调用。
 
 ### 核验
 
@@ -152,7 +152,7 @@ v1 必须 Windows 和 Unix 都能 bind。MSYS/Git Bash 仍走 Windows 进程树�
 - 选择从目录命令里拆到顶层 `current`。`workspace use` 的语义（写 `config.current`）改由 `current global` 承担，不把裸 `use` 改成 session bind。
 - `current project` 不做。
 - 进程锚点不是权限系统；permission / token / approval 仍跟被选中的那个 workspace 走。
-- 进程祖先探测的跨平台接口已经由 spike 验证方向；pending probe 的存放位置和过期时间、绑定记录的存储格式、共享宿主如何由实现识别，仍属于实现设计。不能因为 WT/VS Code/Codex 等进程名出现在祖先链中就一律失败。SPEC 不预先规定存储格式。
+- 进程祖先探测的跨平台接口已经由 spike 验证方向；pending probe 的存放位置和过期时间、绑定记录的存储格式仍属于实现设计。不能因为 WT/VS Code/Codex 等进程名出现在祖先链中就一律失败，也不要求实现猜测某个共同进程是否服务多个逻辑调用者。SPEC 不预先规定存储格式。
 
 ## Acceptance Criteria
 
@@ -166,7 +166,7 @@ v1 必须 Windows 和 Unix 都能 bind。MSYS/Git Bash 仍走 Windows 进程树�
 - 无项目文件、无 bind：仍落到 `config.current`；写操作仍发 `IMPLICIT_WORKSPACE`。
 - `current bind` 一个不存在的名字：`WORKSPACE_NOT_FOUND`。
 - 同一次进程调用里 `confirm`：失败。
-- 两次调用只能找到共享宿主作为共同锚点：失败，不写入绑定。
+- 两次调用没有可匹配的共同进程实例：失败，不写入绑定；共同进程是否还承载其他逻辑调用者不由 CLI 猜测。
 - `current bind` 在当前 cwd 已有项目文件且名字不一致：立即失败，不写入 pending；confirm 阶段仍重新检查。
 - 锚点进程已退出：绑定不再生效。
 - `workspace verify` 无参：失败并提示；`workspace verify home` 不读项目文件、不读 bind。
