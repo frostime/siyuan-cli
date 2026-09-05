@@ -181,13 +181,15 @@ function isExpired(value: Record<string, unknown>, nowMs: number): boolean {
     return Number.isNaN(createdAt) || nowMs - createdAt > PENDING_TTL_MS;
 }
 
-// ─── Confirm step ────────────────────────────────────────────────────────────
-
-export function confirmPendingProbe(
+/**
+ * Read a pending probe without consuming it. Callers that must revalidate
+ * external state (e.g. the project file) between bind and confirm read here
+ * first, then confirm.
+ */
+export function getPendingProbe(
     nonce: string,
-    host: ProcessTreeHost = createDefaultProcessTreeHost(),
     now: () => number = Date.now
-): ProcessBinding {
+): PendingProbe {
     const filePath = pendingPath(nonce);
     const value = readJsonFile(filePath);
     if (!isRecord(value)) {
@@ -209,7 +211,18 @@ export function confirmPendingProbe(
             'Start the two-step flow again with `siyuan-cli current bind <workspace>`.'
         );
     }
-    const probe = value as unknown as PendingProbe;
+    return value as unknown as PendingProbe;
+}
+
+// ─── Confirm step ────────────────────────────────────────────────────────────
+
+export function confirmPendingProbe(
+    nonce: string,
+    host: ProcessTreeHost = createDefaultProcessTreeHost(),
+    now: () => number = Date.now
+): ScopeBinding {
+    const filePath = pendingPath(nonce);
+    const probe = getPendingProbe(nonce, now);
 
     if (host.pid === probe.selfPid) {
         throw new CliError(
@@ -257,7 +270,7 @@ export function confirmPendingProbe(
     removeBindingsMatching(confirmChain);
     writeJsonAtomic(join(bindingsDir(), `${anchorKey(binding.anchor)}.json`), binding);
     rmSync(filePath, { force: true });
-    return binding;
+    return { binding, match };
 }
 
 /**
