@@ -112,7 +112,7 @@ test('bind + confirm anchors the nearest common ancestor and consumes the nonce'
     assert.match(probe.nonce, /^[0-9a-f]{32}$/);
     assert.equal(fileNames(pendingDir(configRoot)).length, 1);
 
-    const binding = confirmPendingProbe(probe.nonce, scopeHost(102));
+    const { binding } = confirmPendingProbe(probe.nonce, scopeHost(102));
     assert.equal(binding.workspace, 'dev');
     assert.equal(binding.anchor.pid, 200);
     assert.equal(binding.anchor.startId, '2000');
@@ -178,7 +178,7 @@ test('re-confirming the same scope replaces the previous binding', () => {
         createPendingProbe('dev', scopeHost(101)).nonce,
         scopeHost(102)
     );
-    assert.equal(first.anchor.pid, 200);
+    assert.equal(first.binding.anchor.pid, 200);
 
     // Second bind/confirm pair shares a deeper common ancestor: a shell (250)
     // under the agent that hosted both calls.
@@ -193,7 +193,7 @@ test('re-confirming the same scope replaces the previous binding', () => {
         createPendingProbe('home', shellScope(111)).nonce,
         shellScope(112)
     );
-    assert.equal(second.anchor.pid, 250);
+    assert.equal(second.binding.anchor.pid, 250);
 
     // The new binding covers the whole confirm scope, so the old agent-200
     // record was replaced and exactly one binding file remains.

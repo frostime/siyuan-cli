@@ -1,7 +1,7 @@
 /**
  * Platform-neutral process ancestry capture for process binding.
  *
- * This module owns (see .dev/changes/caller-current/caller-current.SHAPE.md):
+ * This module owns:
  *   - the process node model: pid (identity base), ppid (ancestry relation),
  *     name / executablePath / commandSignature (role metadata), startId
  *     (platform process-start identity, best-effort);
@@ -13,7 +13,7 @@
  * paths. They live only inside capture functions; exported nodes carry a
  * signature hash and a redacted summary, never the raw text.
  *
- * Matching contract (see caller-current.DEV-SPEC.md): PID + startId is the
+ * Matching contract: PID + startId is the
  * strong process-instance identity. When startId is unavailable on either
  * side, matching degrades to PID + command signature ('pid+signature') and
  * never to bare PID. Capture failure is a structured CliError, not a
@@ -99,7 +99,8 @@ export function matchProcessInstance(
         return { node: a, strength: 'pid+signature' };
     }
     // Deliberately no bare-PID fallback: an equal pid alone cannot
-    // distinguish a reused PID (DEV-SPEC degraded-matching rule).
+    // distinguish a reused PID, so a match always requires the start
+    // identity or a compatible command signature.
     return undefined;
 }
 

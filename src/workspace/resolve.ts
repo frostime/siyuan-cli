@@ -36,6 +36,10 @@ export type WorkspaceResolutionSource =
 export interface BindingProvenance {
     anchor: ProcessNode;
     strength: ProcessIdentityStrength;
+    /** When the binding was confirmed. */
+    boundAt: string;
+    /** Working directory at bind time; diagnostic context, not identity. */
+    cwd?: string;
 }
 
 export interface ResolvedWorkspace extends WorkspaceEntry {
@@ -232,7 +236,9 @@ export function resolveEffectiveWorkspace(
             ? {
                   binding: {
                       anchor: scope.binding.anchor,
-                      strength: scope.match.strength
+                      strength: scope.match.strength,
+                      boundAt: scope.binding.boundAt,
+                      ...(scope.binding.cwd ? { cwd: scope.binding.cwd } : {})
                   }
               }
             : {}),

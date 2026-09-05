@@ -27,13 +27,26 @@ For a business invocation, the effective priority is:
 --baseUrl
   → --workspace
   → $SIYUAN_CLI_WORKSPACE
-  → .siyuan-cli.yaml workspace:
+  → caller process binding + .siyuan-cli.yaml workspace:
+      both select a workspace → they must name the same one;
+      disagreement fails with CURRENT_SELECTION_CONFLICT (exit 2)
   → config.current
 ```
 
-`--baseUrl` is ad-hoc mode: it short-circuits project-file discovery and permission overlays. A named workspace records one of these sources: `flag`, `env`, `project-file`, or `global-current`; the source is later used by the guard warning policy.
+`--baseUrl` is ad-hoc mode: it short-circuits project-file discovery, process binding, and permission overlays. A named workspace records one of these sources: `flag`, `env`, `project-file`, `process-binding`, or `global-current`; the source is later used by the guard warning policy.
 
-`--workspace` and `SIYUAN_CLI_WORKSPACE` outrank a project-file workspace. A project file supplies the workspace only when neither higher-priority source selected one.
+`--workspace` and `SIYUAN_CLI_WORKSPACE` outrank both the binding and a project-file workspace, with no agreement check against them. When the binding and the project file agree (or only one of them selects), the selected name applies; an agreeing pair reports `process-binding` as the source and carries anchor diagnostics in `ResolvedWorkspace.binding`.
+
+## Process binding
+
+A caller can attach a catalog workspace to its observable OS process scope through `siyuan-cli current bind` / `confirm` / `unbind`. Process observation (ancestry capture, instance identity) is owned by `src/workspace/process-tree.ts`; binding state and the two-step protocol are owned by `src/workspace/process-binding.ts`. Resolution only consumes `findActiveBinding()` and must not read process state directly.
+
+Constraints:
+
+- binding state lives under the config directory's `process-binding/` folder and never in `config.yaml`;
+- the anchor is a process instance, matched by PID + start identity, degrading to PID + command signature; bare PID never matches;
+- a bound workspace that is missing from the catalog fails with `WORKSPACE_NOT_FOUND`;
+- process binding is explicit selection provenance, not authorization — permission, token, and approval behavior follow the selected workspace.
 
 ## Project-file contract
 
@@ -87,7 +100,7 @@ The verification step is required even though the port comes from `conf.json`: a
 - the selected source is `global-current`;
 - the endpoint is not a low/medium-severity read.
 
-The warning is non-fatal. It asks the caller to pass `--workspace`, set `SIYUAN_CLI_WORKSPACE`, or add a project file so the target is explicit.
+The warning is non-fatal. It asks the caller to pass `--workspace`, set `SIYUAN_CLI_WORKSPACE`, or add a project file so the target is explicit. `process-binding` and `project-file` are explicit sources and never trigger this warning.
 
 ## Change constraints
 
@@ -95,6 +108,7 @@ When changing this module:
 
 - keep selection provenance separate from connection materialization;
 - do not let project-file discovery affect workspace-management commands;
+- do not let the process binding affect workspace-management commands either;
 - do not allow project files to carry credentials or connection overrides;
 - preserve permission/behavior overlays when a workspace is explicitly selected;
 - keep `workspaceDir` verification tied to the runtime workspace identity, not merely port reachability;
