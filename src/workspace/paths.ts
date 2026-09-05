@@ -47,3 +47,12 @@ export function getConfigPath(configDir?: string): string {
 export function getExtensionDir(configDir?: string): string {
     return join(configDir ?? getConfigDir(), 'extensions');
 }
+
+/**
+ * Home of process-binding runtime state (pending probes + confirmed
+ * bindings). Kept outside config.yaml: the catalog file stays a
+ * human-edited catalog, while binding state is ephemeral CLI-owned data.
+ */
+export function getProcessBindingDir(configDir?: string): string {
+    return join(configDir ?? getConfigDir(), 'process-binding');
+}
