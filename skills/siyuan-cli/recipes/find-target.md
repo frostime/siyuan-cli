@@ -103,7 +103,7 @@ Convert hpath to id before writes.
 
 **User asks for a daily note**:
 → `siyuan-cli tool list-dailynote --atDate yyyy-MM-dd [--notebookId <id>]`
-→ For full model: `siyuan-cli doc read siyuan-guide/dailynote-model.md`
+→ For full model: `siyuan-cli skill read siyuan-guide/dailynote-model.md`
 
 **Document has ref links about user's topic**:
 → `get-block-info <doc-id>` → use outgoing refs: `FROM` is the block inside the document, `TO` is the referenced block → read the needed `TO` block by id

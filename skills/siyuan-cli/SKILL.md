@@ -7,7 +7,11 @@ metadata:
 
 # SiYuan CLI
 
-Agent-first CLI for SiYuan Note. This SKILL is the entry point; built-in docs provide task playbooks (`siyuan-cli doc list/read`).
+Agent-first CLI for SiYuan Note. This SKILL is the entry point; bundled resources provide task playbooks (`siyuan-cli skill read <path>`).
+
+## Version gate
+
+Compare the skill version with the CLI version you are running (both appear in CLI output; the CLI also warns explicitly on mismatch). If they differ, run `siyuan-cli skill install` and `siyuan-cli skill read` again. Do not trust any routed detail until versions match.
 
 ## Bootstrap
 
@@ -16,13 +20,13 @@ siyuan-cli --help
 siyuan-cli current which
 ```
 
-If `siyuan-cli` is missing: `npm install -g @frostime/siyuan-cli`. Always invoke this package as `siyuan-cli`; on SiYuan 3.7.0 or later, `siyuan` may resolve to SiYuan's native CLI instead. If skill version differs from CLI version: `siyuan-cli skill install`, then `siyuan-cli skill read`. If no workspace is configured: `siyuan-cli doc read recipes/connect-workspace.md`. If URL/token/workspace are unknown: stop and ask user.
+If `siyuan-cli` is missing: `npm install -g @frostime/siyuan-cli`. Always invoke this package as `siyuan-cli`; on SiYuan 3.7.0 or later, `siyuan` may resolve to SiYuan's native CLI instead. If no workspace is configured: `siyuan-cli skill read recipes/connect-workspace.md`. If URL/token/workspace are unknown: stop and ask user.
 
 ## Workspace selection
 
 Before content work, run `siyuan-cli current which` and confirm the resolved workspace matches the user's intent. For writes, ask if only machine-wide `config.current` is selected and the user has not named that target.
 
-Choose the narrowest scope: one or a few calls → `--workspace <name>`; repeated work in a project → `.siyuan-cli.yaml` with `workspace: <name>`; long-lived work without a project → `current bind <name>` then an independent `current confirm <nonce>`; deliberately changing the shared default → `current global <name>` (not isolation). If project and binding disagree, stop and use a one-call `--workspace` exception or fix the conflict. After using `bind`, always run `siyuan-cli current unbind` manually before ending the task. Details: `siyuan-cli doc read cli-usage/current.md`.
+Choose the narrowest scope: one or a few calls → `--workspace <name>`; repeated work in a project → `.siyuan-cli.yaml` with `workspace: <name>`; long-lived work without a project → `current bind <name>` then an independent `current confirm <nonce>`; deliberately changing the shared default → `current global <name>` (not isolation). If project and binding disagree, stop and use a one-call `--workspace` exception or fix the conflict. After using `bind`, always run `siyuan-cli current unbind` manually before ending the task. Details: `siyuan-cli skill read cli-usage/current.md`.
 
 ## Command discovery
 
@@ -33,10 +37,10 @@ siyuan-cli api <id> --help       # params, INPUT SOURCES, examples
 siyuan-cli tool <id> --help      # params, examples, behavior
 siyuan-cli api list              # endpoints + classification/severity labels
 siyuan-cli tool list             # tools
-siyuan-cli doc list              # docs + real paths
+siyuan-cli skill list             # skill + resources + summaries
 ```
 
-Before using `@file:`/`@stdin`/`@env:` on a parameter, check `--help` → `INPUT SOURCES`. If absent, use literal or whole-payload `-j`/`-f`. Doc paths here are read via `siyuan-cli doc read <path>`.
+Before using `@file:`/`@stdin`/`@env:` on a parameter, check `--help` → `INPUT SOURCES`. If absent, use literal or whole-payload `-j`/`-f`. Skill resources are read via `siyuan-cli skill read <path>`.
 
 ## Safety anchors
 
@@ -147,18 +151,18 @@ stderr = diagnostics; stdout = result.
 
 | Need | Read / do |
 |------|-----------|
-| workspace selection/binding | `siyuan-cli doc read cli-usage/current.md` |
-| workspace connect/debug | `siyuan-cli doc read recipes/connect-workspace.md` |
-| config schema (behavior, rawApi, defaults, project-file) | `siyuan-cli doc read cli-usage/workspace-config.md` |
-| locate user-named doc/block | `siyuan-cli doc read recipes/find-target.md` |
-| read content ranges/paging/ids | `siyuan-cli doc read recipes/read-content.md` |
-| reference/backlink navigation | `siyuan-cli doc read recipes/read-content.md` + `siyuan-cli doc read siyuan-guide/sql-query-guide.md` |
-| edit/move/delete/batch/create | `siyuan-cli doc read recipes/edit-content.md` |
-| daily notes | `siyuan-cli doc read siyuan-guide/dailynote-model.md` |
-| block/path/sql model | `siyuan-cli doc read siyuan-guide/siyuan-block.md` |
-| permissions/approval config | `siyuan-cli doc read cli-usage/permission.md` |
-| custom API/tool extension | `siyuan-cli doc read cli-usage/extension.md` |
-| deep CLI mechanics: flags, input-source edge cases, stdout/stderr, Approval Center, MSYS | `siyuan-cli doc read cli-usage/cli-overview.md` |
+| workspace selection/binding | `siyuan-cli skill read cli-usage/current.md` |
+| workspace connect/debug | `siyuan-cli skill read recipes/connect-workspace.md` |
+| config schema (behavior, rawApi, defaults, project-file) | `siyuan-cli skill read cli-usage/workspace-config.md` |
+| locate user-named doc/block | `siyuan-cli skill read recipes/find-target.md` |
+| read content ranges/paging/ids | `siyuan-cli skill read recipes/read-content.md` |
+| reference/backlink navigation | `siyuan-cli skill read recipes/read-content.md` + `siyuan-cli skill read siyuan-guide/sql-query-guide.md` |
+| edit/move/delete/batch/create | `siyuan-cli skill read recipes/edit-content.md` |
+| daily notes | `siyuan-cli skill read siyuan-guide/dailynote-model.md` |
+| block/path/sql model | `siyuan-cli skill read siyuan-guide/siyuan-block.md` |
+| permissions/approval config | `siyuan-cli skill read cli-usage/permission.md` |
+| custom API/tool extension | `siyuan-cli skill read cli-usage/extension.md` |
+| deep CLI mechanics: flags, input-source edge cases, stdout/stderr, Approval Center, MSYS | `siyuan-cli skill read cli-usage/cli-overview.md` |
 
 ## Layer choice
 
@@ -194,6 +198,6 @@ stderr = diagnostics; stdout = result.
 
 ## Internals
 
-For extension typing: `siyuan-cli doc read cli-usage/extension.md`, then inspect installed `dist/shared/schema.d.mts`.
+For extension typing: `siyuan-cli skill read cli-usage/extension.md`, then inspect installed `dist/shared/schema.d.mts`.
 
 GitHub: [siyuan-cli](https://github.com/frostime/siyuan-cli) · [SiYuan kernel API](https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go)

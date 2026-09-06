@@ -21,9 +21,8 @@ summary: Command structure, flags, input sources, and error handling for siyuan-
 | `workspace` | add · list · verify · show · remove | Manage catalog connections; `use` and `which` are deprecated aliases |
 | `api` | list · describe · raw · `<id>` | Call kernel endpoints |
 | `tool` | list · describe · `<id>` | Run composite workflow tools |
-| `doc` | list · read | Discover bundled docs |
 | `approval` | status · list · show · approve · reject · open · stop | Manage approval broker |
-| `skill` | install · read · uninstall | Manage bundled agent skill |
+| `skill` | list · read · install · uninstall | Read the bundled skill and resources; install it to an agent skills dir |
 | `extension` | init · list · cache | Manage user extensions |
 
 Full flags and usage: `siyuan-cli --help`, `siyuan-cli <group> --help`, `siyuan-cli <group> <sub> --help`.

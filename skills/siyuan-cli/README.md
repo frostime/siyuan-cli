@@ -1,12 +1,12 @@
 ---
-title: SiYuan CLI Docs
-slug: docs-index
-summary: Agent-facing reference shipped with siyuan-cli. Start here when using `siyuan-cli doc read README.md`.
+title: SiYuan CLI Skill Resources
+slug: skill-resources
+summary: Agent-facing reference shipped with siyuan-cli. Start here when using `siyuan-cli skill read README.md`.
 ---
 
-# SiYuan CLI Docs
+# SiYuan CLI Skill Resources
 
-If you are an Agent with the installed `siyuan-cli` SKILL, read the SKILL first — it is the operational entry point with safety rules, hot-path commands, and routing. Use this page to choose the right built-in document when the SKILL routes you here or when you reach docs directly.
+If you are an Agent with the installed `siyuan-cli` SKILL, read the SKILL first — it is the operational entry point with safety rules, hot-path commands, and routing. Use this page to choose the right skill resource when the SKILL routes you here or when you browse the skill directly.
 
 ## Quick start points
 
@@ -34,16 +34,16 @@ If you are an Agent with the installed `siyuan-cli` SKILL, read the SKILL first 
 ## Help discovery
 
 ```bash
-siyuan-cli --help                    # command overview + docs root path
-siyuan-cli doc list                  # list built-in docs with real file paths
-siyuan-cli doc read <path>           # read a doc by path or unique basename
+siyuan-cli --help                    # command overview
+siyuan-cli skill list                  # list skill resources with summaries
+siyuan-cli skill read <path>           # read a doc by path or unique basename
 siyuan-cli api list                  # all available endpoints
 siyuan-cli api <id> --help           # endpoint parameters, input sources, examples
 siyuan-cli tool list                 # all available tools
 siyuan-cli tool <id> --help          # tool parameters, examples, behavior
 ```
 
-## Built-in docs
+## Skill resources
 
 ### Recipes (`recipes/`)
 
