@@ -1,7 +1,7 @@
 ---
 title: Process binding implementation handover
 created: 2026-09-06T01:00:09+08:00
-consumed: false
+consumed: true
 ---
 
 ## Assume Reader
