@@ -14,7 +14,7 @@ Use for: append/insert, block update, batch update, document rewrite, create/mov
 For any non-append write:
 
 ```bash
-siyuan-cli workspace which
+siyuan-cli current which
 siyuan-cli tool get-block-info <id>
 siyuan-cli tool get-block-content <id> --range context --limit 7 --showId true
 siyuan-cli tool locate-block --id <doc-id> --pattern "%target text%"  # SQL LIKE, not regex
@@ -175,9 +175,9 @@ Confirm: intended target changed · neighbors unchanged · follow-up ids known �
 
 # Recovery
 
-**Wrong target**: re-run `workspace which` + `get-block-info` + bounded read; narrow to stable block id before retry.
+**Wrong target**: re-run `current which` + `get-block-info` + bounded read; narrow to stable block id before retry.
 
-**Denied / approval required**: inspect rules with `workspace which`; approve/reject in Approval Center or `siyuan-cli approval list`. Retry with `--yes` only when intended and allowed.
+**Denied / approval required**: inspect rules with `current which`; approve/reject in Approval Center or `siyuan-cli approval list`. Retry with `--yes` only when intended and allowed.
 
 # Related docs
 

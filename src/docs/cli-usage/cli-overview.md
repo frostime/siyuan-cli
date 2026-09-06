@@ -11,13 +11,14 @@ summary: Command structure, flags, input sources, and error handling for siyuan-
 - [Input sources](#input-sources) — `@file`, `@stdin`, `@env`, heredoc
 - [Git Bash / MSYS](#git-bash--msys-path-conversion) — path rewriting workarounds
 - [Error handling](#error-handling) — exit codes, error codes
-- [Debugging](#debugging) — `--debug`, `--dry-run`, `workspace which`
+- [Debugging](#debugging) — `--debug`, `--dry-run`, `current which`
 
 ## Commands
 
 | Group | Subcommands | Role |
 |-------|-------------|------|
-| `workspace` | add · list · use · verify · remove · which | Manage kernel connections |
+| `current` | bind · confirm · unbind · global · which · verify | Select and verify the effective workspace |
+| `workspace` | add · list · verify · show · remove | Manage catalog connections; `use` and `which` are deprecated aliases |
 | `api` | list · describe · raw · `<id>` | Call kernel endpoints |
 | `tool` | list · describe · `<id>` | Run composite workflow tools |
 | `doc` | list · read | Discover bundled docs |
@@ -224,12 +225,12 @@ exit 5          → permission policy blocks this; check config rules
 See `permission.md` for the full reference. Quick diagnostic:
 
 ```bash
-siyuan-cli workspace which              # see resolved workspace + full rule list
+siyuan-cli current which                # see resolved workspace and selection source
 siyuan-cli api <id> --debug             # see assembled payload
 ```
 
 Common fixes:
-- `ENDPOINT_DENIED` → `siyuan-cli workspace which` to see rules, add an allow rule
+- `ENDPOINT_DENIED` → use `siyuan-cli current which` to confirm the target, then inspect the applicable permission rules
 - `CONTENT_DENIED` → rules may restrict writes to this notebook/path; inspect rule list
 - `APPROVAL_UNAVAILABLE` → broker not running; retry with `--yes` only when safe
 
@@ -244,9 +245,10 @@ siyuan-cli skill install [--target agents|claude|.pi] [--local]
 ## Debugging
 
 ```bash
-siyuan-cli workspace which              # resolution for current directory
-siyuan-cli workspace verify             # verify effective workspace (cwd-aware)
-siyuan-cli workspace verify --global-current  # verify global config.current only
+siyuan-cli current which                # resolution for current directory
+siyuan-cli current verify               # verify the effective workspace (cwd-aware)
+siyuan-cli workspace verify <name>      # verify a named catalog entry
+siyuan-cli workspace verify --all       # verify all named catalog entries
 siyuan-cli api <id> --debug             # curl-equivalent to stderr
 siyuan-cli api <id> ... --dry-run       # preview writes
 ```

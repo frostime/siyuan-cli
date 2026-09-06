@@ -13,7 +13,7 @@ Agent-first CLI for SiYuan Note. This SKILL is the entry point; built-in docs pr
 
 ```bash
 siyuan-cli --help
-siyuan-cli workspace which
+siyuan-cli current which
 ```
 
 If `siyuan-cli` is missing: `npm install -g @frostime/siyuan-cli`. Always invoke this package as `siyuan-cli`; on SiYuan 3.7.0 or later, `siyuan` may resolve to SiYuan's native CLI instead. If skill version differs from CLI version: `siyuan-cli skill install`, then `siyuan-cli skill read`. If no workspace is configured: `siyuan-cli doc read recipes/connect-workspace.md`. If URL/token/workspace are unknown: stop and ask user.
@@ -130,10 +130,10 @@ EOF
 |------|---------|--------|
 | 0 | success | parse stdout |
 | 1 | general/kernel/approval/not found | read stderr JSON |
-| 2 | config/workspace | `siyuan-cli workspace which` |
+| 2 | config/workspace | `siyuan-cli current which` |
 | 3 | network/kernel down | ask user to start SiYuan |
 | 4 | auth/token | ask user for token |
-| 5 | permission denied | `siyuan-cli workspace which` |
+| 5 | permission denied | `siyuan-cli current which` |
 
 stderr = diagnostics; stdout = result.
 

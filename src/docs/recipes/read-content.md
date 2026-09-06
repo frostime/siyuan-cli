@@ -13,7 +13,7 @@ If the target is not already a stable id → `recipes/find-target.md` first.
 
 Choose the smallest read that satisfies the task.
 
-If you reached this recipe directly: confirm workspace first (`siyuan-cli workspace which`); ensure target is a stable id (see `recipes/find-target.md`).
+If you reached this recipe directly: confirm workspace first (`siyuan-cli current which`); ensure target is a stable id (see `recipes/find-target.md`).
 
 ```text
 known id → get-block-info → choose bounded range → read → report partiality if filtered/truncated
