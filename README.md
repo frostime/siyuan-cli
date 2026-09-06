@@ -65,7 +65,7 @@ siyuan-cli skill install
 
 By default, it installs the built-in SKILL to `~/.agents/skills/`.
 
-Use `--target` to specify a different location, for example: `siyuan-cli skill install --target claude`.
+Use `--agent` to target a specific tool, for example: `siyuan-cli skill install --agent claude-code`. Run `siyuan-cli skill targets` to see every agent and where its skills live.
 
 If you update `siyuan-cli`, run the command again to update the skill.
 
@@ -414,12 +414,12 @@ The built-in doc set is organized in three layers:
 | Task recipes | `recipes/` | Step-by-step workflows: connect workspace, find documents, read content, safely edit content |
 
 ```bash
-siyuan-cli skill list                        # list skill resources with summaries
-siyuan-cli skill read                        # read the skill (with resource manifest)
-siyuan-cli skill read recipes/edit-content.md  # task-oriented operation recipes
+siyuan-cli skill list                          # list skill resources with summaries
+siyuan-cli skill read                          # read the skill (with resource manifest)
+siyuan-cli skill read recipes/edit-content.md  # one bundled resource
 ```
 
-The docs root path is printed by `siyuan-cli --help`, so agents with file system access can read files directly without going through the CLI.
+Read resources with the path exactly as listed by `skill read` / `skill list`; a bare basename resolves only when unambiguous. The skill root path is printed by `siyuan-cli --help` for people who want to browse the files themselves.
 
 ---
 
@@ -437,10 +437,13 @@ The docs root path is printed by `siyuan-cli --help`, so agents with file system
 Install the skill:
 
 ```bash
-siyuan-cli skill install                       # default: ~/.agents/skills/
-siyuan-cli skill install --target claude       # → ~/.claude/skills/
-siyuan-cli skill install --target .copilot --local  # → ./.copilot/skills/ (project-local)
+siyuan-cli skill install                       # sync every recorded install (default: ~/.agents/skills/)
+siyuan-cli skill install --agent claude-code   # → ~/.claude/skills/
+siyuan-cli skill install --agent pi            # → ~/.pi/agent/skills/
+siyuan-cli skill install --project             # → ./.agents/skills/ (this checkout only)
 ```
+
+Global installs are remembered in the CLI config dir, so one bare `skill install` refreshes all of them (e.g. both `~/.agents` and `~/.claude`) after a CLI upgrade; `--project` installs are not tracked. `siyuan-cli skill targets` lists each known agent and where it loads skills from. See `siyuan-cli skill read cli-usage/cli-overview.md`.
 
 Tip: install `skill-creator`, then ask your agent:
 

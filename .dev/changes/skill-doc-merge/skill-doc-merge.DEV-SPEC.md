@@ -1,7 +1,7 @@
 # Merge Built-in Docs into the Skill Surface
 
-Status: draft · 2026-09-06 · supersedes the two-layer SKILL + doc architecture
-LAI: #9
+Status: accepted · 2026-09-07 · supersedes the two-layer SKILL + doc architecture
+LAI: #9 (impl #12 #13 closed; #14 spike open)
 
 ## Problem Statement
 
@@ -54,7 +54,8 @@ skills/siyuan-cli/
 ```text
 siyuan-cli skill read [path]   # no arg → SKILL.md; with path → one resource
 siyuan-cli skill list          # SKILL + all resources: path, title, summary
-siyuan-cli skill install / uninstall   # unchanged behavior (recursive copy)
+siyuan-cli skill targets       # known agents, their project/global dirs, what is installed
+siyuan-cli skill install / uninstall   # recursive copy, see "Install targets" below
 ```
 
 `doc` and its subcommands are removed; `--help` "Start here" points to `skill read`.
@@ -75,25 +76,46 @@ Reading the skill itself (includes the resource manifest — this is how agents 
 </skill>
 ```
 
-Reading one resource:
+Reading one resource — the tag changes, so a resource is never mistaken for the skill itself:
 
 ```xml
-<skill name="siyuan-cli" version="0.17.0" path="recipes/find-target.md" description="Locate user-named docs/blocks.">
+<skill-resource name="siyuan-cli" version="0.17.0" path="recipes/find-target.md" description="Locate user-named docs/blocks.">
   …file body (frontmatter stripped)…
-</skill>
+</skill-resource>
 ```
 
 - `description` on a resource read comes from the file's frontmatter `summary`.
 - Unknown path → structured error listing valid top-level entries (points to `skill list`).
 - Path traversal outside the skill dir is rejected (`SKILL_PATH_INVALID`).
+- Callers address resources by the **relative path the manifest publishes** (`recipes/find-target.md`). A bare basename is accepted only as an unambiguous-compat convenience and is never taught in SKILL.md or README examples.
 
 ### SKILL.md routing rewrite
 
 All routing-table entries change from `siyuan-cli doc read <path>` to `siyuan-cli skill read <path>`. The SKILL.md text teaches exactly this one access path — no "if installed, Read the file directly" branch. Internal self-references inside the moved docs (`doc read/list`) get the same rewrite.
 
+## Install targets and registry (review amendments)
+
+The shipped `--target <dir-name> [--local]` shape conflated two axes and accepted arbitrary names, so `--target .pi` produced `~/.pi/skills` (a path pi never reads) and a typo silently created a directory. Reshaped along the two real axes, with ids and directories copied from the mapping used by vercel-labs/skills so the same names work across installers:
+
+```text
+siyuan-cli skill install [--agent <id>...] [--global|--project] [--dry-run]
+siyuan-cli skill uninstall [--agent <id>...] [--global|--project]
+siyuan-cli skill targets
+```
+
+- `--agent` accepts only table ids: `agents` (default), `claude-code`, `codex`, `cursor`, `gemini-cli`, `github-copilot`, `opencode`, `pi`. Each id maps to a project dir and a global dir; unknown ids fail with the valid list. No path input reaches the filesystem unvalidated, so the old target-name validator is gone.
+- Scope: `--global` (default) resolves under the home directory, `--project` under the working directory. `--global --project` is a conflict error.
+- Repeatable `--agent` (citty collects duplicates into an array) and comma-separated values are both accepted.
+- Symlinked installs (`skills`' default) are deliberately not offered: Windows symlinks need extra privilege and the version probe wants one readable copy per install. Copy is the only method.
+- Registry: each **global** install records `{ agent, path, installedAt }` in `<configDir>/skill-installs.json`. A bare `skill install` syncs every recorded install whose directory still exists, falling back to the default `agents` id when nothing is on record; `--agent` installs those ids and merges with the existing records.
+- **Project-scope installs are not recorded.** They belong to one checkout, not to the machine, so a bare install elsewhere must not rewrite them and the version probe must not report them. Because records are global-only, replaying `agent` alone re-resolves the same path; no scope field is needed.
+- `checkInstalledSkillVersion` probes **every** recorded install (not just the first) and names the offending path; with nothing recorded it probes the default `agents` dir as before.
+- `--agent` must stay absent-by-default in the CLI arg spec — a default value would make every call explicit and disable the sync path.
+- `--target`/`--local` are not aliased, but they are not silently ignored either: citty passes unknown flags through, so both subcommands reject them with `SKILL_FLAG_REMOVED`. The guard is temporary and should be deleted once 0.16 usage has aged out.
+- `skill uninstall` without `--agent` removes only the default `agents` install (mass removal by empty args is not the symmetric behavior), and reports `absent` instead of failing when a location was never installed.
+
 ## Non-goals
 
-- No change to skill install targets/semantics beyond what already exists.
 - No runtime mechanism to refresh mode-3 installs; version drift is handled by the first-class version rule in SKILL.md plus the CLI-side mismatch warning.
 - No changes to workspace/binding behavior.
 

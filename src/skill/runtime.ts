@@ -4,7 +4,8 @@ import {
     mkdirSync,
     readdirSync,
     readFileSync,
-    rmSync
+    rmSync,
+    writeFileSync
 } from 'node:fs';
 import { basename, dirname, extname, join, relative, resolve } from 'pathe';
 import { fileURLToPath } from 'node:url';
@@ -14,10 +15,14 @@ import { getConfigDir } from '../workspace/paths.js';
 
 const BUILTIN_SKILL_NAME = 'siyuan-cli';
 
-export interface SkillTargetOptions {
-    target?: string;
-    local?: boolean;
+export interface SkillInstallOptions {
+    /** Omitted means a bare install: sync every recorded install location. */
+    agents?: SkillAgentId[];
+    /** Defaults to `global`; `project` installs into the working directory. */
+    scope?: SkillScope;
     dryRun?: boolean;
+    /** Override the config dir holding the install registry (tests). */
+    configDir?: string;
 }
 
 export function resolveBuiltinSkillsDir(
@@ -61,59 +66,59 @@ function builtinSkillFile(): string {
 }
 
 
-function validateSkillTargetName(name: string): void {
-    if (!name || name === '.' || name === '..') {
-        throw new CliError(
-            ExitCode.CONFIG,
-            'SKILL_TARGET_INVALID',
-            `Invalid skill target: "${name || '(empty)'}".`,
-            'Use a simple target name such as agents, claude, pi, or .pi.'
-        );
-    }
-    if (/[\\/]/.test(name) || !/^[A-Za-z0-9._-]+$/.test(name)) {
-        throw new CliError(
-            ExitCode.CONFIG,
-            'SKILL_TARGET_INVALID',
-            `Invalid skill target: "${name}".`,
-            'Use a simple target name such as agents, claude, pi, or .pi.'
-        );
-    }
+// ─── Install targets ───────────────────────────────────────────────────
+// Where each known agent discovers skills. Agent ids and their directories
+// follow the mapping used by the `skills` installer
+// (https://github.com/vercel-labs/skills), so the same names work across
+// tools. `project` paths are relative to the working directory, `global`
+// paths relative to the home directory; most agents share the project-level
+// `.agents/skills` directory.
+
+export const SKILL_AGENT_TARGETS = {
+    agents: { project: '.agents', global: '.agents' },
+    'claude-code': { project: '.claude', global: '.claude' },
+    codex: { project: '.agents', global: '.codex' },
+    cursor: { project: '.agents', global: '.cursor' },
+    'gemini-cli': { project: '.agents', global: '.gemini' },
+    'github-copilot': { project: '.agents', global: '.copilot' },
+    opencode: { project: '.agents', global: '.config/opencode' },
+    pi: { project: '.pi', global: '.pi/agent' }
+} as const;
+
+export type SkillAgentId = keyof typeof SKILL_AGENT_TARGETS;
+export type SkillScope = 'global' | 'project';
+
+/** Where a bare install with nothing on record puts the skill. */
+export const DEFAULT_SKILL_AGENT: SkillAgentId = 'agents';
+
+export function skillAgentIds(): SkillAgentId[] {
+    return Object.keys(SKILL_AGENT_TARGETS) as SkillAgentId[];
 }
 
-export function normalizeSkillTargetName(target?: string): string {
-    const name = (target ?? 'agents').trim();
-    if (!name) return 'agents';
-    validateSkillTargetName(name);
-    if (name === 'agents' || name === 'claude') return name;
-    return name.startsWith('.') ? name : `.${name}`;
+/** Resolve one `--agent` value; anything off the table is an error. */
+export function resolveSkillAgentId(input: string): SkillAgentId {
+    const id = input.trim().toLowerCase();
+    if (isSkillAgentId(id)) return id;
+    throw new CliError(
+        ExitCode.CONFIG,
+        'SKILL_AGENT_UNKNOWN',
+        `Unknown skill agent: "${input}".`,
+        `Known agents: ${skillAgentIds().join(', ')}. See \`siyuan-cli skill targets\`.`
+    );
 }
 
-export function resolveSkillTargetDir(opts: SkillTargetOptions = {}): string {
-    const normalized = normalizeSkillTargetName(opts.target);
-    if (normalized === 'agents') {
-        if (opts.local) {
-            throw new CliError(
-                ExitCode.CONFIG,
-                'SKILL_TARGET_INVALID',
-                'Target "agents" uses the home directory shortcut.',
-                'Use `--target .agents --local` for a project-local path.'
-            );
-        }
-        return join(homedir(), '.agents', 'skills', BUILTIN_SKILL_NAME);
-    }
-    if (normalized === 'claude') {
-        if (opts.local) {
-            throw new CliError(
-                ExitCode.CONFIG,
-                'SKILL_TARGET_INVALID',
-                'Target "claude" uses the home directory shortcut.',
-                'Use `--target .claude --local` for a project-local path.'
-            );
-        }
-        return join(homedir(), '.claude', 'skills', BUILTIN_SKILL_NAME);
-    }
-    const base = opts.local ? process.cwd() : homedir();
-    return join(base, normalized, 'skills', BUILTIN_SKILL_NAME);
+function isSkillAgentId(value: string): value is SkillAgentId {
+    return Object.hasOwn(SKILL_AGENT_TARGETS, value);
+}
+
+/** The skill directory one agent + scope installs into. */
+export function resolveSkillTargetDir(
+    agent: SkillAgentId = DEFAULT_SKILL_AGENT,
+    scope: SkillScope = 'global'
+): string {
+    const entry = SKILL_AGENT_TARGETS[agent];
+    const base = scope === 'project' ? process.cwd() : homedir();
+    return join(base, entry[scope], 'skills', BUILTIN_SKILL_NAME);
 }
 
 export function readSkill(): string {
@@ -323,10 +328,10 @@ export function renderSkillRead(path?: string): string {
 
     const { resource, body } = resolveSkillResource(path);
     return (
-        `<skill ${attrs} path="${escapeAttr(resource.relPath)}"` +
+        `<skill-resource ${attrs} path="${escapeAttr(resource.relPath)}"` +
         `${resource.title ? ` title="${escapeAttr(resource.title)}"` : ''}` +
         `${resource.summary ? ` description="${escapeAttr(resource.summary)}"` : ''}>\n\n` +
-        `${body.trimEnd()}\n</skill>\n`
+        `${body.trimEnd()}\n</skill-resource>\n`
     );
 }
 
@@ -344,32 +349,147 @@ export function formatSkillHint(): string {
     );
 }
 
-export function installSkill(opts: SkillTargetOptions = {}) {
+export function installSkill(opts: SkillInstallOptions = {}) {
     const sourceDir = builtinSkillDir();
-    const targetDir = resolveSkillTargetDir(opts);
-    const action = existsSync(targetDir) ? 'updated' : 'installed';
-    const operations = [{ op: 'copy', from: sourceDir, to: targetDir }];
+    const known = liveSkillInstalls(opts.configDir);
+    const targets = installPlans(opts, known).map(({ agent, scope }) => {
+        const targetDir = resolveSkillTargetDir(agent, scope);
+        return {
+            agent,
+            scope,
+            path: targetDir,
+            action: existsSync(targetDir) ? ('updated' as const) : ('installed' as const),
+            operations: [{ op: 'copy', from: sourceDir, to: targetDir }]
+        };
+    });
+
     if (opts.dryRun) {
-        return { target: targetDir, action, dryRun: true, operations };
+        return { dryRun: true, targets };
     }
 
-    mkdirSync(dirname(targetDir), { recursive: true });
-    rmSync(targetDir, { recursive: true, force: true });
-    cpSync(sourceDir, targetDir, { recursive: true, force: true });
-    return { target: targetDir, action, dryRun: false };
-}
-
-export function uninstallSkill(opts: Omit<SkillTargetOptions, 'dryRun'> = {}) {
-    const targetDir = resolveSkillTargetDir(opts);
-    if (!existsSync(targetDir)) {
-        throw new CliError(
-            ExitCode.CONFIG,
-            'SKILL_TARGET_MISSING',
-            `Target does not exist: ${targetDir}`
+    for (const entry of targets) {
+        mkdirSync(dirname(entry.path), { recursive: true });
+        rmSync(entry.path, { recursive: true, force: true });
+        cpSync(sourceDir, entry.path, { recursive: true, force: true });
+    }
+    if ((opts.scope ?? 'global') === 'global') {
+        // Keep the other recorded installs; refresh the ones just written.
+        const written = new Set(targets.map((entry) => entry.path));
+        writeSkillInstalls(
+            [
+                ...known.filter((record) => !written.has(record.path)),
+                ...targets.map((entry) => ({
+                    agent: entry.agent,
+                    path: entry.path,
+                    installedAt: new Date().toISOString()
+                }))
+            ],
+            opts.configDir
         );
     }
-    rmSync(targetDir, { recursive: true, force: true });
-    return { removed: targetDir };
+    return { dryRun: false, targets };
+}
+
+/** Which agent + scope an install call covers. */
+function installPlans(
+    opts: SkillInstallOptions,
+    known: SkillInstallRecord[]
+): { agent: SkillAgentId; scope: SkillScope }[] {
+    const scope = opts.scope ?? 'global';
+    if (opts.agents?.length) return opts.agents.map((agent) => ({ agent, scope }));
+    // A bare global install keeps the machine's recorded installs in sync and
+    // falls back to the default agent when nothing is on record. A bare
+    // project install has no history to replay, so it uses the default agent.
+    if (scope === 'global' && known.length > 0) {
+        return known.map((record) => ({ agent: record.agent, scope }));
+    }
+    return [{ agent: DEFAULT_SKILL_AGENT, scope }];
+}
+
+export function uninstallSkill(opts: SkillInstallOptions = {}) {
+    const scope = opts.scope ?? 'global';
+    const agents = opts.agents?.length
+        ? opts.agents
+        : [DEFAULT_SKILL_AGENT];
+    const targets = agents.map((agent) => {
+        const targetDir = resolveSkillTargetDir(agent, scope);
+        const existed = existsSync(targetDir);
+        if (existed) {
+            rmSync(targetDir, { recursive: true, force: true });
+        }
+        return {
+            agent,
+            scope,
+            path: targetDir,
+            action: existed ? ('removed' as const) : ('absent' as const)
+        };
+    });
+
+    const gone = new Set(targets.map((entry) => entry.path));
+    const known = readSkillInstalls(opts.configDir);
+    const kept = known.filter((record) => !gone.has(record.path));
+    if (kept.length !== known.length) {
+        writeSkillInstalls(kept, opts.configDir);
+    }
+    return { targets };
+}
+
+// ─── Install registry ──────────────────────────────────────────────────
+// Every global `skill install` records its location in the config dir, so a
+// later bare `skill install` syncs all recorded installs (multi-agent setups)
+// instead of blindly touching the default target. Project installs are
+// deliberately absent: they belong to one checkout, not to the machine.
+// Records are global-scope, so replaying `agent` alone re-resolves the path.
+
+export interface SkillInstallRecord {
+    agent: SkillAgentId;
+    path: string;
+    installedAt: string;
+}
+
+const SKILL_INSTALLS_FILE = 'skill-installs.json';
+
+function skillInstallsPath(configDir?: string): string {
+    return join(configDir ?? getConfigDir(), SKILL_INSTALLS_FILE);
+}
+
+function isInstallRecord(value: unknown): value is SkillInstallRecord {
+    const record = value as Record<string, unknown> | null;
+    return (
+        typeof record === 'object' &&
+        record !== null &&
+        typeof record['path'] === 'string' &&
+        typeof record['agent'] === 'string' &&
+        isSkillAgentId(record['agent'])
+    );
+}
+
+function liveSkillInstalls(configDir?: string): SkillInstallRecord[] {
+    return readSkillInstalls(configDir).filter((record) =>
+        existsSync(join(record.path, 'SKILL.md'))
+    );
+}
+
+export function readSkillInstalls(configDir?: string): SkillInstallRecord[] {
+    try {
+        const parsed = JSON.parse(
+            readFileSync(skillInstallsPath(configDir), 'utf-8')
+        ) as unknown;
+        const installs = isRecord(parsed) ? parsed['installs'] : null;
+        return Array.isArray(installs) ? installs.filter(isInstallRecord) : [];
+    } catch {
+        return [];
+    }
+}
+
+function writeSkillInstalls(records: SkillInstallRecord[], configDir?: string): void {
+    const filePath = skillInstallsPath(configDir);
+    mkdirSync(dirname(filePath), { recursive: true });
+    writeFileSync(filePath, JSON.stringify({ installs: records }, null, 2) + '\n');
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
 }
 
 /**
@@ -382,33 +502,85 @@ function parseSkillVersion(content: string): string | undefined {
 }
 
 /**
- * Check whether the installed SKILL at the default target matches the CLI version.
- * Returns a warning string if there is a mismatch or the SKILL is missing, otherwise null.
- *
- * #TODO HINT: currently only checks `~/.agents/skills/` (default target).
- * If multi-target checking is needed, iterate over additional targets here
- * (e.g. `~/.claude/skills/`, `~/.pi/agent/skills/`).
+ * Check every recorded install against the running CLI version. When nothing
+ * is on record (zero-install, or an install predating the registry), probe the
+ * default `agents` target instead. Returns the first problem found, else null.
  */
-export function checkInstalledSkillVersion(cliVersion: string): string | null {
-    const targetDir = resolveSkillTargetDir({ target: 'agents' });
-    const targetFile = join(targetDir, 'SKILL.md');
+export function checkInstalledSkillVersion(
+    cliVersion: string,
+    configDir?: string
+): string | null {
+    const recorded = liveSkillInstalls(configDir);
+    const candidates =
+        recorded.length > 0
+            ? recorded.map((record) => record.path)
+            : [resolveSkillTargetDir(DEFAULT_SKILL_AGENT)];
 
-    if (!existsSync(targetFile)) {
-        return `SKILL file not found at ${targetFile}. Run \`siyuan-cli skill install\` to install it.`;
+    for (const targetDir of candidates) {
+        const problem = installedSkillVersionProblem(targetDir, cliVersion);
+        if (problem) return problem;
     }
-
-    try {
-        const content = readFileSync(targetFile, 'utf-8');
-        const installedVersion = parseSkillVersion(content);
-        if (!installedVersion) {
-            return `Cannot read version from ${targetFile}. Run \`siyuan-cli skill install\` to reinstall.`;
-        }
-        if (installedVersion !== cliVersion) {
-            return `SKILL version mismatch: installed ${installedVersion}, CLI ${cliVersion}. Run \`siyuan-cli skill install\` to update.`;
-        }
-    } catch {
-        return `Failed to read ${targetFile}. Run \`siyuan-cli skill install\` to reinstall.`;
-    }
-
     return null;
+}
+
+function installedSkillVersionProblem(
+    targetDir: string,
+    cliVersion: string
+): string | null {
+    const file = join(targetDir, 'SKILL.md');
+    if (!existsSync(file)) {
+        return `SKILL file not found at ${file}. Run \`siyuan-cli skill install\` to install it.`;
+    }
+
+    let installedVersion: string | undefined;
+    try {
+        installedVersion = parseSkillVersion(readFileSync(file, 'utf-8'));
+    } catch {
+        return `Failed to read ${file}. Run \`siyuan-cli skill install\` to reinstall.`;
+    }
+    if (!installedVersion) {
+        return `Cannot read version from ${file}. Run \`siyuan-cli skill install\` to reinstall.`;
+    }
+    if (installedVersion !== cliVersion) {
+        return `SKILL version mismatch: installed ${installedVersion} at ${file}, CLI ${cliVersion}. Run \`siyuan-cli skill install\` to update.`;
+    }
+    return null;
+}
+
+/** Version of the skill installed at `dir`, or undefined when nothing readable is there. */
+function installedVersionAt(dir: string): string | undefined {
+    try {
+        return parseSkillVersion(readFileSync(join(dir, 'SKILL.md'), 'utf-8'));
+    } catch {
+        return undefined;
+    }
+}
+
+/** Human-readable map of every known agent, its skill directories, and what is installed. */
+export function formatSkillTargets(): string {
+    const recorded = new Set(
+        readSkillInstalls().map((record) => normalizeRecordPath(record.path))
+    );
+    const lines = ['Agents', ''];
+    for (const agent of skillAgentIds()) {
+        lines.push(agent);
+        for (const scope of ['project', 'global'] as SkillScope[]) {
+            const dir = resolveSkillTargetDir(agent, scope);
+            const marks = [
+                installedVersionAt(dir) ? `installed ${installedVersionAt(dir)}` : '',
+                scope === 'global' && recorded.has(normalizeRecordPath(dir))
+                    ? 'recorded'
+                    : ''
+            ].filter(Boolean);
+            lines.push(
+                `  ${scope}: ${dir}${marks.length > 0 ? ` (${marks.join(', ')})` : ''}`
+            );
+        }
+        lines.push('');
+    }
+    return lines.join('\n').trimEnd();
+}
+
+function normalizeRecordPath(path: string): string {
+    return path.replace(/\\/g, '/');
 }

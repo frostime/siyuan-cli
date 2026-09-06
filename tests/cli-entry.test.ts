@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -100,4 +100,22 @@ test('custom API, tool, extension, endpoint, and tool help use the canonical com
         assert.equal(result.status, 0, `${args.join(' ')}: ${result.stderr}`);
         assert.match(result.stdout, expected);
     }
+});
+
+test('skill install rejects bad agent ids, removed flags, and conflicting scopes', () => {
+    const failures: [string[], RegExp][] = [
+        [['skill', 'install', '--agent', 'bogus'], /SKILL_AGENT_UNKNOWN/],
+        [['skill', 'install', '--target', 'claude'], /SKILL_FLAG_REMOVED/],
+        [['skill', 'install', '--global', '--project'], /SKILL_SCOPE_CONFLICT/]
+    ];
+
+    for (const [args, expected] of failures) {
+        const result = runCli(...args);
+        const output = `${result.stdout}${result.stderr}`;
+        assert.notEqual(result.status, 0, `${args.join(' ')}: ${output}`);
+        assert.match(output, expected);
+    }
+
+    // Nothing was installed, so no install registry was created.
+    assert.ok(!existsSync(join(configRoot, 'skill-installs.json')));
 });

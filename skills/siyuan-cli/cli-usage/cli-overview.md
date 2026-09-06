@@ -238,10 +238,19 @@ Common fixes:
 ## Skill install targets
 
 ```bash
-siyuan-cli skill install [--target agents|claude|.pi] [--local]
+siyuan-cli skill targets                              # every known agent, its paths, what is installed
+siyuan-cli skill install                              # sync every recorded install
+siyuan-cli skill install --agent claude-code          # just this agent, then record it
+siyuan-cli skill install --agent pi --agent codex     # repeatable, or --agent pi,codex
+siyuan-cli skill install --project                    # ./.agents/skills/, never recorded
+siyuan-cli skill uninstall [--agent <id>] [--project]
 ```
 
-`agents`/`claude` are home-directory shortcuts; generic names normalize to leading-dot form; `--local` uses project directory.
+`--agent` takes an agent id from a fixed table — `agents` (the shared `.agents` convention), `claude-code`, `codex`, `cursor`, `gemini-cli`, `github-copilot`, `opencode`, `pi` — and unknown ids fail with the valid list instead of creating a directory. The ids and their directories match the mapping used by the `skills` installer (github.com/vercel-labs/skills). Scope: `--global` (default, under the home directory) or `--project` (under the working directory); most agents share the project-level `.agents/skills/`, while global paths differ per agent (`pi` → `~/.pi/agent/skills`, `opencode` → `~/.config/opencode/skills`).
+
+A bare install keeps the machine in sync: each global install is recorded in the config dir (`skill-installs.json`), and `skill install` without `--agent` refreshes every recorded location that still exists, falling back to the `agents` id when nothing is on record. Project-scope installs belong to one checkout, so they are deliberately not tracked and never touched by a bare install. `skill uninstall` without `--agent` removes only the default `agents` install, and reports `absent` for locations that were never installed. Version-mismatch warnings name the offending install path.
+
+Read resources with the exact path shown by `skill read` / `skill list` (e.g. `recipes/find-target.md`); a bare basename resolves only when unambiguous.
 
 ## Debugging
 
