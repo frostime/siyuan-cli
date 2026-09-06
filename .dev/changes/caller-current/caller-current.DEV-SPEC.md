@@ -142,17 +142,18 @@ stdout/stderr 仍是：成功结果在 stdout（workspace/current 管理命令�
 
 ### 平台
 
-v1 必须 Windows 和 Unix 都能 bind。MSYS/Git Bash 仍走 Windows 进程树，不能当 Unix 实现。Unix 祖先链和指纹必须先在真 Linux 上 spike，再写实现。spike 未通过前，不能把 Unix bind 做成空壳成功。
+v1 保持 CLI 的跨平台范围，Windows、Linux 和 macOS 都应支持 process binding。MSYS/Git Bash 仍走 Windows 进程树，不能当 Unix 实现。进程启动标识按平台 best-effort 获取：Windows 可用 creation time，Linux 可用 `/proc/<pid>/stat` starttime，macOS 可用 libproc/sysctl 或其他可行方式；拿不到启动标识不等于平台不支持，只降低匹配强度。只有无法读取当前 PID 或无法构造任何祖先链时，process binding 才失败。
 
 ## Implementation Decisions
 
-- 身份键是进程锚点，不是 runtime 注入的 session id；能力名称和输出使用 process binding，避免暗示逻辑 session 隔离。
+- 目标是尽可能唯一定位 OS 进程实例，不是 runtime 注入的 session id；能力名称和输出使用 process binding，避免暗示逻辑 session 隔离。
+- PID 是必要的基础定位字段；PPID 是祖先关系字段；进程名、可执行文件路径和命令行参数是进程角色/上下文的便宜辅助字段；平台支持时加入 process start identity 以降低 PID 复用风险。启动标识不是平台准入条件，缺失时允许 best-effort 匹配并在诊断中暴露匹配强度。
 - bind 的对象是已有命名 workspace，不是路径或 URL。
 - 项目文件和 bind 可以同时存在；指向不同名字时硬报错，不默默分胜负。
 - 选择从目录命令里拆到顶层 `current`。`workspace use` 的语义（写 `config.current`）改由 `current global` 承担，不把裸 `use` 改成 session bind。
 - `current project` 不做。
 - 进程锚点不是权限系统；permission / token / approval 仍跟被选中的那个 workspace 走。
-- 进程祖先探测的跨平台接口已经由 spike 验证方向；pending probe 的存放位置和过期时间、绑定记录的存储格式仍属于实现设计。不能因为 WT/VS Code/Codex 等进程名出现在祖先链中就一律失败，也不要求实现猜测某个共同进程是否服务多个逻辑调用者。SPEC 不预先规定存储格式。
+- 进程祖先探测的跨平台接口已经由 spike 验证方向；pending probe 的存放位置和过期时间、绑定记录的存储格式仍属于实现设计。不能因为 WT/VS Code/Codex 等进程名出现在祖先链中就一律失败，也不要求实现猜测某个共同进程是否服务多个逻辑调用者。SPEC 不预先规定存储格式。进程节点应尽量采集命令行参数并形成安全签名；原始命令行可能含 token、prompt 或路径，不应直接持久化或默认输出。
 
 ## Acceptance Criteria
 
@@ -169,6 +170,7 @@ v1 必须 Windows 和 Unix 都能 bind。MSYS/Git Bash 仍走 Windows 进程树�
 - 两次调用没有可匹配的共同进程实例：失败，不写入绑定；共同进程是否还承载其他逻辑调用者不由 CLI 猜测。
 - `current bind` 在当前 cwd 已有项目文件且名字不一致：立即失败，不写入 pending；confirm 阶段仍重新检查。
 - 锚点进程已退出：绑定不再生效。
+- 启动标识可用时，PID 相同但启动标识不同的进程不匹配；启动标识不可用时，允许基于 PID 和辅助元数据做 best-effort 匹配，并显示较低匹配强度。
 - `workspace verify` 无参：失败并提示；`workspace verify home` 不读项目文件、不读 bind。
 - `current verify` 带名字：失败。
 - `workspace use` / `workspace which` 仍能跑，stderr 有 Deprecated 警告；`--help` 默认列表里看不到它们（若 citty 限制导致必须显示，则标 Deprecated）。
@@ -177,7 +179,7 @@ v1 必须 Windows 和 Unix 都能 bind。MSYS/Git Bash 仍走 Windows 进程树�
 需要人看的：
 
 - 打开 [prototype/index.html](prototype/index.html)，走完「推荐绑定」「项目文件冲突」「共享祖先失败」三条，确认命令文案、报错时机和 `which` 输出是想要的产品形态。
-- Unix spike 在真 Linux 上跑过，而不是 MSYS。
+- Linux spike 在真 Linux 上跑过，而不是 MSYS；macOS 至少保留 best-effort 适配路径，不因缺少启动标识而整体拒绝。
 
 ## Open Questions
 
@@ -198,6 +200,7 @@ v1 必须 Windows 和 Unix 都能 bind。MSYS/Git Bash 仍走 Windows 进程树�
 - **进程作用域 current**：这次 CLI 进程所属的可观察进程作用域所选定的 workspace 名字。它不是逻辑 Agent session 的身份，也不是全局 `config.current` 或项目文件。
 - **进程锚点**：两次独立调用的最近、稳定共同祖先进程，用 pid + 创建时间标识。绑定挂在这个进程实例上，进程退出即失效；更高层的 WT、VS Code、Codex 或 systemd 可能承载多个逻辑调用者，不能自动宣称拥有 session 粒度。
 - **进程绑定（process binding）**：把 workspace 选择附着到进程锚点的机制。它能消除每次调用传参的需要，但只提供该进程作用域的隔离；同一 OS 进程内的逻辑调用者可能共享它。它不是认证，也不是逻辑 Agent/session 的通用身份机制。
+- **进程签名**：由进程名、可执行文件路径和规范化命令行参数形成的角色/上下文摘要。它用于诊断、区分同名进程，以及在没有 process start identity 时降低误匹配风险；不是逻辑 Agent/session 身份。
 - **观察到的 cwd**：bind 时记录的工作目录上下文，可用于 `current which` 诊断或未来的显式目录约束；它不是进程身份，也不参与绑定匹配。
 - **目录**：全局配置里有哪些 workspace、它们怎么连。对应 `workspace add/list/show/remove`。
 - **选择**：这次调用用哪个名字、这个决定记在哪。对应 `current *`。

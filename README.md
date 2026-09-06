@@ -32,7 +32,7 @@ Use `siyuan-cli` as the canonical command. The package also installs `siyuan` as
 ```bash
 siyuan-cli workspace add local --url http://127.0.0.1:6806 --token <your-token>  # Settings → About in SiYuan
 siyuan-cli workspace verify local
-siyuan-cli workspace which
+siyuan-cli current which
 ```
 
 If you don't know the port, use workspace directory auto-discovery (local only):
@@ -237,8 +237,8 @@ Workspace connections are stored in `~/.config/siyuan-cli/config.yaml` (also res
 ```bash
 siyuan-cli workspace add local  --url http://127.0.0.1:6806 --token <token>
 siyuan-cli workspace add remote --url http://192.168.1.100:6806 --token <token>
-siyuan-cli workspace use local          # set global default
-siyuan-cli workspace list               # list all configured workspaces
+siyuan-cli current global local          # set machine-global default
+siyuan-cli workspace list                # list all configured workspaces
 siyuan-cli workspace verify local       # test connection and auth
 ```
 
@@ -253,6 +253,17 @@ workspaces:
       value: SIYUAN_TOKEN       # resolved at call time, never written to config
 ```
 
+### Workspace selection
+
+After `workspace verify <name>`, choose the narrowest selection scope:
+
+- one or a few calls: pass `--workspace <name>`;
+- repeated work in a project: add `workspace: <name>` to `.siyuan-cli.yaml`;
+- long-lived work without a project file: use `siyuan-cli current bind <name>`, then run `siyuan-cli current confirm <nonce>` in a new independent call;
+- deliberately change the machine-wide fallback: use `siyuan-cli current global <name>`.
+
+Before content work, inspect the result with `siyuan-cli current which`. If you used process binding, run `siyuan-cli current unbind` manually before ending the task. Process binding is not logical Agent/session isolation; use a project file or explicit `--workspace` when callers share a process.
+
 ### Project-level pinning
 
 When multiple projects talk to different SiYuan instances, a global default causes conflicts. Place a `.siyuan-cli.yaml` at your project root to pin that project to a workspace:
@@ -266,10 +277,12 @@ workspace: prod   # must exist in the global config
 The full resolution chain:
 
 ```
---workspace flag  →  $SIYUAN_CLI_WORKSPACE  →  .siyuan-cli.yaml  →  config.current
+--baseUrl  →  --workspace flag  →  $SIYUAN_CLI_WORKSPACE  →  project file / process binding  →  config.current
 ```
 
-Use `siyuan-cli workspace which` at any time to inspect how the current directory resolves — it shows the resolved workspace, its source, the base URL, whether a token is present, and the full permission rule list.
+If a project file and process binding both select a workspace, they must agree; otherwise resolution fails.
+
+Use `siyuan-cli current which` at any time to inspect how the current directory resolves — it shows the resolved workspace, its source, the base URL or workspace directory, the project config path, and process-binding diagnostics when applicable. It does not access the kernel.
 
 ---
 
@@ -370,7 +383,7 @@ siyuan-cli approval reject <id>      # reject from terminal
 
 Independent of user-configured rules, endpoints classified as `destructive` or `critical` risk — batch deletes, system-level writes, runtime invocations — **automatically require approval even if your rules say `allow`**. This is a built-in safety net that cannot be bypassed by permission rules alone; only `--yes` (or `behavior.allowYes: false` to disable `--yes` entirely) controls it.
 
-Use `siyuan-cli workspace which` to inspect the resolved rule list, or `--dry-run` on any command to preview whether it would be blocked or gated. For the complete rule reference: `siyuan-cli doc read permission`.
+Use `siyuan-cli current which` to confirm the resolved workspace and source, inspect the applicable `permission` blocks in `config.yaml` or `.siyuan-cli.yaml`, or use `--dry-run` on any command to preview whether it would be blocked or gated. For the complete rule reference: `siyuan-cli doc read permission`.
 
 ---
 
@@ -547,18 +560,19 @@ siyuan-cli api filetree.getIDsByHPath --notebook <id> --path //TestDoc
 ### Auth failures
 
 - Verify the token with `siyuan-cli workspace verify <name>`
+- Verify the effective selection with `siyuan-cli current verify`
 - Check that SiYuan's kernel is running and reachable at the configured URL
 - Tokens from `tokenSource: env` are resolved at call time; ensure the env var is set in the calling shell
 
 ### Wrong workspace
 
-Run `siyuan-cli workspace which` to inspect the resolved workspace and its resolution source. Use `--workspace <name>` to override for a single command.
+Run `siyuan-cli current which` to inspect the resolved workspace and its resolution source. Use `--workspace <name>` to override for a single command.
 
 ### Permission denied
 
 - Run `siyuan-cli api <id> --dry-run` to see if the operation would be blocked
-- Run `siyuan-cli workspace which` to review the full rule list
-- Edit the `siyuan-cli/config.yaml` file
+- Inspect the applicable `permission` blocks in `config.yaml` or `.siyuan-cli.yaml`
+- Edit the applicable `permission` rules in `config.yaml` or `.siyuan-cli.yaml`
 
 ---
 

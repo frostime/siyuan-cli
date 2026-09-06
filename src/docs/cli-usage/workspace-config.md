@@ -207,33 +207,36 @@ behavior:                    # optional; merged with workspace/defaults behavior
 ### Resolution chain
 
 ```text
---workspace flag > $SIYUAN_CLI_WORKSPACE > .siyuan-cli.yaml > config.current
+--workspace flag > $SIYUAN_CLI_WORKSPACE > project file / process binding > config.current
 ```
+
+If a project file and process binding both select a workspace, they must agree; otherwise resolution fails.
 
 ### Inspect
 
 ```bash
-siyuan-cli workspace which
+siyuan-cli current which
 ```
 
-Output includes `source`, active workspace, project config path (if found), and the full resolved rule list (if permission rules are configured).
+Output includes `source`, active workspace, project config path (if found), and process-binding diagnostics when a binding is active. It does not access the kernel or print the resolved permission rule list.
 
 ## Quick verification
 
 ```bash
 siyuan-cli workspace list                    # all configured workspaces
-siyuan-cli workspace which                   # current resolution (no network)
-siyuan-cli workspace verify                  # verify effective workspace for current directory
-siyuan-cli workspace verify <name>           # verify an explicit workspace by name
-siyuan-cli workspace verify --global-current # verify global config.current only
+siyuan-cli current which                     # current resolution (no network)
+siyuan-cli current verify                    # verify the effective workspace for this call
+siyuan-cli workspace verify <name>           # verify one named catalog entry
+siyuan-cli workspace verify --all            # verify all named catalog entries
 ```
 
-`workspace verify` (no args) follows effective resolution for the current directory:
-`$SIYUAN_CLI_WORKSPACE` env → `.siyuan-cli.yaml` → `config.current`.
-Its output includes `source` and `projectConfigPath` so you can see where the active target came from.
+`current verify` follows the effective selection available to that command:
+`$SIYUAN_CLI_WORKSPACE` → project file / process binding → `config.current`.
+Its output includes `source` and `projectConfigPath` so you can see where the active target came from. Use `workspace verify <name|--all>` when you want to check named catalog connections instead.
 
 ## Related docs
 
+- [`current.md`](current.md) — effective selection, process binding, verification, and selection errors
 - [`permission.md`](permission.md) — permission rules, explicit approval, extension schema coupling
 - [`cli-overview.md`](cli-overview.md) — Approval Center commands and broker lifecycle
 - `recipes/connect-workspace.md` — step-by-step workspace setup recipe

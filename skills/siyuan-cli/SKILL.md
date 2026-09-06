@@ -13,10 +13,16 @@ Agent-first CLI for SiYuan Note. This SKILL is the entry point; built-in docs pr
 
 ```bash
 siyuan-cli --help
-siyuan-cli workspace which
+siyuan-cli current which
 ```
 
 If `siyuan-cli` is missing: `npm install -g @frostime/siyuan-cli`. Always invoke this package as `siyuan-cli`; on SiYuan 3.7.0 or later, `siyuan` may resolve to SiYuan's native CLI instead. If skill version differs from CLI version: `siyuan-cli skill install`, then `siyuan-cli skill read`. If no workspace is configured: `siyuan-cli doc read recipes/connect-workspace.md`. If URL/token/workspace are unknown: stop and ask user.
+
+## Workspace selection
+
+Before content work, run `siyuan-cli current which` and confirm the resolved workspace matches the user's intent. For writes, ask if only machine-wide `config.current` is selected and the user has not named that target.
+
+Choose the narrowest scope: one or a few calls → `--workspace <name>`; repeated work in a project → `.siyuan-cli.yaml` with `workspace: <name>`; long-lived work without a project → `current bind <name>` then an independent `current confirm <nonce>`; deliberately changing the shared default → `current global <name>` (not isolation). If project and binding disagree, stop and use a one-call `--workspace` exception or fix the conflict. After using `bind`, always run `siyuan-cli current unbind` manually before ending the task. Details: `siyuan-cli doc read cli-usage/current.md`.
 
 ## Command discovery
 
@@ -130,10 +136,10 @@ EOF
 |------|---------|--------|
 | 0 | success | parse stdout |
 | 1 | general/kernel/approval/not found | read stderr JSON |
-| 2 | config/workspace | `siyuan-cli workspace which` |
+| 2 | config/workspace | `siyuan-cli current which` |
 | 3 | network/kernel down | ask user to start SiYuan |
 | 4 | auth/token | ask user for token |
-| 5 | permission denied | `siyuan-cli workspace which` |
+| 5 | permission denied | `siyuan-cli current which` |
 
 stderr = diagnostics; stdout = result.
 
@@ -141,6 +147,7 @@ stderr = diagnostics; stdout = result.
 
 | Need | Read / do |
 |------|-----------|
+| workspace selection/binding | `siyuan-cli doc read cli-usage/current.md` |
 | workspace connect/debug | `siyuan-cli doc read recipes/connect-workspace.md` |
 | config schema (behavior, rawApi, defaults, project-file) | `siyuan-cli doc read cli-usage/workspace-config.md` |
 | locate user-named doc/block | `siyuan-cli doc read recipes/find-target.md` |

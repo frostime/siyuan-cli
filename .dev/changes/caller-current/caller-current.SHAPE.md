@@ -32,8 +32,9 @@ src/
 │           current operations. It delegates selection and binding mechanics.
 ├── workspace/
 │   ├── process-tree.ts             create  +140–240
-│   │   └── platform-neutral process node/identity model and Windows/Unix
-│   │       ancestry capture; hides Toolhelp and `/proc` details.
+│   │   └── platform-neutral process node/identity/signature model and
+│   │       Windows/Unix/macOS ancestry capture; hides platform APIs and command
+│   │       line retrieval details.
 │   ├── process-binding.ts          create  +180–300
 │   │   └── pending probe and binding lifecycle, nonce pairing, process identity
 │   │       matching, state-file I/O, and stale-binding handling.
@@ -112,6 +113,7 @@ Chosen: it hides the platform/state complexity behind two meaningful interfaces 
 
 - No broker, socket, signed capability, or runtime-specific session adapter.
 - No cwd in the process identity key; it may be retained only as diagnostic context.
+- Capture process name, executable path, and normalized command-line signature as role/context metadata. Raw command lines must not be persisted or printed by default because they may contain secrets; strong matching uses PID + platform start identity, while the signature supports diagnostics and degraded matching.
 - No process-name blacklist as the correctness mechanism.
 - No automatic add of a path/URL during bind.
 - No `current project` writer in this change.

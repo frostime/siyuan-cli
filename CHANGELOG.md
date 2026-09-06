@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Workspace selection can be bound to the calling process. `siyuan-cli current bind <workspace>` followed by `siyuan-cli current confirm <nonce>` in a second, independent call attaches a catalog workspace to the caller's own OS process scope — an Agent runtime or a live shell — so later `api` and `tool` calls in that scope need no `--workspace` and do not disturb anyone else's default. The binding ends when that process exits. It is process-scoped selection, not logical session identity: callers that share one OS process share the binding, so use explicit `--workspace` or a project file when finer separation is required. A project file and a binding that name different workspaces is an error, never a silent winner.
+
+### Changed
+
+- **Breaking:** the commands that decide *which workspace a call uses* moved out of `workspace` into a new top-level `current` subcommand. `workspace` now covers only the catalog (`add` / `list` / `show` / `remove`) and named connection checks; `current` owns selection (`bind` / `confirm` / `unbind` / `global` / `which` / `verify`). `workspace use` and `workspace which` still run as deprecated aliases.
+- **Breaking:** `workspace verify` now verifies named catalog entries (`workspace verify <name>` / `--all`). Checking the workspace this call would actually resolve to is `current verify`; a bare `workspace verify` no longer means that and instead reports the ambiguity with both forms.
+
+### Removed
+
+- Removed `workspace verify --global-current`. Use `current verify`.
+
 ## [0.16.0] - 2026-08-10
 
 ### Added

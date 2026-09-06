@@ -11,7 +11,7 @@ Turn a user-visible hint into a stable SiYuan target: document id, block id, not
 
 Do not write to a target found only by title, keyword, or hpath. Resolve candidates → inspect → stabilize to id.
 
-If you reached this recipe directly: confirm workspace first (`siyuan-cli workspace which`).
+If you reached this recipe directly: confirm workspace first (`siyuan-cli current which`).
 
 ```text
 user hint → workspace/scope → candidate search → inspect → stable id → read/write

@@ -217,10 +217,11 @@ Final rule chain for workspace `main`: workspace rules (5) ++ defaults rules (3)
 
 ## Debugging permissions
 
-1. `siyuan-cli workspace which` — see the complete rule list and resolution source
-2. `siyuan-cli api <id> --debug` — see endpoint id and assembled payload
-3. Read the error message: `ENDPOINT_DENIED` includes the rule index or "default deny" when the fallback `permission.default` is `deny`; `CONTENT_DENIED` includes resource kind/value and matching rule index
-4. Common fixes:
+1. `siyuan-cli current which` — confirm the selected workspace, resolution source, and project config path
+2. Inspect the applicable `permission` blocks in `config.yaml` or `.siyuan-cli.yaml`
+3. `siyuan-cli api <id> --debug` — see endpoint id and assembled payload
+4. Read the error message: `ENDPOINT_DENIED` includes the rule index or "default deny" when the fallback `permission.default` is `deny`; `CONTENT_DENIED` includes resource kind/value and matching rule index
+5. Common fixes:
    - `ENDPOINT_DENIED` → add an `allow` rule for this endpoint, or check glob pattern
    - `CONTENT_DENIED` → add an `allow` rule scoped to the target notebook/path
    - `APPROVAL_UNAVAILABLE` → inspect broker state with `siyuan-cli approval status`

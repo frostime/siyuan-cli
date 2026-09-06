@@ -1,7 +1,7 @@
 ---
 title: Process binding implementation handover
 created: 2026-09-06T01:00:09+08:00
-consumed: false
+consumed: true
 ---
 
 ## Assume Reader
@@ -28,13 +28,14 @@ The command model was separated into `workspace` catalog/connection operations a
 
 ## Key Information for the Successor
 
-- Process identity is only `PID + process-instance creation identity`: Windows PID + creation time; Linux PID + `/proc` starttime. `ppid`, cwd, process name, and executable path are ancestry/diagnostic data, not identity keys.
+- Process identity is primarily PID + process-instance creation identity (Windows PID + creation time; Linux PID + `/proc` starttime when available). Process name, executable path, and normalized command-line signature are also needed as role/context metadata because Pi/Codex/OpenCode may share a `node`-like executable; raw command lines may contain secrets and must not be persisted or printed by default. `ppid` is ancestry relation; cwd is context, not identity.
 - The process binding may be shared by multiple logical callers inside one OS process. Do not add a Windows/Linux process-name blacklist or infer session identity from names.
 - `current bind <existing-name>` must reject a current project-file workspace mismatch before creating pending state. `current confirm <nonce>` must re-read project config and reject a mismatch introduced between calls.
 - `--baseUrl` remains ad-hoc and bypasses binding/project selection. Workspace catalog commands must not be affected by current cwd or process binding. `workspaceDir` materialization and runtime workspace verification remain unchanged.
 - Runtime binding state must not be written into `config.yaml`; keep catalog/global defaults separate from ephemeral process-binding state.
 - CLI output is part of the contract: bind/confirm/failure results need executable next-step guidance in English. Existing repository rule says CLI internal docs and prompts are English.
 - Do not introduce a broker, signed capability, runtime-specific `PI_SESSION_ID` adapter, cwd-based identity, automatic path/URL add, or `current project` writer in this change.
+- If process start identity is unavailable on a platform, allow best-effort matching with reduced identity strength rather than excluding that platform; use process signature metadata as a supporting discriminator.
 - The previous commit is `018d397` (`📝 docs(workspace): specify process binding direction`). The current working tree may contain the follow-up SPEC/shape/handover artifact changes; inspect `git status` before editing.
 
 ## LAI Task Tree
