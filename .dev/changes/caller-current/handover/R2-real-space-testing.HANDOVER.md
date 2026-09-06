@@ -1,8 +1,12 @@
 ---
 title: Real-space testing and docs handover
 created: 2026-09-06T15:10:00+08:00
-consumed: false
+consumed: true
 ---
+
+> **Consumed.** The product-level checklist below was executed in full and LAI #8 is closed (evidence: notes #11–#13). The `[Unreleased]` CHANGELOG entry is committed. LAI #10 was filed for dead binding-record reclamation, deliberately outside this change. Only #6 (bundled docs and Agent skill) remains.
+>
+> One correction to the guidance below, learned by testing: the ancestry truncation is caused by the **MSYS/Git Bash fork layer, not by `pnpm run`**. The whole bind → confirm → resolve flow succeeds through `pnpm run siyuan` in a native Windows shell (verified against a VS Code `pwsh` terminal, anchored on `pwsh.exe`). Under Git Bash, `current bind` still succeeds and writes a pending probe whose chain stops at the `sh.exe` hop; the explicit `PROCESS_BINDING_NO_COMMON_ANCESTOR` failure happens at confirm, not at bind.
 
 ## Assume Reader
 
