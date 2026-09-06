@@ -2,16 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-    getDocsRoot,
-    listBuiltinDocs,
-    readBuiltinDoc,
-    resolveBuiltinDoc,
-    resolveDocsRoot
-} from '../src/doc/runtime.ts';
-import {
+    formatSkillHint,
     installSkill,
+    listSkillResources,
     normalizeSkillTargetName,
-    readSkill,
+    renderSkillRead,
     resolveBuiltinSkillsDir,
     resolveSkillTargetDir,
     uninstallSkill
@@ -19,45 +14,51 @@ import {
 
 const originalCwd = process.cwd();
 
-test('docs root points to shipped docs and listBuiltinDocs includes recipes', () => {
-    const root = getDocsRoot();
-    assert.match(root, /src[\\/]docs$/);
-
-    const docs = listBuiltinDocs();
-    assert.ok(docs.length > 0);
-    assert.equal(docs[0]?.relPath, 'README.md');
-    assert.ok(docs.some((doc) => doc.relPath === 'recipes/edit-content.md'));
+test('listSkillResources enumerates bundled resources with frontmatter summaries', () => {
+    const resources = listSkillResources();
+    assert.ok(resources.length > 0);
+    assert.equal(resources[0]?.relPath, 'README.md');
+    assert.ok(resources.some((r) => r.relPath === 'recipes/edit-content.md'));
+    assert.ok(resources.every((r) => !r.relPath.endsWith('SKILL.md')));
+    assert.ok(resources[0]?.summary);
 });
 
-test('resolveDocsRoot supports both dev and packaged layouts', () => {
-    const normalize = (path: string) => path.replace(/\\/g, '/');
+const SKILL_XML = /<skill name="siyuan-cli" version="[^"]+" description="[^"]+">/;
 
-    const devRoot = resolveDocsRoot('H:/repo/src/doc', (path) =>
-        normalize(path) === 'H:/repo/src/docs'
+test('renderSkillRead without a path returns the skill envelope with a resource manifest', () => {
+    const output = renderSkillRead();
+    assert.match(output, SKILL_XML);
+    assert.match(output, /<resources>/);
+    assert.match(output, /<resource path="recipes\/find-target.md"/);
+    assert.match(output, /version="[^"]+"/);
+    assert.match(output, /# SiYuan CLI/);
+    assert.doesNotMatch(output, /^---/); // frontmatter stripped from body
+});
+
+test('renderSkillRead resolves a resource by path and unique basename', () => {
+    const byPath = renderSkillRead('recipes/edit-content.md');
+    assert.match(byPath, /<skill name="siyuan-cli" version="[^"]+" path="recipes\/edit-content.md"/);
+    assert.match(byPath, /# Goal/);
+    assert.doesNotMatch(byPath, /<resources>/);
+
+    const byName = renderSkillRead('edit-content');
+    assert.match(byName, /path="recipes\/edit-content.md"/);
+
+    assert.throws(
+        () => renderSkillRead('no-such-resource'),
+        /Skill resource "no-such-resource" not found/
     );
-    assert.equal(normalize(devRoot), 'H:/repo/src/docs');
-
-    const packagedRoot = resolveDocsRoot('H:/repo/dist/doc', (path) =>
-        normalize(path) === 'H:/repo/src/docs'
+    assert.throws(
+        () => renderSkillRead('../../escape.md'),
+        /Skill resource .* not found/
     );
-    assert.equal(normalize(packagedRoot), 'H:/repo/src/docs');
 });
 
-test('readBuiltinDoc resolves by relative path and unique basename', () => {
-    const byPath = readBuiltinDoc('recipes/edit-content.md');
-    assert.equal(byPath.doc.relPath, 'recipes/edit-content.md');
-    assert.match(byPath.content, /# Goal/);
-
-    const byName = resolveBuiltinDoc('edit-content');
-    assert.equal(byName.relPath, 'recipes/edit-content.md');
-});
-
-test('readSkill returns bundled skill content', () => {
-    const content = readSkill();
-    assert.match(content, /^---/);
-    assert.match(content, /# SiYuan CLI/);
-    assert.doesNotMatch(content, /Runtime values/);
-    assert.doesNotMatch(content, /\{\{cli_version\}\}/);
+test('formatSkillHint points at the skill surface', () => {
+    const hint = formatSkillHint();
+    assert.match(hint, /Skill root/);
+    assert.match(hint, /siyuan-cli skill read/);
+    assert.doesNotMatch(hint, /doc list|doc read/);
 });
 
 

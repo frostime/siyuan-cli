@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **Breaking:** the built-in docs no longer exist as a separate `doc` command; all guidance now ships inside the bundled agent skill. `siyuan-cli skill read` returns the skill (with a manifest of bundled resources, e.g. former docs such as `recipes/find-target.md`), `siyuan-cli skill read <path>` reads one resource, and `siyuan-cli skill list` enumerates resources. The skill works in three interchangeable modes: read on demand via the CLI without installing anything, install it with `siyuan-cli skill install`, or install the published skill from GitHub with external skill managers.
+
 - Removed `workspace verify --global-current`. Use `current verify`.
 
 ## [0.16.0] - 2026-08-10

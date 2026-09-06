@@ -1,11 +1,54 @@
 import { defineCommand } from 'citty';
-import { installSkill, readSkill, uninstallSkill } from './runtime.js';
+import {
+    formatSkillHint,
+    installSkill,
+    listSkillResources,
+    renderSkillRead,
+    uninstallSkill
+} from './runtime.js';
 import { fatalError, toCliError } from '../shared/errors.js';
 
-const readCommand = defineCommand({
-    meta: { name: 'read', description: 'Read the bundled skill file.' },
+function formatSkillList(): string {
+    const resources = listSkillResources();
+    const lines = [`${resources.length} resources`, ''];
+    for (const resource of resources) {
+        lines.push(resource.relPath);
+        lines.push(`  Path: ${resource.absPath}`);
+        lines.push(`  ${resource.summary ?? resource.title ?? ''}`);
+        lines.push('');
+    }
+    return lines.join('\n').trimEnd();
+}
+
+const listCommand = defineCommand({
+    meta: {
+        name: 'list',
+        description: 'List the bundled skill resources with summaries.'
+    },
     run: () => {
-        process.stdout.write(readSkill());
+        process.stdout.write(formatSkillList() + '\n');
+    }
+});
+
+const readCommand = defineCommand({
+    meta: {
+        name: 'read',
+        description:
+            'Read the bundled skill (with a resource manifest), or one resource file.'
+    },
+    args: {
+        path: {
+            type: 'positional',
+            description: 'Resource path or unique basename; omit to read the skill itself',
+            required: false
+        }
+    },
+    run: ({ args }) => {
+        try {
+            process.stdout.write(renderSkillRead(args.path));
+        } catch (e) {
+            fatalError(toCliError(e));
+        }
     }
 });
 
@@ -76,10 +119,14 @@ const uninstallCommand = defineCommand({
 });
 
 export const skillCommand = defineCommand({
-    meta: { name: 'skill', description: 'Manage the bundled agent skill.' },
+    meta: {
+        name: 'skill',
+        description: 'Read and manage the bundled agent skill.'
+    },
     subCommands: {
-        install: installCommand,
+        list: listCommand,
         read: readCommand,
+        install: installCommand,
         uninstall: uninstallCommand
     }
 });

@@ -39,7 +39,7 @@ test('root help identifies the canonical command', () => {
     assert.equal(result.status, 0, result.stderr);
     assert.match(
         result.stdout,
-        /siyuan-cli current\|workspace\|api\|tool\|doc\|skill\|approval\|extension/
+        /siyuan-cli current\|workspace\|api\|tool\|skill\|approval\|extension/
     );
     assert.doesNotMatch(result.stdout, /\bsiyuan workspace\|api/);
 });
