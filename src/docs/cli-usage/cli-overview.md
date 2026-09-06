@@ -17,7 +17,7 @@ summary: Command structure, flags, input sources, and error handling for siyuan-
 
 | Group | Subcommands | Role |
 |-------|-------------|------|
-| `current` | bind · confirm · unbind · global · which · verify | Select and verify the effective workspace |
+| `current` | bind · confirm · unbind · global · which · verify | Select and verify the effective workspace; see [`current.md`](current.md) |
 | `workspace` | add · list · verify · show · remove | Manage catalog connections; `use` and `which` are deprecated aliases |
 | `api` | list · describe · raw · `<id>` | Call kernel endpoints |
 | `tool` | list · describe · `<id>` | Run composite workflow tools |
@@ -55,6 +55,8 @@ siyuan-cli api raw asset.getDocAssets -j '{"id":"20240922152051-7dpjfpv"}'
 ```
 
 Raw stdout is pure JSON `data` (pipe to `jq`); warnings go to stderr. Bypasses schema validation, guards, response filtering, and compact formatting. → `workspace-config.md` §Raw API fallback.
+
+Workspace selection and process binding → [`current.md`](current.md).
 
 ## Using tools
 
@@ -253,4 +255,4 @@ siyuan-cli api <id> --debug             # curl-equivalent to stderr
 siyuan-cli api <id> ... --dry-run       # preview writes
 ```
 
-Approval commands: `siyuan-cli approval status|list|open|approve|reject`. Broker config and lifecycle → `workspace-config.md` §Behavior. Permission rules → `permission.md`.
+Approval commands: `siyuan-cli approval status|list|open|approve|reject`. Broker config and lifecycle → `workspace-config.md` §Behavior. Workspace selection and process binding → [`current.md`](current.md). Permission rules → `permission.md`.

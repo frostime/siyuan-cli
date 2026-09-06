@@ -236,6 +236,7 @@ Its output includes `source` and `projectConfigPath` so you can see where the ac
 
 ## Related docs
 
+- [`current.md`](current.md) — effective selection, process binding, verification, and selection errors
 - [`permission.md`](permission.md) — permission rules, explicit approval, extension schema coupling
 - [`cli-overview.md`](cli-overview.md) — Approval Center commands and broker lifecycle
 - `recipes/connect-workspace.md` — step-by-step workspace setup recipe

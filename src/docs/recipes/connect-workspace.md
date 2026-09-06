@@ -69,7 +69,18 @@ siyuan-cli current which
 
 The CLI resolves the runtime base URL from local workspace metadata when possible.
 
-## 4. Anchor a project to a workspace
+## 4. Choose how calls select a workspace
+
+After a named connection is verified, choose the narrowest selection scope:
+
+- one or a few calls: pass `--workspace <name>` on each business command;
+- repeated work in this project: add `workspace: <name>` to `.siyuan-cli.yaml`;
+- long-lived work without a project file: read [`cli-usage/current.md`](../cli-usage/current.md) and use the two-step process binding flow;
+- deliberately change the machine-wide fallback: use `siyuan-cli current global <name>`.
+
+If process binding is used, run `siyuan-cli current unbind` manually before ending the task. Do not use `current global` as an isolation mechanism.
+
+## 5. Anchor a project to a workspace
 
 For project-local agents, prefer `.siyuan-cli.yaml` so concurrent sessions do not race on the machine-global `current global` setting.
 
@@ -133,5 +144,6 @@ If these fail, fix connection/auth/workspace resolution before continuing.
 
 - `README.md`
 - `cli-usage/cli-overview.md`
+- `cli-usage/current.md`
 - `cli-usage/workspace-config.md`
 - `cli-usage/permission.md`

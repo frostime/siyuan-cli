@@ -48,7 +48,8 @@ The complete set of codes is owned by their source call sites; this document rec
 | Family | Representative codes | Recovery meaning |
 |---|---|---|
 | Input and transport | `INVALID_JSON`, `PAYLOAD_INVALID`, `STDIN_CONFLICT`, `STDIN_IS_TTY`, `ENV_NOT_SET`, `FILE_READ_ERROR` | Fix invocation input before retrying. |
-| Workspace/config | `NO_WORKSPACE`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_MISSING_CONNECTION`, `CONF_JSON_UNREADABLE`, `PORT_NOT_FOUND`, `WORKSPACE_VERIFY_FAILED`, `PROJECT_CONFIG_*`, `TOKEN_MODE_CONFLICT`, `VERIFY_MODE_CONFLICT` | Correct local configuration or make the target explicit. |
+| Workspace/config | `NO_WORKSPACE`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_MISSING_CONNECTION`, `CONF_JSON_UNREADABLE`, `PORT_NOT_FOUND`, `WORKSPACE_VERIFY_FAILED`, `PROJECT_CONFIG_*`, `TOKEN_MODE_CONFLICT`, `VERIFY_MODE_CONFLICT`, `CURRENT_SELECTION_CONFLICT` | Correct local configuration or make the target explicit. |
+| Process binding | `PROCESS_TREE_UNSUPPORTED`, `PROCESS_TREE_UNAVAILABLE`, `PROCESS_BINDING_PENDING_NOT_FOUND`, `PROCESS_BINDING_PENDING_EXPIRED`, `PROCESS_BINDING_SAME_CALL`, `PROCESS_BINDING_NO_COMMON_ANCESTOR`, `PROCESS_BINDING_ANCHOR_UNIDENTIFIABLE` | Use the two-step binding flow again, or use a project file / explicit `--workspace` when the process scope cannot be identified. |
 | Endpoint/compatibility | `ENDPOINT_NOT_FOUND`, `UNSUPPORTED_KERNEL_VERSION`, `KERNEL_VERSION_UNRECOGNIZED`, `RAW_API_*` | Use a registered/allowed endpoint or a compatible Kernel. |
 | Permission | `ENDPOINT_DENIED`, `CONTENT_DENIED`, `BLOCK_NOT_FOUND` | Follow the configured policy or choose an allowed target. |
 | Approval | `APPROVAL_UNAVAILABLE`, `APPROVAL_BROKER_UNAVAILABLE`, `APPROVAL_REJECTED`, `APPROVAL_TIMEOUT`, `APPROVAL_CANCELLED` | Inspect the broker, retry, or surface the human decision. |

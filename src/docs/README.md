@@ -18,6 +18,7 @@ If you are an Agent with the installed `siyuan-cli` SKILL, read the SKILL first 
 | Need to edit, move, delete, create, or batch update | `recipes/edit-content.md` |
 | Need block/path/sql domain model | `siyuan-guide/siyuan-block.md` |
 | Need daily note operations | `siyuan-guide/dailynote-model.md` |
+| Workspace selection and process binding | `cli-usage/current.md` |
 | Permission denied or approval issues | `cli-usage/permission.md` |
 | Writing custom API/tool extensions | `cli-usage/extension.md` |
 | CLI flags, error codes, input sources | `cli-usage/cli-overview.md` |
@@ -67,6 +68,7 @@ siyuan-cli tool <id> --help          # tool parameters, examples, behavior
 | File | Covers |
 |------|--------|
 | `cli-overview.md` | Command tree, global flags, input sources, error codes, debugging. |
-| `workspace-config.md` | Config file, workspace connections, token sources, project anchoring. |
+| `current.md` | Effective workspace selection, process binding, verification, and selection errors. |
+| `workspace-config.md` | Config file, workspace connections, token sources, behavior, permissions, and project anchoring. |
 | `permission.md` | Permission rule syntax, evaluation, explicit approval, debugging. |
 | `extension.md` | Custom API/tool extensions, schema authoring, permission schema coupling. |

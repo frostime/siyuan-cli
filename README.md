@@ -253,6 +253,17 @@ workspaces:
       value: SIYUAN_TOKEN       # resolved at call time, never written to config
 ```
 
+### Workspace selection
+
+After `workspace verify <name>`, choose the narrowest selection scope:
+
+- one or a few calls: pass `--workspace <name>`;
+- repeated work in a project: add `workspace: <name>` to `.siyuan-cli.yaml`;
+- long-lived work without a project file: use `siyuan-cli current bind <name>`, then run `siyuan-cli current confirm <nonce>` in a new independent call;
+- deliberately change the machine-wide fallback: use `siyuan-cli current global <name>`.
+
+Before content work, inspect the result with `siyuan-cli current which`. If you used process binding, run `siyuan-cli current unbind` manually before ending the task. Process binding is not logical Agent/session isolation; use a project file or explicit `--workspace` when callers share a process.
+
 ### Project-level pinning
 
 When multiple projects talk to different SiYuan instances, a global default causes conflicts. Place a `.siyuan-cli.yaml` at your project root to pin that project to a workspace:
@@ -266,7 +277,7 @@ workspace: prod   # must exist in the global config
 The full resolution chain:
 
 ```
---workspace flag  →  $SIYUAN_CLI_WORKSPACE  →  project file / process binding  →  config.current
+--baseUrl  →  --workspace flag  →  $SIYUAN_CLI_WORKSPACE  →  project file / process binding  →  config.current
 ```
 
 If a project file and process binding both select a workspace, they must agree; otherwise resolution fails.
@@ -549,6 +560,7 @@ siyuan-cli api filetree.getIDsByHPath --notebook <id> --path //TestDoc
 ### Auth failures
 
 - Verify the token with `siyuan-cli workspace verify <name>`
+- Verify the effective selection with `siyuan-cli current verify`
 - Check that SiYuan's kernel is running and reachable at the configured URL
 - Tokens from `tokenSource: env` are resolved at call time; ensure the env var is set in the calling shell
 
