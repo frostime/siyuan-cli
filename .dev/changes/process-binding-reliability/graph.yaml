@@ -107,7 +107,8 @@ nodes:
     N2:
         title: Validate process ancestry in real Git Bash calls
         lai_issue: 19
-        status: frontier
+        status: active
+        active_owner: S647
         depends_on: []
         purpose: >-
             Close the technical-report gap with two independent calls launched through
