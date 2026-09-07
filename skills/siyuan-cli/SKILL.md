@@ -11,7 +11,7 @@ Agent-first CLI for SiYuan Note. This SKILL is the entry point; the bundled reso
 
 ## Shipped skill, matching version
 
-`siyuan-cli skill read` always serves the skill bundled with the running CLI. An installed copy can lag behind it: when unsure, compare the skill version with the CLI version (both appear in CLI output, and the CLI warns on mismatch); if they differ, run `siyuan-cli skill install`, then re-read before trusting any detail.
+`siyuan-cli skill read` always serves the skill bundled with the running CLI. An installed copy can lag behind it: the skill version is on every `skill read` envelope, `siyuan-cli --help` prints the CLI version and warns when an installed copy differs. On a mismatch, run `siyuan-cli skill install`, then re-read before trusting any detail.
 
 ## Bootstrap
 

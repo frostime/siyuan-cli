@@ -14,25 +14,25 @@ Agents must go through a CLI subprocess (`doc read`) to read task-level detail e
 
 ## Approach
 
-Merge the docs corpus into the skill as bundled resources. The skill becomes the single knowledge surface, delivered in three interchangeable modes:
+Merge the docs corpus into the skill as bundled resources. The skill becomes the single knowledge surface. Modes 1 and 2 are the supported delivery; mode 3 is what a third-party installer makes possible, not something this CLI promises:
 
 | Mode | Delivery | Version coupling |
 |---|---|---|
 | 1. Zero-install | Agent runs `siyuan-cli skill read` on demand; CLI returns skill content | Tied to the running binary |
 | 2. `skill install` | Recursive copy of the skill dir to an agent skills dir (existing implementation, already multi-file capable) | Version-mismatch warning nudges realignment |
-| 3. `npx skills` (vercel-labs) | Pull `skills/siyuan-cli/` from GitHub, register across agent tools | May drift; SKILL.md version-check instruction is the fallback |
+| 3. external skill manager | Pull `skills/siyuan-cli/` from GitHub with a third-party installer | Not verified: the #14 spike was closed unrun, so this mode is a possibility, not a supported path, and is claimed nowhere in the CHANGELOG or README |
 
 The `doc` command is removed entirely.
 
 ### Version coupling rule (first-class)
 
-Because mode 3 installs can drift from the running CLI version, version alignment is a top-level SKILL.md rule stated at the very beginning of the body, before any routing content:
+Because an installed copy can drift from the running CLI version, version alignment is a top-level SKILL.md rule stated at the very beginning of the body, before any routing content:
 
-> Compare the skill's version with the CLI version you are running (every CLI invocation prints both; the CLI also emits an explicit mismatch warning). If they differ, run `siyuan-cli skill install` and re-read the skill before trusting any routed detail.
+> Compare the skill's version with the CLI version you are running (the skill version is on every `skill read` envelope; `siyuan-cli --help` prints the CLI version and warns when an installed copy differs). If they differ, run `siyuan-cli skill install` and re-read the skill before trusting any routed detail.
 
-Enforcement is two-sided and already exists / is kept:
+Enforcement is two-sided:
 
-- CLI side: `checkInstalledSkillVersion` prints a mismatch warning on every invocation against the default install target.
+- CLI side: `checkInstalledSkillVersion` warns on the root overview (`siyuan-cli` with no command, or `--help`), for each install recorded in the registry or the default install target when nothing is recorded. Business commands stay silent so their stdout remains machine-parseable.
 - Skill side: the opening rule above; the XML envelope also carries `version`, making mismatch visible in every `skill read` output even in zero-install mode.
 
 ## Layout (single source of truth)
@@ -120,7 +120,7 @@ siyuan-cli skill targets
 
 ## Non-goals
 
-- No runtime mechanism to refresh mode-3 installs; version drift is handled by the first-class version rule in SKILL.md plus the CLI-side mismatch warning.
+- No runtime mechanism to refresh installs made by external skill managers; version drift is handled by the first-class version rule in SKILL.md plus the CLI-side mismatch warning.
 - No changes to workspace/binding behavior.
 
 ## Migration checklist
@@ -131,7 +131,7 @@ siyuan-cli skill targets
 4. `skill list`: enumerate SKILL + resources from frontmatter.
 5. Remove `src/doc/` (`command.ts`, `runtime.ts`), unregister in `src/cli.ts`, replace `formatDocsHint` usage with a skill-based hint.
 6. Update incidental references: `src/extension/command.ts` hint line, error hints mentioning `doc list/read`, `tests/doc-and-skill.test.ts` + `tests/cli-entry.test.ts`, repo-local `AGENTS.md` / `.dev/` docs, CHANGELOG `[Unreleased]`.
-7. Spike (optional, last): run `npx skills add` against the repo to verify mode 3; drop if it does not cooperate.
+7. ~~Spike: run `npx skills add` against the repo to verify mode 3.~~ Closed unrun (LAI #14): external installers are not a path this CLI builds or maintains, and the `--agent` table already matches their ids.
 
 ## Acceptance criteria
 
