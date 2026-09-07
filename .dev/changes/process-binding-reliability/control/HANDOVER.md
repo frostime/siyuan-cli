@@ -51,12 +51,14 @@ The fourth phase created the long-task graph and LAI #18–#25. The DEV-SPEC was
 Read in this order:
 
 1. `AGENTS.md`;
-2. `.dev/changes/process-binding-reliability/graph.yaml`;
-3. `.dev/changes/process-binding-reliability/process-binding-reliability.DEV-SPEC.md`;
-4. `.dev/changes/process-binding-reliability/process-binding-reliability.TECH-REPORT.md`;
-5. `src/workspace/workspace-resolution.SPEC.md`;
-6. LAI #16, #18, and #19;
-7. only then inspect source files needed to test your understanding, especially `src/current/command.ts`, `src/workspace/process-binding.ts`, `src/workspace/process-tree.ts`, and `src/workspace/resolve.ts`.
+2. the `long-task-orchestration` SKILL and its `references/supervisor-handover.md`;
+3. the `use-lai` SKILL and the bundled `lai skill` output;
+4. `.dev/changes/process-binding-reliability/graph.yaml`;
+5. `.dev/changes/process-binding-reliability/process-binding-reliability.DEV-SPEC.md`;
+6. `.dev/changes/process-binding-reliability/process-binding-reliability.TECH-REPORT.md`;
+7. `src/workspace/workspace-resolution.SPEC.md`;
+8. LAI #16, #18, and #19;
+9. only then inspect source files needed to test your understanding, especially `src/current/command.ts`, `src/workspace/process-binding.ts`, `src/workspace/process-tree.ts`, and `src/workspace/resolve.ts`.
 
 Before editing, taking LAI #18, changing `graph.yaml`, or advancing N2, reply to S604 with:
 
