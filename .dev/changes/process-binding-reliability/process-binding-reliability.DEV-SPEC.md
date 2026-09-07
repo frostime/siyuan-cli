@@ -1,6 +1,6 @@
 ---
 name: process-binding-reliability
-summary: 在不改动 Agent 运行框架的前提下，重新确认并解决 Windows/MSYS 环境中的进程绑定可靠性问题。
+summary: 在不改动 Agent 运行框架的前提下，稳定跨平台进程绑定，并整理其状态、输出和代码边界。
 updated: 2026-09-07
 status: clarifying
 ---
@@ -9,114 +9,214 @@ status: clarifying
 
 ## 当前状态与材料边界
 
-本 Change 从产品需求和已经验证的运行事实重新开始。目前仍在澄清阶段，尚未批准进入正式实现。外部技术的验证结果见 `process-binding-reliability.TECH-REPORT.md`。
+本 Change 从产品需求和已经验证的运行事实重新开始。外部技术的验证结果见 `process-binding-reliability.TECH-REPORT.md`。
 
-上一轮 `caller-current` Change 以及 LAI #1、#10、#11 只保留为历史材料，其中的表述、推测、建议方案和范围都不再是本轮需求。用户确认本文后，本轮工作以本文为准。
+用户已经确认：保留两步进程绑定；允许使用同一个确认码重试；默认输出面向 Agent 使用紧凑文本；MSYS 只是 Windows 捕获器内部按能力启用的支线；源码采用 workspace 领域下独立 `binding/` 子模块的组织方向。
+
+正常业务调用遇到进程关系不确定时如何选择 workspace、死亡正式绑定如何清理，仍需继续确认。因此本文状态仍为 `clarifying`，尚未批准进入正式实现。
+
+上一轮 `caller-current` Change 以及 LAI #1、#10、#11 只保留为历史材料，其中的表述、推测、建议方案和范围都不再是本轮需求。本轮工作以本文和用户后续确认的修改为准。
 
 ## 问题
 
 `siyuan-cli` 的每次调用都是短命进程。一个长期运行的调用者——通常是 Agent 进程或交互式终端——需要选定一次 workspace，之后由同一调用者发起的 CLI 调用自动使用该选择，不必每次传 `--workspace`，也不必修改整台机器共用的默认值。
 
-现有两步绑定设计继续成立：
+现有两步设计继续成立：
 
 1. `current bind` 记录第一次 CLI 调用看到的进程关系，并返回确认码。
 2. `current confirm <确认码>` 记录第二次独立调用看到的进程关系。
 3. 两次调用都能看到、且能够可靠确认身份的最近共同进程，成为正式绑定对象。
 4. 后续调用只有在自己的进程关系中找到同一个进程时，才使用该绑定。
 
-当前 Windows 实现会一次读取 `Win32_Process` 清单，然后沿 `ParentProcessId` 逐层向上查。在 Bash 由 MSYS 提供的 Windows Agent 环境里，这条 Windows 关系可能在到达仍然运行的 Agent 进程之前断掉。结果是：`bind` 和 `confirm` 明明来自同一个 Agent，却可能找不到共同进程。
+产品必须在不修改 Agent 运行框架的前提下支持预期运行环境。程序如果拿不到足够可靠的证据，可以拒绝绑定，但不能根据残缺信息宣称绑定成功。
 
-产品必须在不修改 Agent 运行框架的前提下支持真实的 Windows/MSYS Agent 环境。程序如果拿不到足够可靠的证据，可以拒绝绑定，但不能根据残缺信息宣称绑定成功。
-
-## 已确认的需求和限制
+## 已确认的责任和限制
 
 - 不要求修改 Pi、Claude Code、Codex 或其他 Agent 运行框架。
 - 不要求 Agent 生成身份、传递长期环境变量或配合新的调用协议。
 - 不引入身份令牌、中间服务或长期运行的辅助进程。
-- 必须支持 Windows 上使用 MSYS 提供 Bash 工具的 Agent 环境，当前 Pi 运行环境是必测场景。
-- Git for Windows 自带的 Git Bash 也属于预期支持范围，但必须单独实测，不能直接从当前 MSYS2 结果推断。
 - 继续使用“两次独立调用寻找共同进程”的设计，不把进程关系当成逻辑 Agent 身份认证。
 - 临时 CLI、shell 和工具调用进程可以结束。正式绑定应落在两次调用共同看到的稳定进程上。
 - `current bind` 只创建一次待确认尝试；只有 `current confirm` 可以创建正式绑定。
 - 证据不足时允许绑定失败。
 - 不得只凭进程名称选定共同进程，也不得猜测缺失关系后面是谁。
 - 新终端或无关进程树不会因为位于同一台机器就继承其他终端的绑定。
+- Windows 原生调用是主路径；MSYS 只在运行证据表明当前 CLI 确实属于一套 MSYS 进程表时启用。
+- 当前 Pi on Windows + MSYS2 是必测场景。Git for Windows Git Bash 属于预期支持范围，但必须单独实测。
 - 除非本文明确修改，workspace 选择顺序、项目文件冲突、权限、凭据和连接建立仍遵循 `src/workspace/workspace-resolution.SPEC.md`。
 - 面向最终用户和 Agent 的 SKILL 不得包含开发命令、临时调查结论或已经放弃的解释。
 
-## 绑定状态
+## 用户操作与状态
 
-绑定过程中存在两种不同的记录。
+### 开始绑定
 
-### 待确认记录
+```bash
+siyuan-cli current bind <workspace>
+```
 
-`current bind` 完成后，程序保存确认码、workspace 名称、第一次看到的进程关系、工作目录和创建时间。此时还没有选出正式绑定进程。
+第一次进程查询成功后，程序创建待确认记录，保存确认码、workspace、第一次观察、工作目录、创建时间和固定过期时间。此时没有正式绑定。
 
-`confirm` 失败后，可以保留这条记录，让调用者使用同一个确认码重试。记录会在限定时间后过期。由于这时还没有正式绑定进程，重试和取消应依靠确认码或其他不依赖进程关系的办法，不能要求重新找到一个从未绑定成功的进程。
+默认文本不以孤立的 `Binding is not active.` 开头，而应先说明流程已经开始，例如：
 
-具体取消方式仍未确定。当前实现让 `current unbind` 删除所有待确认记录，同时也负责解除正式绑定，两个职责混在了一起，而且可能误删其他并行绑定尝试。
+```text
+Binding procedure started for workspace "dev".
+Next: run this command in a new CLI invocation:
+  siyuan-cli current confirm <nonce>
+The binding takes effect only after confirmation succeeds.
+```
 
-### 正式绑定
+输出还必须给出取消命令和过期时间。
 
-`confirm` 成功后，待确认记录被删除，程序把 workspace 绑定到选出的共同进程。匹配不能只看进程号，还要确认进程创建时间或其他足以防止进程号复用的特征。
+如果第一次进程查询失败，不创建待确认记录。调用者可以重新执行 `current bind`。
 
-共同进程退出后如何清理正式绑定记录，仍是未决范围。不能因为一次查询没有看到该进程，就直接断定它已经死亡并删除记录。
+### 确认和重试
+
+```bash
+siyuan-cli current confirm <nonce>
+```
+
+确认成功后，程序消费待确认记录并创建正式绑定。
+
+确认失败但待确认记录仍然有效时，保留原记录，允许在新的独立 CLI 调用中使用同一个确认码重试。重试不延长最初的过期时间。错误输出必须明确说明：
+
+- 正式绑定没有创建；
+- 待确认记录是否保留；
+- 是否可以重试；
+- 精确的重试与取消命令；
+- 本次是否向 SiYuan 发出了请求。
+
+确认码已过期、不存在、损坏、已消费或已取消时不能重试，需要重新开始绑定。
+
+第一版不实现无界自动重试。若实现层能够明确识别同一次查询中的瞬时快照竞争，可以在一个命令内部有限地重新采集一次；这属于待 SHAPE 确认的局部技术决定，不改变用户可见协议。
+
+### 取消待确认记录
+
+```bash
+siyuan-cli current cancel <nonce>
+```
+
+`cancel` 只删除指定确认码对应的待确认记录，不查询当前进程关系，也不改变正式绑定。
+
+### 解除正式绑定
+
+```bash
+siyuan-cli current unbind
+```
+
+`unbind` 只解除当前进程范围中已经确认的绑定，不再顺便删除所有待确认记录。
+
+## 输出合同
+
+`current` 命令的成功输出默认采用面向 Agent 的紧凑文本。需要程序化处理时，调用者显式传入：
+
+```bash
+--print json
+```
+
+JSON 模式应使用项目统一的结构化输出机制，而不是在 `current` 命令中直接调用 `JSON.stringify()` 建立另一套格式。
+
+失败继续遵循项目现有错误合同：以非零退出码在 stderr 输出结构化 JSON。与绑定有关的错误必须在 `message`、`hint` 和 `details` 中提供明确状态和可直接执行的恢复命令。
+
+默认文本和 JSON 都必须使 Agent 无需推断以下事实：
+
+- 绑定流程是否只是开始，还是已经正式生效；
+- 当前应该执行 confirm、重试、cancel、unbind，还是重新 bind；
+- workspace 相关命令现在是否可以安全继续；
+- 失败发生时是否已经向 SiYuan 发出请求。
+
+## 进程关系观察
+
+### 主路径
+
+Linux、macOS 和 Windows 原生环境继续使用各自的操作系统进程关系。公共绑定逻辑只接收统一的进程实例和父子关系，不理解具体平台命令。
+
+### Windows 下的条件 MSYS 支线
+
+Windows 捕获器先取得原生 Windows 信息。只有发现可用的 `ps`，并且其进程表中确实存在 Windows PID 等于当前 CLI PID 的记录时，才启用 MSYS 支线：
+
+1. 使用跨已验证版本一致的 `ps -e -l` 取得 MSYS PID、PPID 和 Windows PID；
+2. 沿 MSYS 逻辑父进程关系找到该进程表的边界；
+3. 用边界进程的 Windows PID 接回 Windows 原生关系；
+4. 合并两段观察；
+5. 任何接合步骤无法可靠核对时，报告关系不完整，不猜测缺失部分。
+
+不得通过 Pi、Git Bash、`bash.exe` 等产品名或进程名直接认定当前调用属于 MSYS。能力检测失败时不进入该支线。
+
+MSYS 只提供关系边；正式进程身份仍使用 Windows PID 和统一来源的创建时间。不得把 MSYS PID 持久化为绑定身份。
+
+### 暂不采用管道进程号
+
+标准输入输出管道另一端的进程号在当前 Pi 环境中能够直接指向 Pi，但重定向、共享读取进程和文档保证仍有未决限制。第一条正式实现路线不使用该信号。
+
+只有真实 Git Bash 验证或后续支持环境证明“MSYS + Windows”两段关系不足时，才重新激活管道路线调查。
+
+## 代码组织
+
+对外仍保留两个顶层命令：
+
+```text
+siyuan-cli workspace ...   管理全局 workspace 目录
+siyuan-cli current ...     管理本次调用的 workspace 选择
+```
+
+源码不再为只有一个命令文件的 `src/current/` 保留独立顶层领域。进程绑定集中到 workspace 领域下独立的 `binding/` 子模块。当前接受的结构方向是：
+
+```text
+src/workspace/
+├── command.ts                 workspace 目录命令
+├── current-command.ts         current 选择命令
+├── binding/
+│   ├── protocol.ts            pending、confirm、cancel、正式绑定生命周期
+│   ├── process-tree.ts        公共进程模型、实例匹配、共同进程算法
+│   ├── windows.ts             Windows 原生观察和条件接合
+│   └── msys.ts                MSYS 能力检测、进程表解析和逻辑关系
+├── config.ts
+├── project-config.ts
+├── resolve.ts
+├── resolver.ts
+├── diagnostics.ts
+└── paths.ts
+```
+
+边界已经确定，具体文件名和是否需要少量辅助文件由正式 SHAPE 决定。
+
+约束：
+
+- `binding/` 不负责 workspace 目录、凭据、权限或连接建立；
+- `resolve.ts` 不理解 Windows、MSYS 或具体进程采集命令；
+- 命令层不实现共同进程算法或状态文件规则；
+- 不建立通用平台插件系统或多信号证据图；
+- 不为了目录对称而重组与本 Change 无关的整个 workspace 模块；
+- deprecated workspace aliases 不应迫使命令模块互相调用，具体共享操作由 SHAPE 确定合适的领域所有者。
 
 ## 已验证的事实
 
-下列事实已经在当前 Windows 上的 Pi 环境中重复观察到：
+下列事实已经由本轮 SPIKE 验证，详细证据见技术报告：
 
-- 只看 Windows 进程关系时，向上查询可能在一个缺失的父进程号处停止，无法到达仍在运行的 Pi 进程。
-- MSYS 自己的进程清单仍然保存了 CLI 与 shell 之间的父子关系，并同时提供这些进程对应的 Windows 进程号。
-- 从最外层 MSYS shell 对应的 Windows 进程号继续查询，可以到达 Pi 的 Node 进程。
-- 两次独立 Pi Bash 工具调用中的临时 shell 进程号不同，但它们上方是同一个 Pi Node 进程。
+- Windows 原生父进程接口不能事后恢复已经退出的中间进程原来的上级。
+- 当前 Pi/MSYS2 环境可以用 MSYS 逻辑关系接回 Windows 关系，并在独立工具调用中到达同一个 Pi Node 进程。
+- Git Bash 所带旧版 `ps` 与当前 MSYS2 的选项解析存在差异，`ps -e -l` 在两边均提供所需列。
+- 管道进程号是可能的补充信号，但不足以单独承担绑定身份。
+- Job Object、控制台、登录会话、环境变量和事后事件监听不满足本轮零侵入要求。
 
-这说明，在当前实测环境里，所需关系没有完全丢失，而是分散在 MSYS 和 Windows 两套记录中。把两套记录接起来可能恢复完整到 Pi 的路径，但该方向尚未经过正式实现验证。
+## 尚未确定
 
-Git for Windows Git Bash 和其他同类环境尚未完成验证。
-
-## 待验证的技术方向
-
-Windows 原生命令继续使用 Windows 进程关系。
-
-如果当前 CLI 出现在 MSYS 进程清单中，候选做法是：
-
-1. 按 MSYS 自己的进程号和父进程号，从 CLI 向上找到最外层 MSYS 进程；
-2. 使用 MSYS 提供的 Windows 进程号，把每个 MSYS 进程对应到 Windows 进程；
-3. 从最外层 MSYS 进程继续沿 Windows 关系向上查询；
-4. 合并两段结果，不把 MSYS 内部短命辅助进程误当成真正的上级关系；
-5. 两段关系无法可靠接合时，明确报告进程查询失败，不返回一条看似正常但已经截断的关系。
-
-正式采用前，必须先用一个小型实验在两个独立的真实 Pi Bash 工具调用之间证明这条路线可行。规格确认后，再把各项技术验证和实现工作拆成独立 LAI 子任务。
-
-## 对外行为
-
-### 已确定
-
-- `current bind` 表示创建待确认尝试，不表示绑定成功。
-- `current confirm <确认码>` 只有在两次观察中找到同一个、能够可靠辨认的共同进程时才成功。
-- 证据不足时，`confirm` 失败，不创建正式绑定。
-- 保留的待确认记录可以使用确认码重试或取消，不依赖一个尚未选出的进程。
-- 正式绑定只有在后续调用能够匹配已记录进程时才适用。
-- 进程查询明确失败时，不得把残缺关系当成完整关系。
-
-### 尚未确定
-
-- 取消单个待确认记录和取消全部待确认记录分别使用什么命令。
-- 正常业务调用遇到明确的进程查询失败，同时本机又存在正式绑定记录时，应如何退出和提示。
-- 死亡的正式绑定记录是否在本 Change 中处理，还是继续作为后续独立工作。
-- 除当前 Pi/MSYS 和 Git for Windows Git Bash 外，还要支持哪些同类环境。
-- 合并 MSYS 与 Windows 关系时，如何证明接合点没有因进程号复用而指错进程。
+- 正常业务调用遇到明确的进程查询失败，同时本机又存在仍然有效的正式绑定时，应如何退出和提示。
+- 如何确认并清理已经死亡或 PID 已被复用的正式绑定记录；该工作是否必须与本轮同时交付。
+- 除当前 Pi/MSYS2 和 Git for Windows Git Bash 外，还要声明支持哪些同类环境。
+- 合并 MSYS 与 Windows 关系时，进程创建时间和进程号复用的最终核对规则。
 
 ## 初步验收条件
 
 以下条件会随尚未确定的行为继续修改：
 
-- 在 Windows 上的真实 Pi 环境中，`bind` 和 `confirm` 通过两个独立 Bash 工具调用执行，并找到同一个仍在运行的 Pi 进程，或找到位于临时 shell 之上的另一个有效共同进程。
-- 后续独立调用的 `current which` 显示 `source: process-binding` 和预期 workspace。
-- 每次调用的临时 shell 与 CLI 进程号都可以不同，不影响绑定。
-- MSYS 与 Windows 关系不完整或无法可靠接合时，程序明确失败，不根据猜测创建正式绑定。
-- 待确认记录的重试、取消和过期有彼此清楚、可以验证的结果。
-- Windows 原生命令和 Linux 的现有行为不退化。
-- Git for Windows Git Bash 必须在真实环境中验证，不能只靠推断。
-- 最终 SKILL 只说明用户可以依赖的行为和恢复办法，不保留开发包装命令或调查历史。
+- `current bind` 默认输出紧凑文本，明确表示流程已开始、绑定尚待确认，并给出 confirm、cancel 和过期信息。
+- `--print json` 输出项目统一的结构化形式。
+- `confirm` 失败后，仍有效的同一个 nonce 可以在独立调用中重试，且原过期时间不延长。
+- `cancel <nonce>` 只取消指定待确认记录；`unbind` 只解除正式绑定。
+- 在 Windows 上的真实 Pi 环境中，`bind`、`confirm` 和后续调用经过不同临时 shell，仍找到同一个有效共同进程。
+- MSYS 支线只在进程表包含当前 CLI Windows PID 时启用；Windows 原生调用不依赖 MSYS。
+- MSYS 与 Windows 关系无法可靠接合时，程序明确报告信息不足，不根据猜测创建正式绑定。
+- Windows 原生、Linux 和 macOS 的现有进程关系行为不退化。
+- Git for Windows Git Bash 必须在真实环境中完成独立调用验证。
+- 最终 SKILL 只说明用户可以依赖的操作、状态和恢复办法，不保留开发包装命令或调查历史。
