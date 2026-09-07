@@ -4,9 +4,15 @@ updated: 2026-09-07
 
 control:
     target_authority: user
-    supervisor: primary-pi-session
+    supervisor: S604
     integration_branch: fix/process-binding-reliability
     lai_parent: 16
+    handover:
+        status: pending
+        from: S604
+        to: S348
+        requested_at: 2026-09-07T23:44:39+08:00
+        artifact: .dev/changes/process-binding-reliability/control/HANDOVER.md
 
 artifacts:
     specification: .dev/changes/process-binding-reliability/process-binding-reliability.DEV-SPEC.md
@@ -67,6 +73,7 @@ nodes:
         title: Finalize process-binding behavior contract
         lai_issue: 18
         status: active
+        active_owner: S604-handover-pending
         depends_on: []
         purpose: >-
             Close the user-owned behavior decisions still marked open in the DEV-SPEC.
