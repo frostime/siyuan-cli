@@ -19,6 +19,7 @@ artifacts:
     specification: .dev/changes/process-binding-reliability/process-binding-reliability.DEV-SPEC.md
     technical_report: .dev/changes/process-binding-reliability/process-binding-reliability.TECH-REPORT.md
     future_shape: .dev/changes/process-binding-reliability/process-binding-reliability.SHAPE.md
+    future_developer_doc: .dev/docs/process-binding.md
 
 target:
     statement: >-
@@ -33,6 +34,7 @@ target:
         - Windows-native behavior remains independent of MSYS; MSYS is activated only by runtime evidence.
         - The final module structure matches an accepted SHAPE and does not broadly reorganize unrelated workspace code.
         - Automated and real-runtime evidence supports the documented verification boundary without hard-excluding untested environments.
+        - A durable project developer document preserves the technical basis, design rationale, evidence, and maintenance constraints.
 
 accepted_state:
     - id: A1
@@ -84,6 +86,13 @@ accepted_state:
           is conclusively absent or authoritative start identity proves reuse. Unknown records remain.
           Existing process-instance matching is preserved, and documentation distinguishes tested
           environments from unverified ones instead of hard-excluding them.
+    - id: A8
+      validity: current
+      evidence: user decision on 2026-09-08
+      statement: >-
+          The final Change includes a durable .dev/docs developer document that lets maintainers
+          recover the process-binding technical basis, chosen design, evidence, verification method,
+          and maintenance constraints without reconstructing Change history.
 
 nodes:
     N1:
@@ -219,11 +228,33 @@ nodes:
             - Missing table, broken handoff, PID reuse, expiry, and stale-state failures are explicit.
             - Typecheck, test, and build pass.
 
+    N9:
+        title: Document process-binding technical foundations
+        lai_issue: 26
+        status: waiting
+        depends_on: [N7]
+        purpose: >-
+            Preserve the cross-platform process model, design rationale, verified evidence,
+            and maintenance constraints as durable project developer documentation.
+        allowed_effects:
+            - Create and maintain .dev/docs/process-binding.md and its .dev/project.md index entry.
+            - Reference final source, tests, durable contracts, and external evidence without changing runtime behavior.
+        expected_result: >-
+            A cold maintainer can understand and safely modify or revalidate process binding
+            without reconstructing this Change or treating untested environments as hard-excluded.
+        acceptance:
+            - Explain why Windows ancestry alone is insufficient and how the conditional MSYS-to-Windows handoff works.
+            - Explain two-call scope selection, process-instance identity, observation outcomes, lifecycle, and fail-loud behavior.
+            - Distinguish tested evidence from unverified environments and provide a reproducible verification route.
+            - Map concepts to authoritative source, tests, SPECs, and external constraints without narrating obvious code.
+            - Contain current-state knowledge only, omit transient sample PIDs and investigation chronology, and define update triggers.
+            - Be listed in the .dev/project.md Docs Index.
+
     N8:
         title: Finalize process-binding guidance and change artifacts
         lai_issue: 25
         status: waiting
-        depends_on: [N7]
+        depends_on: [N9]
         purpose: >-
             Publish only verified behavior and leave code, durable contracts, skill
             content, and Change artifacts in their final state.
@@ -234,6 +265,7 @@ nodes:
         acceptance:
             - SKILL teaches compact default usage, retry, cancel, unbind, failure recovery, and tested-environment boundaries.
             - No development wrapper commands or historical diagnoses remain in user-facing text.
+            - The durable process-binding developer document is consistent with final code and verified evidence.
             - Final diff is compared with SHAPE and material deviations are resolved.
             - DEV-SPEC and SHAPE have final status; graph has no blocking unresolved area.
 
@@ -268,6 +300,9 @@ risks:
     - id: R5
       statement: A live but unrelated confirmed binding can force another caller with insufficient observation to choose a workspace explicitly.
       control: Fail before any SiYuan request, provide an exact explicit-selector recovery, skip observation when no confirmed records remain, and reclaim only conclusively stale records.
+    - id: R6
+      statement: A developer document that copies implementation detail or investigation history will drift and mislead future maintainers.
+      control: Write N9 after integrated verification; document external constraints, rationale, evidence, authority links, and update triggers while leaving local mechanics to code and tests.
 
 runtime_rules:
     - The user is target authority; only the user changes product scope or observable guarantees.
