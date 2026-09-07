@@ -1,7 +1,7 @@
 ---
 name: process-binding-reliability-technical-report
 summary: Windows/MSYS 环境中零侵入进程关系恢复的验证结果、能力边界和技术约束。
-updated: 2026-09-07
+updated: 2026-09-08
 status: complete
 ---
 
@@ -20,19 +20,21 @@ status: complete
 1. **只查 Windows 进程关系不能解决问题。** Windows 只在当前进程上保留一个创建者进程号。中间创建者退出后，普通查询接口不能事后恢复它原来的上级进程。
 2. **当前 Pi + MSYS2 环境中，所需关系仍然可以恢复。** MSYS 自己维护 CLI 与 shell 的逻辑父子关系，并提供对应的 Windows 进程号；走完 MSYS 这一段后，可以切回 Windows 关系继续找到 Pi。
 3. **两个独立 Pi Bash 工具调用已经找到同一个 Pi Node 进程。** 每次调用的 CLI、`sh` 和外层 `bash` 都不同，但两条合并后的关系在 Pi 进程处相交。这符合现有两步绑定设计。
-4. **继承的标准输入输出管道可能提供一条更短的辅助证据。** 在当前 Pi 环境中，两次独立调用都从继承的标准错误管道查到同一个 Pi 进程号。但该接口的文档保证、重定向行为和不同运行框架下的范围都不足以支撑它单独承担绑定。
-5. Job Object、控制台进程列表、Windows 登录会话、环境变量、事后启动的事件监听等路线都不能在现有限制下唯一、稳定地表示同一个 Agent。
-6. 因此，当前需求在技术上**不是做不到**。已验证的主要路线是“MSYS 逻辑关系 + Windows 原生关系”；管道另一端的进程号可作为补充证据或快速线索，但不能直接取代进程关系。
+4. **真实 Git for Windows 运行时也验证了同一路线。** 一个长期 Git Bash harness 通过 npm-shim 形态的入口先后启动两次本仓库 CLI；两次 CLI 的 Windows PID 和 MSYS PID 均不同，Git 的进程表都能把它们接到同一个仍存活的 Git Bash 实例，再从该实例的 Windows PID 接回同一条 Windows 关系。
+5. **继承的标准输入输出管道可能提供一条更短的辅助证据。** 在当前 Pi 环境中，两次独立调用都从继承的标准错误管道查到同一个 Pi 进程号。但该接口的文档保证、重定向行为和不同运行框架下的范围都不足以支撑它单独承担绑定。
+6. Job Object、控制台进程列表、Windows 登录会话、环境变量、事后启动的事件监听等路线都不能在现有限制下唯一、稳定地表示同一个 Agent。
+7. 因此，当前需求在技术上**不是做不到**。已验证的主要路线是“MSYS 逻辑关系 + Windows 原生关系”；管道另一端的进程号可作为补充证据或快速线索，但不能直接取代进程关系。
 
 ## 验证环境
 
 - Windows 10 专业版，版本 `10.0.19045.6466`；
 - 当前 Pi 的 Bash 工具运行在 MSYS2，`ps` 版本 `3.6.7`；
-- Git for Windows 安装在 `G:\Enviroment\Git`，Git Bash 所带 `ps` 版本 `3.4.10`；
+- Git for Windows 安装在 `G:\Enviroment\Git`，Git Bash 为 GNU Bash `5.2.26`，所带 `ps` 版本 `3.4.10`；
 - Node.js `24.12.0`；
+- N2 使用本仓库构建产物 `siyuan-cli 0.17.0-dev.2`；
 - 正式代码未修改；本地实验和三个独立子 Agent 的只读调查共同提供证据。
 
-Git Bash 已完成嵌套运行下的进程表和 Windows 进程号验证，但尚未让 Pi 直接改用 Git Bash 作为工具 shell，因此没有完成“Pi + Git Bash”端到端验证。
+Git for Windows 已在真实运行时中完成 Agent-like 长期 caller 下的两次独立 CLI 调用验证。当前 Pi 会话本身仍使用 MSYS2 工具 shell；“Pi 被配置为直接使用 Git Bash”没有在本次实验中声称已经验证，也不是 N2 判断 Git 运行时、进程表和 Windows handoff 是否成立所必需的条件。
 
 ## 当前实现为什么失败
 
@@ -131,6 +133,33 @@ CLI 51876
 ```
 
 另一次独立 Bash 工具调用使用的是不同外层 bash，但仍然到达同一个 Pi 进程 `41904`。这些数字只是该次实验样本，不能写入正式逻辑；重要的是两次临时进程不同而长期 Pi 进程相同。
+
+### Git for Windows 两次独立调用验证（N2）
+
+N2 在真实 `G:\Enviroment\Git\bin\bash.exe` 中启动一个长期存活的 Git Bash harness。Harness 通过 npm-shim 形态的 shell 入口（最终 `exec node .../bin/siyuan.mjs`）先后运行两次本仓库构建后的 `siyuan-cli --version`。只读 preload hook 在实际 CLI Node 进程中同步采集 Git `ps -e -l`、另一套 MSYS2 的 `ps -e -l` 和 Windows CIM 快照；实验文件位于临时目录，没有修改生产代码或绑定状态。
+
+两次调用的关键样本如下：
+
+| | 第一次调用 | 第二次调用 |
+|---|---:|---:|
+| CLI Windows PID | `55376` | `3296` |
+| CLI Git/MSYS PID | `1789` | `1798` |
+| Git/MSYS parent PID | `1782` | `1782` |
+| 共同 Git Bash Windows PID | `57520` | `57520` |
+| 共同实例 Windows start ID | `639244097469535490` | `639244097469535490` |
+| 纯 Windows 关系停止点 | missing `52020` | missing `19888` |
+
+两条纯 Windows 关系分别在 `node.exe → sh.exe` 后遇到不同的已退出 creator，均未到达长期 harness。Git `ps -e -l` 则把两个不同的 CLI 逻辑进程都接到 MSYS PID `1782`；该记录映射到仍在 Windows CIM 快照中的 `bash.exe` PID `57520`。从这个 handoff 实例继续查询 Windows 关系，两次得到相同的后续链。PID 与 start ID 都相同，证明交点是同一个仍存活的进程实例，而不是仅仅复用了数值 PID。
+
+这次实验同时验证了多安装隔离：
+
+- 两次 Git Bash 调用中，由 PATH 解析到的 `ps 3.4.10` 和显式核对的 Git `ps` 都包含当前 CLI WINPID；独立 MSYS2 的 `ps 3.6.7` 都不包含；
+- 反向控制调用从 MSYS2 发起时，PATH 解析到 `ps 3.6.7`，MSYS2 表包含当前 WINPID，而 Git 表不包含；
+- 因此应以“进程表是否包含当前 CLI WINPID”选择 owning runtime，不能因为 PATH 上存在某个 `ps` 或产品名称相似就采用其关系。
+
+输出格式方面，Git `ps 3.4.10` 的 `ps -e -l` 提供 `PID PPID PGID WINPID ...`，而组合写法 `ps -efl` 输出另一种格式且没有 WINPID。此次非 TTY 调用中，把 `COLUMNS` 设为 `20` 没有复现截断，输出宽度与 `4096` 时相同；这不推翻此前环境中观察到的截断差异，因此实现仍应清除或设置足够大的 `COLUMNS`，并以表头和必需数值列校验实际输出，不能依赖固定空格位置。
+
+N2 由此关闭了 Git for Windows 运行时的关键技术缺口：两次真实 Git Bash CLI-shaped 调用能够通过 owning MSYS 表和 Windows handoff 找到同一个长期 caller。该结论只覆盖上述实测环境与调用拓扑，不把其他平台或版本写成硬性不适用。
 
 ### 可以采用的接合方式
 
@@ -238,11 +267,11 @@ Windows 的 `GetNamedPipeServerProcessId` 可以查询命名管道服务端的�
 
 ### `confirm` 已成功
 
-正式记录绑定到共同进程。解除绑定需要当前调用再次找到这个进程。如果支持环境中的进程查询本身失败，应先报告查询失败，而不是把“没查到绑定”和“查找过程没完成”混为一件事。
+正式记录绑定到共同进程。解除绑定需要当前调用再次找到这个进程。如果已验证场景中的进程查询本身失败，应先报告查询失败，而不是把“没查到绑定”和“查找过程没完成”混为一件事。
 
 反过来，仅仅发现某条正式绑定记录没有匹配当前调用，并不能证明当前调用原本属于该绑定；程序不能据此猜测 Agent 身份。
 
-## 可以进入产品讨论的技术路线
+## 技术路线评估
 
 ### 路线一：Windows 原生关系 + MSYS 逻辑关系
 
@@ -263,30 +292,19 @@ Windows 的 `GetNamedPipeServerProcessId` 可以查询命名管道服务端的�
 
 - 可以改善创建时间精度和错误识别；
 - 无法恢复已经退出的中间进程原来的父进程；
-- 不能满足已确认的 Windows/MSYS 支持要求。
+- 不能满足已确认的 Windows/MSYS 验证目标。
 
-## 尚未完成的外部验证
+## 留待实现与集成验证的技术事项
 
-在决定正式形态前，仍有这些技术事实需要按选择的路线补齐：
+N2 已完成真实 Git for Windows 调用和多安装归属验证。后续节点仍需完成：
 
-1. 让 Pi 直接使用 Git for Windows Git Bash 作为工具 shell，重复两个独立调用的完整验证；
-2. 验证多个 MSYS/Git Bash 安装同时存在时，程序能否总是选中创建当前 CLI 的那一套进程表；
-3. 验证旧 Git Bash `ps 3.4.10` 下行首状态、`<defunct>`、`COLUMNS` 和进程号复用处理；
-4. 统一 Windows 创建时间来源和精度，确保同一进程在 `bind`、`confirm` 和后续匹配中得到相同标识；
-5. 如果考虑管道路线，验证 PowerShell、cmd、Windows Terminal、Git Bash、重定向和不同 Agent 运行框架中的管道另一端分别是谁；
-6. 构造 MSYS 表缺失、接合点已退出、进程号已复用等失败，证明程序能够识别并停止。
+1. 统一 Windows 创建时间来源和精度，确保同一进程在 `bind`、`confirm` 和后续匹配中得到相同标识；
+2. 用 fixture 覆盖旧 Git Bash 输出中的可选状态前缀、`<defunct>`、缺列和损坏行，并验证解析器不会从不完整表格猜测关系；
+3. 构造 MSYS 表缺失、current WINPID 缺失、handoff 实例已退出和 PID 已复用等失败，证明程序能够识别并停止；
+4. 在 N7 运行集成后的 bind、confirm、后续业务调用、cancel 和 unbind；如果实际可配置，再补充 Pi 直接使用 Git Bash 的产品级验证；
+5. 只有 ancestry 路线在要求验证的环境中被证明确实不足时，才按 graph 条件重新调查管道进程号。
 
-## 供下一轮产品讨论使用的问题
-
-技术调查已经把产品选择收缩到以下几点：
-
-1. 正式实现只采用 MSYS 与 Windows 两段关系，还是再加入管道进程号作为辅助证据；
-2. 一次进程关系查询明确失败时，哪些命令应立即退出，哪些显式指定 workspace 的命令可以不受影响；
-3. 待确认记录是否增加按确认码取消的命令；
-4. 死亡正式绑定记录的清理是否与本轮一起处理；
-5. Git Bash/MSYS 支持到哪些具体版本和运行方式。
-
-这些问题需要结合产品责任和复杂度决定，不能由本报告单独回答。
+产品行为已经由 accepted DEV-SPEC 确定；本报告中的技术发现不得自行扩大或缩小最终文档声称的实测范围。
 
 ## 主要外部依据
 

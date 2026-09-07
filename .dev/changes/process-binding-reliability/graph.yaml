@@ -42,12 +42,13 @@ accepted_state:
           Process binding remains a zero-harness-intrusion, two-call protocol that
           selects the nearest reliably identified common process instance.
     - id: A2
-      validity: current-with-gap
-      evidence: LAI #17 and process-binding-reliability.TECH-REPORT.md
+      validity: current
+      evidence: LAI #17, LAI #19, and process-binding-reliability.TECH-REPORT.md
       statement: >-
           Windows-native ancestry cannot recover an exited intermediate creator;
-          current Pi/MSYS2 can bridge MSYS logical ancestry to Windows ancestry.
-      gap: A real Pi or equivalent harness using Git for Windows Git Bash has not been verified end to end.
+          current Pi/MSYS2 and two real Git for Windows CLI-shaped calls can bridge
+          owning MSYS logical ancestry to Windows ancestry. A non-owning MSYS table
+          is rejected because it does not contain the current CLI WINPID.
     - id: A3
       validity: current
       evidence: user decision on 2026-09-07
@@ -107,8 +108,8 @@ nodes:
     N2:
         title: Validate process ancestry in real Git Bash calls
         lai_issue: 19
-        status: active
-        active_owner: S647
+        status: accepted
+        accepted_at: 2026-09-08
         depends_on: []
         purpose: >-
             Close the technical-report gap with two independent calls launched through
@@ -126,7 +127,7 @@ nodes:
     N3:
         title: Shape the process-binding architecture and diff
         lai_issue: 20
-        status: waiting
+        status: frontier
         depends_on: [N1, N2]
         purpose: >-
             Inspect the current import graph and turn the accepted workspace/binding
