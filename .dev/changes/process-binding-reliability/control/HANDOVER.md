@@ -1,7 +1,7 @@
 ---
 title: Process Binding Reliability Supervisor Handover
 created: 2026-09-07T23:44:39+08:00
-consumed: false
+consumed: true
 ---
 
 # Assume Reader
