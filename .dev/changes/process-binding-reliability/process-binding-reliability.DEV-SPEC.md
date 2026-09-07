@@ -9,7 +9,7 @@ status: clarifying
 
 ## 当前状态与材料边界
 
-本 Change 从产品需求和已经验证的运行事实重新开始。目前仍在澄清阶段，尚未批准进入正式实现。
+本 Change 从产品需求和已经验证的运行事实重新开始。目前仍在澄清阶段，尚未批准进入正式实现。外部技术的验证结果见 `process-binding-reliability.TECH-REPORT.md`。
 
 上一轮 `caller-current` Change 以及 LAI #1、#10、#11 只保留为历史材料，其中的表述、推测、建议方案和范围都不再是本轮需求。用户确认本文后，本轮工作以本文为准。
 
