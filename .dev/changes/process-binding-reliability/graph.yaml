@@ -93,6 +93,14 @@ accepted_state:
           The final Change includes a durable .dev/docs developer document that lets maintainers
           recover the process-binding technical basis, chosen design, evidence, verification method,
           and maintenance constraints without reconstructing Change history.
+    - id: A9
+      validity: current
+      evidence: user acceptance and process-binding-reliability.SHAPE.md on 2026-09-08
+      statement: >-
+          Process binding is organized by responsibility under workspace/binding:
+          process semantics, observation, persisted state, and protocol are separate;
+          Windows capture owns a nested MSYS process-table helper selected by capability,
+          and workspace resolution consumes domain outcomes rather than platform stop reasons.
 
 nodes:
     N1:
@@ -136,8 +144,8 @@ nodes:
     N3:
         title: Shape the process-binding architecture and diff
         lai_issue: 20
-        status: active
-        active_owner: S647
+        status: accepted
+        accepted_at: 2026-09-08
         depends_on: [N1, N2]
         purpose: >-
             Inspect the current import graph and turn the accepted workspace/binding
@@ -157,7 +165,7 @@ nodes:
     N4:
         title: Implement reliable process observation
         lai_issue: 21
-        status: waiting
+        status: frontier
         depends_on: [N3]
         purpose: >-
             Implement platform-neutral observation plus Windows-native and
@@ -176,7 +184,7 @@ nodes:
     N5:
         title: Implement binding lifecycle and Agent-facing commands
         lai_issue: 22
-        status: waiting
+        status: frontier
         depends_on: [N3]
         purpose: >-
             Implement the accepted pending/confirmed state transitions and current
@@ -280,10 +288,7 @@ conditional_candidates:
             Add a formal research/design node before changing the process-observation
             contract; do not fold pipe peers into ancestry without user approval.
 
-unresolved_areas:
-    - id: U4
-      owner: N3
-      question: Which domain operation replaces the current command-to-command dependency used by deprecated workspace aliases?
+unresolved_areas: []
 
 risks:
     - id: R1
