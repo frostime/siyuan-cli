@@ -7,8 +7,7 @@ import { currentCommand } from './current/command.js';
 import { apiCommand, getEndpointHelpEntry, renderGroupedApiHelp } from './api/command.js';
 import { toolCommand, getToolHelpText, renderGroupedToolHelp } from './tool/command.js';
 import { skillCommand } from './skill/command.js';
-import { checkInstalledSkillVersion } from './skill/runtime.js';
-import { docCommand, formatDocsHint } from './doc/command.js';
+import { checkInstalledSkillVersion, formatSkillHint } from './skill/runtime.js';
 import { approvalCommand } from './approval/command.js';
 import {
     extensionCommand,
@@ -40,7 +39,6 @@ const main = defineCommand({
         workspace: workspaceCommand,
         api: apiCommand,
         tool: toolCommand,
-        doc: docCommand,
         skill: skillCommand,
         approval: approvalCommand,
         extension: extensionCommand
@@ -97,8 +95,8 @@ async function customShowUsage<T extends Record<string, unknown>>(
 
     await showUsage(cmd, parent);
 
-    if (!parent || meta?.name === 'doc' || parentMeta?.name === 'doc') {
-        process.stdout.write(formatDocsHint());
+    if (!parent || meta?.name === 'skill' || parentMeta?.name === 'skill') {
+        process.stdout.write(formatSkillHint());
     }
 
     // Append SKILL version warning if the installed skill is missing or outdated.

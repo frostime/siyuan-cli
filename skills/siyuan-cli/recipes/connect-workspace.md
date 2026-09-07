@@ -142,7 +142,6 @@ If these fail, fix connection/auth/workspace resolution before continuing.
 
 # Related docs
 
-- `README.md`
 - `cli-usage/cli-overview.md`
 - `cli-usage/current.md`
 - `cli-usage/workspace-config.md`

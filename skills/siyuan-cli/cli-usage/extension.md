@@ -277,7 +277,7 @@ https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go
 
 ## Package-local reference
 
-`cli-usage/extension.md` is shipped inside the same installed package as the runtime code. Use `siyuan-cli doc list` / `siyuan-cli doc read cli-usage/extension.md` to locate the docs root, then inspect the sibling `dist/` directory in that package when documentation is incomplete.
+This resource ships inside the same installed package as the runtime code. `siyuan-cli --help` prints the skill root; from it, inspect the sibling `dist/` directory in that package when documentation is incomplete.
 
 | File | What it contains |
 |------|-----------------|

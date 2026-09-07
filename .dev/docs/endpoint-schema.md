@@ -500,4 +500,4 @@ When changing `EndpointSchema` semantics, update or verify tests for:
 - `/src/shared/output.ts`
 - `/src/api/command.ts`
 - `/src/extension/cache.ts`
-- `/src/docs/cli-usage/extension.md`
+- skill 资源 `cli-usage/extension.md`（`siyuan-cli skill read cli-usage/extension.md`）

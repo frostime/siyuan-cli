@@ -9,16 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Workspace selection can be bound to the calling process. `siyuan-cli current bind <workspace>` followed by `siyuan-cli current confirm <nonce>` in a second, independent call attaches a catalog workspace to the caller's own OS process scope — an Agent runtime or a live shell — so later `api` and `tool` calls in that scope need no `--workspace` and do not disturb anyone else's default. The binding ends when that process exits. It is process-scoped selection, not logical session identity: callers that share one OS process share the binding, so use explicit `--workspace` or a project file when finer separation is required. A project file and a binding that name different workspaces is an error, never a silent winner.
+- Workspace selection can be bound to the calling process: `siyuan-cli current bind <workspace>`, then `siyuan-cli current confirm <nonce>` in a second call. Later `api` and `tool` calls in that process need no `--workspace`, and `current unbind` releases the binding. A project file and a binding that name different workspaces is an error, never a silent winner.
+- `siyuan-cli skill install` records its global install locations, so a bare `skill install` refreshes every install on the machine after a CLI upgrade. Project-scope installs (`--project`) are not recorded.
+- `siyuan-cli skill targets` lists each known agent, where it loads skills from in project and global scope, and what is installed there.
 
 ### Changed
 
-- **Breaking:** the commands that decide *which workspace a call uses* moved out of `workspace` into a new top-level `current` subcommand. `workspace` now covers only the catalog (`add` / `list` / `show` / `remove`) and named connection checks; `current` owns selection (`bind` / `confirm` / `unbind` / `global` / `which` / `verify`). `workspace use` and `workspace which` still run as deprecated aliases.
-- **Breaking:** `workspace verify` now verifies named catalog entries (`workspace verify <name>` / `--all`). Checking the workspace this call would actually resolve to is `current verify`; a bare `workspace verify` no longer means that and instead reports the ambiguity with both forms.
+- **Breaking:** workspace selection moved out of `workspace` into a new top-level `current` command (`bind` / `confirm` / `unbind` / `global` / `which` / `verify`). `workspace` now covers only the catalog, and `workspace use` / `workspace which` remain as deprecated aliases.
+- **Breaking:** `workspace verify` now verifies named catalog entries (`workspace verify <name>` / `--all`). Checking the workspace a call actually resolves to is `current verify`.
+- **Breaking:** `siyuan-cli skill install` / `skill uninstall` choose a location with `--agent <id>` plus `--global` / `--project` instead of `--target <dir-name>` plus `--local`. Agent ids come from a fixed table matching the mapping used by the `skills` installer, so an unknown name is rejected instead of creating a directory.
+- The installed-skill version check reports every recorded install location and names the path it checked.
 
 ### Removed
 
-- Removed `workspace verify --global-current`. Use `current verify`.
+- **Breaking:** the built-in `doc` command. All guidance ships inside the bundled agent skill: `siyuan-cli skill read` prints the skill with a manifest of its resources, `siyuan-cli skill read <path>` prints one resource, and `siyuan-cli skill list` enumerates them.
+- `workspace verify --global-current`. Use `current verify`.
 
 ## [0.16.0] - 2026-08-10
 

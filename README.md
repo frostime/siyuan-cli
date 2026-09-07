@@ -65,7 +65,7 @@ siyuan-cli skill install
 
 By default, it installs the built-in SKILL to `~/.agents/skills/`.
 
-Use `--target` to specify a different location, for example: `siyuan-cli skill install --target claude`.
+Use `--agent` to target a specific tool, for example: `siyuan-cli skill install --agent claude-code`. Run `siyuan-cli skill targets` to see every agent and where its skills live.
 
 If you update `siyuan-cli`, run the command again to update the skill.
 
@@ -75,9 +75,11 @@ Launch an agent that can read skill files, read local files, and run shell comma
 
 Say to your agent:
 
-> "Help me use siyuan-cli. Read the installed `siyuan-cli` SKILL, then use `siyuan-cli doc list` for built-in docs when needed."
+> "Help me use siyuan-cli. Read its SKILL, then follow that SKILL's routing to the bundled resources whenever you need detail."
 
-The README is a human-facing overview. Detailed operational guidance lives in the installed SKILL and built-in docs exposed by `siyuan-cli doc list`.
+There are two ways for an agent to read the SKILL: its host loads the installed copy (step 4), or the agent runs `siyuan-cli skill read` on demand with nothing installed at all. Either way the SKILL must match the CLI version — on a mismatch warning, run `siyuan-cli skill install` again and re-read.
+
+The README is a human-facing overview. Detailed operational guidance lives in the SKILL and its bundled resources.
 
 ## How to think about siyuan-cli
 
@@ -383,7 +385,7 @@ siyuan-cli approval reject <id>      # reject from terminal
 
 Independent of user-configured rules, endpoints classified as `destructive` or `critical` risk — batch deletes, system-level writes, runtime invocations — **automatically require approval even if your rules say `allow`**. This is a built-in safety net that cannot be bypassed by permission rules alone; only `--yes` (or `behavior.allowYes: false` to disable `--yes` entirely) controls it.
 
-Use `siyuan-cli current which` to confirm the resolved workspace and source, inspect the applicable `permission` blocks in `config.yaml` or `.siyuan-cli.yaml`, or use `--dry-run` on any command to preview whether it would be blocked or gated. For the complete rule reference: `siyuan-cli doc read permission`.
+Use `siyuan-cli current which` to confirm the resolved workspace and source, inspect the applicable `permission` blocks in `config.yaml` or `.siyuan-cli.yaml`, or use `--dry-run` on any command to preview whether it would be blocked or gated. For the complete rule reference: `siyuan-cli skill read cli-usage/permission.md`.
 
 ---
 
@@ -396,7 +398,7 @@ Agents discover capabilities incrementally:
 - `siyuan-cli --help` for the command tree;
 - `siyuan-cli api list` for endpoints;
 - `siyuan-cli api <id> --help` for one endpoint;
-- `siyuan-cli doc list` and `siyuan-cli doc read <topic>` for deeper docs;
+- `siyuan-cli skill read <resource-path>` for bundled guidance;
 - `siyuan-cli tool list` for higher-level workflows.
 
 This keeps context disclosure **explicit, local, and task-driven**.
@@ -414,12 +416,12 @@ The built-in doc set is organized in three layers:
 | Task recipes | `recipes/` | Step-by-step workflows: connect workspace, find documents, read content, safely edit content |
 
 ```bash
-siyuan-cli doc list                          # list all docs with file paths and summaries
-siyuan-cli doc read README.md                # read a doc by path or unique name
-siyuan-cli doc read recipes/edit-content.md  # task-oriented operation recipes
+siyuan-cli skill read                          # read the skill (with resource manifest)
+siyuan-cli skill read recipes/edit-content.md  # one bundled resource
+siyuan-cli skill list                          # resources + summaries, without the skill body
 ```
 
-The docs root path is printed by `siyuan-cli --help`, so agents with file system access can read files directly without going through the CLI.
+Address resources with the paths exactly as listed in that manifest. `siyuan-cli --help` prints the skill root, so you can also browse the files directly.
 
 ---
 
@@ -437,10 +439,13 @@ The docs root path is printed by `siyuan-cli --help`, so agents with file system
 Install the skill:
 
 ```bash
-siyuan-cli skill install                       # default: ~/.agents/skills/
-siyuan-cli skill install --target claude       # → ~/.claude/skills/
-siyuan-cli skill install --target .copilot --local  # → ./.copilot/skills/ (project-local)
+siyuan-cli skill install                       # sync every recorded install (default: ~/.agents/skills/)
+siyuan-cli skill install --agent claude-code   # → ~/.claude/skills/
+siyuan-cli skill install --agent pi            # → ~/.pi/agent/skills/
+siyuan-cli skill install --project             # → ./.agents/skills/ (this checkout only)
 ```
+
+Global installs are remembered in the CLI config dir, so one bare `skill install` refreshes all of them (e.g. both `~/.agents` and `~/.claude`) after a CLI upgrade; `--project` installs are not tracked. `siyuan-cli skill targets` lists each known agent and where it loads skills from. See `siyuan-cli skill read cli-usage/cli-overview.md`.
 
 Tip: install `skill-creator`, then ask your agent:
 
@@ -462,7 +467,7 @@ siyuan-cli extension cache         # batch-generate schema.json caches
 
 > **Tip**: You can tell your agent:
 > "I want to extend the siyuan-cli API. Please read the siyuan-cli docs and help me write an extension for `<endpoint>`."
-> The agent can read `siyuan-cli doc read cli-usage/extension`, visit the website (if it is capable), and generate the extension file for you.
+> The agent can read `siyuan-cli skill read cli-usage/extension.md`, visit the website (if it is capable), and generate the extension file for you.
 >
 > **Reference**
 >
@@ -539,7 +544,7 @@ siyuan-cli tool hello-ext --name Alice
 
 Tool extensions receive a `ToolContext` with `callEndpoint()` for calling registered endpoints (with full permission and guard logic) and `callEndpointRaw()` for calling arbitrary kernel paths directly.
 
-For the full authoring guide: `siyuan-cli doc read cli-usage/extension`.
+For the full authoring guide: `siyuan-cli skill read cli-usage/extension.md`.
 
 ---
 

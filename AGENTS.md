@@ -7,7 +7,7 @@
 ## Key paths
 
 - 项目代码：`src/`
-- CLI 内置文档：`src/docs/`（随 package 发布）
+- 内置文档：随 skill 一起发布（构建后位于 `dist/skills/siyuan-cli/`，经 `siyuan-cli skill read` 访问）
 - CLI 内置 SKILL：`skills/`（install 后落在全局 `~/.agents/skills/`）
 - 已安装 package 视角：运行时代码与类型声明看同 package 下的 `dist/`
 
