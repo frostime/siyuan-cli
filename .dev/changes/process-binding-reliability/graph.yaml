@@ -22,17 +22,17 @@ artifacts:
 
 target:
     statement: >-
-        Make caller-process workspace binding reliable in supported runtimes without
+        Make caller-process workspace binding reliable under verified runtime conditions without
         requiring Agent harness cooperation, while keeping failure explicit, Agent
         recovery actionable, and the implementation concentrated behind a workspace
         binding boundary.
     success:
-        - Two independent calls from one supported long-lived caller can confirm and reuse one binding.
+        - Two independent calls from one long-lived caller under documented verified conditions can confirm and reuse one binding.
         - Insufficient evidence never creates a confirmed binding from guessed ancestry.
         - Pending retry, targeted cancellation, confirmed unbind, and output states follow the accepted SPEC.
         - Windows-native behavior remains independent of MSYS; MSYS is activated only by runtime evidence.
         - The final module structure matches an accepted SHAPE and does not broadly reorganize unrelated workspace code.
-        - Automated and real-runtime verification support the claimed environment boundary.
+        - Automated and real-runtime evidence supports the documented verification boundary without hard-excluding untested environments.
 
 accepted_state:
     - id: A1
@@ -68,13 +68,28 @@ accepted_state:
       statement: >-
           MSYS is a capability-detected Windows-side branch, not a core product path;
           pipe-endpoint PID evidence is deferred unless the ancestry route proves insufficient.
+    - id: A6
+      validity: current
+      evidence: user decision on 2026-09-08 and accepted DEV-SPEC
+      statement: >-
+          Implicit business calls fail before any SiYuan request when confirmed records remain
+          but process evidence cannot determine binding applicability; explicit selectors bypass
+          observation, and calls with no remaining confirmed records skip it.
+    - id: A7
+      validity: current
+      evidence: user decision on 2026-09-08 and accepted DEV-SPEC
+      statement: >-
+          Pending records expire by time; confirmed records are reclaimed only when the anchor PID
+          is conclusively absent or authoritative start identity proves reuse. Unknown records remain.
+          Existing process-instance matching is preserved, and documentation distinguishes tested
+          environments from unverified ones instead of hard-excluding them.
 
 nodes:
     N1:
         title: Finalize process-binding behavior contract
         lai_issue: 18
-        status: active
-        active_owner: S647
+        status: accepted
+        accepted_at: 2026-09-08
         depends_on: []
         purpose: >-
             Close the user-owned behavior decisions still marked open in the DEV-SPEC.
@@ -184,7 +199,7 @@ nodes:
             - Commands that do not need process binding avoid unnecessary observation when permitted by the contract.
 
     N7:
-        title: Verify process binding in supported runtimes
+        title: Verify process binding under declared runtime conditions
         lai_issue: 24
         status: waiting
         depends_on: [N6]
@@ -215,7 +230,7 @@ nodes:
             - Remove obsolete investigation wording and consumed temporary material with user permission where required.
         expected_result: Final user guidance and a completed Change consistent with the accepted SHAPE.
         acceptance:
-            - SKILL teaches compact default usage, retry, cancel, unbind, failure recovery, and support boundaries.
+            - SKILL teaches compact default usage, retry, cancel, unbind, failure recovery, and tested-environment boundaries.
             - No development wrapper commands or historical diagnoses remain in user-facing text.
             - Final diff is compared with SHAPE and material deviations are resolved.
             - DEV-SPEC and SHAPE have final status; graph has no blocking unresolved area.
@@ -225,21 +240,12 @@ conditional_candidates:
         title: Investigate pipe-endpoint PID as binding evidence
         activation: >-
             N2 or N7 proves that the accepted MSYS-to-Windows ancestry route cannot
-            recover the long-lived caller in a required supported environment.
+            recover the long-lived caller in an environment required by the verification target.
         effect_if_activated: >-
             Add a formal research/design node before changing the process-observation
             contract; do not fold pipe peers into ancestry without user approval.
 
 unresolved_areas:
-    - id: U1
-      owner: N1
-      question: What must an implicit business command do when live bindings exist but process observation is insufficient?
-    - id: U2
-      owner: N1
-      question: Which confirmed-binding states may be reclaimed automatically, and what evidence proves death or PID reuse?
-    - id: U3
-      owner: N1
-      question: What exact runtime/version boundary will be claimed beyond Pi/MSYS2 and Git for Windows Git Bash?
     - id: U4
       owner: N3
       question: Which domain operation replaces the current command-to-command dependency used by deprecated workspace aliases?
@@ -247,7 +253,7 @@ unresolved_areas:
 risks:
     - id: R1
       statement: Treating every missing Windows parent as fatal would reject valid chains that already contain the anchor.
-      control: Preserve stop reasons and decide sufficiency relative to the binding operation.
+      control: Preserve stop reasons; bind/confirm may succeed when a reliable common anchor was observed before truncation, while an implicit no-match from a truncated chain remains insufficient.
     - id: R2
       statement: A generic multi-signal evidence model would broaden identity semantics and test combinations.
       control: Keep pipe evidence conditional and out of the first implementation route.
@@ -257,6 +263,9 @@ risks:
     - id: R4
       statement: Concurrent delegated writers could invent incompatible interfaces or collide in one worktree.
       control: Accept N3 first; give N4 and N5 disjoint ownership and separate worktrees when delegated.
+    - id: R5
+      statement: A live but unrelated confirmed binding can force another caller with insufficient observation to choose a workspace explicitly.
+      control: Fail before any SiYuan request, provide an exact explicit-selector recovery, skip observation when no confirmed records remain, and reclaim only conclusively stale records.
 
 runtime_rules:
     - The user is target authority; only the user changes product scope or observable guarantees.
