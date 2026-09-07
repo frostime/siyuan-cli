@@ -6,7 +6,7 @@ consumed: false
 
 # Assume Reader
 
-S348 is a fresh Pi main Agent in the same repository. It can inspect the Git branch, Change artifacts, source, LAI, and this mail thread, but it has none of S604's conversation context. S348 is being prepared to take over supervision of the whole long-task graph, not merely one implementation node.
+S647 is a fresh Pi main Agent in the same repository. It can inspect the Git branch, Change artifacts, source, LAI, and this mail thread, but it has none of S604's conversation context. S647 is being prepared to take over supervision of the whole long-task graph, not merely one implementation node.
 
 # Background Context
 
@@ -22,7 +22,7 @@ The new Change preserves the underlying product goal: a short-lived CLI should i
 - N1 / LAI #18 is active: finalize the remaining user-owned behavior contract.
 - N2 / LAI #19 is the only frontier node: validate two real Git for Windows Bash calls.
 - N3 / LAI #20 waits on N1 and N2; no implementation may start before N3 produces a user-accepted SHAPE.
-- `graph.yaml` marks this handover pending. S604 remains supervisor until S348 completes the read/question loop and explicitly accepts supervision.
+- `graph.yaml` marks this handover pending. S604 remains supervisor until S647 completes the read/question loop and explicitly accepts supervision.
 
 # Trajectory
 
@@ -66,7 +66,7 @@ Before editing, taking LAI #18, changing `graph.yaml`, or advancing N2, reply to
 - every material ambiguity, contradiction, or claim you cannot independently justify;
 - three to seven focused questions whose answers would let you supervise safely.
 
-S604 will answer and may ask you to revise your working model. When you believe the transfer is complete, explicitly state that you accept supervisor responsibility and name any remaining risks you will carry as unresolved. S604 will then mark the handover consumed, release LAI #18, and transfer graph supervision to S348.
+S604 will answer and may ask you to revise your working model. When you believe the transfer is complete, explicitly state that you accept supervisor responsibility and name any remaining risks you will carry as unresolved. S604 will then mark the handover consumed, release LAI #18, and transfer graph supervision to S647.
 
 # File Reference Map
 
