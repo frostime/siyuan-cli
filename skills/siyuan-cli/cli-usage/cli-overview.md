@@ -250,7 +250,7 @@ siyuan-cli skill uninstall [--agent <id>] [--project]
 
 A bare install keeps the machine in sync: each global install is recorded in the config dir (`skill-installs.json`), and `skill install` without `--agent` refreshes every recorded location that still exists, falling back to the `agents` id when nothing is on record. Project-scope installs belong to one checkout, so they are deliberately not tracked and never touched by a bare install. `skill uninstall` without `--agent` removes only the default `agents` install, and reports `absent` for locations that were never installed. Version-mismatch warnings name the offending install path.
 
-Read resources with the exact path shown by `skill read` / `skill list` (e.g. `recipes/find-target.md`); a bare basename resolves only when unambiguous.
+Address resources by the exact path shown in the `skill read` manifest (e.g. `recipes/find-target.md`). An unmatched path fails with `SKILL_RESOURCE_NOT_FOUND` — re-read the manifest instead of guessing a filename.
 
 ## Debugging
 

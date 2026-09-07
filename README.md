@@ -75,9 +75,11 @@ Launch an agent that can read skill files, read local files, and run shell comma
 
 Say to your agent:
 
-> "Help me use siyuan-cli. Read the installed `siyuan-cli` SKILL, then use `siyuan-cli skill read` for bundled guidance when needed."
+> "Help me use siyuan-cli. Read its SKILL, then follow that SKILL's routing to the bundled resources whenever you need detail."
 
-The README is a human-facing overview. Detailed operational guidance lives in the installed SKILL and its bundled resources, exposed by `siyuan-cli skill read`.
+There are two ways for an agent to read the SKILL: its host loads the installed copy (step 4), or the agent runs `siyuan-cli skill read` on demand with nothing installed at all. Either way the SKILL must match the CLI version — on a mismatch warning, run `siyuan-cli skill install` again and re-read.
+
+The README is a human-facing overview. Detailed operational guidance lives in the SKILL and its bundled resources.
 
 ## How to think about siyuan-cli
 
@@ -414,12 +416,12 @@ The built-in doc set is organized in three layers:
 | Task recipes | `recipes/` | Step-by-step workflows: connect workspace, find documents, read content, safely edit content |
 
 ```bash
-siyuan-cli skill list                          # list skill resources with summaries
 siyuan-cli skill read                          # read the skill (with resource manifest)
 siyuan-cli skill read recipes/edit-content.md  # one bundled resource
+siyuan-cli skill list                          # resources + summaries, without the skill body
 ```
 
-Read resources with the path exactly as listed by `skill read` / `skill list`; a bare basename resolves only when unambiguous. The skill root path is printed by `siyuan-cli --help` for people who want to browse the files themselves.
+Address resources with the paths exactly as listed in that manifest. `siyuan-cli --help` prints the skill root, so you can also browse the files directly.
 
 ---
 

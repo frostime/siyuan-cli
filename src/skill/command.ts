@@ -83,7 +83,8 @@ const readCommand = defineCommand({
     args: {
         path: {
             type: 'positional',
-            description: 'Resource path or unique basename; omit to read the skill itself',
+            description:
+                'Resource path from the skill manifest; omit to read the skill itself',
             required: false
         }
     },

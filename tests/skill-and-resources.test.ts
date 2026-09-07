@@ -29,7 +29,7 @@ const originalCwd = process.cwd();
 test('listSkillResources enumerates bundled resources with frontmatter summaries', () => {
     const resources = listSkillResources();
     assert.ok(resources.length > 0);
-    assert.equal(resources[0]?.relPath, 'README.md');
+    assert.equal(resources[0]?.relPath, 'recipes/connect-workspace.md'); // recipes lead
     assert.ok(resources.some((r) => r.relPath === 'recipes/edit-content.md'));
     assert.ok(resources.every((r) => !r.relPath.endsWith('SKILL.md')));
     assert.ok(resources[0]?.summary);

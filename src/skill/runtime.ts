@@ -188,11 +188,8 @@ function walkResources(root: string, dir: string = root): string[] {
 }
 
 function compareResources(a: SkillResource, b: SkillResource): number {
-    const rank = (relPath: string): number => {
-        if (relPath === 'README.md') return 0;
-        if (relPath.startsWith('recipes/')) return 1;
-        return 2;
-    };
+    const rank = (relPath: string): number =>
+        relPath.startsWith('recipes/') ? 0 : 1;
     const diff = rank(a.relPath) - rank(b.relPath);
     return diff !== 0 ? diff : a.relPath.localeCompare(b.relPath);
 }
@@ -210,7 +207,7 @@ function skillResourceError(
         ExitCode.CONFIG,
         errorType,
         message,
-        'Run `siyuan-cli skill list` to see available resource paths.',
+        'Run `siyuan-cli skill read` to see the resource manifest.',
         detail
     );
 }

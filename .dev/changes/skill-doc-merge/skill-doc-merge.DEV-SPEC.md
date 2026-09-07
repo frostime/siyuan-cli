@@ -39,14 +39,14 @@ Enforcement is two-sided and already exists / is kept:
 
 ```text
 skills/siyuan-cli/
-├── SKILL.md              # routing layer, unchanged size class (~9 KB)
-├── README.md             # moved from src/docs/README.md
+├── SKILL.md              # the one entry point: rules + routing, ~9 KB
 ├── cli-usage/            # moved from src/docs/cli-usage/
 ├── recipes/              # moved from src/docs/recipes/
 └── siyuan-guide/         # moved from src/docs/siyuan-guide/
 ```
 
 - `src/docs/` is deleted. Package `files`/build config updated accordingly.
+- `src/docs/README.md` is dropped rather than moved. It existed because docs and the SKILL were two artifacts with separate roots; once merged, SKILL.md is the overview and a second index would only duplicate its routing table.
 - Resource frontmatter (`title`/`slug`/`summary`) is retained — it feeds `skill list` and the resource manifest in `skill read` output.
 
 ## Command surface
@@ -85,13 +85,17 @@ Reading one resource — the tag changes, so a resource is never mistaken for th
 ```
 
 - `description` on a resource read comes from the file's frontmatter `summary`.
-- Unknown path → structured error listing valid top-level entries (points to `skill list`).
+- Unknown path → structured error whose hint points back at the `skill read` manifest.
 - Path traversal outside the skill dir is rejected (`SKILL_PATH_INVALID`).
-- Callers address resources by the **relative path the manifest publishes** (`recipes/find-target.md`). A bare basename is accepted only as an unambiguous-compat convenience and is never taught in SKILL.md or README examples.
+- Callers address resources by the **relative path the manifest publishes** (`recipes/find-target.md`). Matching a bare basename is an internal fallback, not a documented rule: it appears in no SKILL text, doc, or `--help` string. A wrong guess fails loudly and the error returns the candidates, so nobody needs to be taught the shortcut.
 
 ### SKILL.md routing rewrite
 
-All routing-table entries change from `siyuan-cli doc read <path>` to `siyuan-cli skill read <path>`. The SKILL.md text teaches exactly this one access path — no "if installed, Read the file directly" branch. Internal self-references inside the moved docs (`doc read/list`) get the same rewrite.
+SKILL.md teaches exactly one access path — `siyuan-cli skill read <path>` — with no "if installed, Read the file directly" branch. That command serves the skill bundled with the running CLI, so the agent-facing text never has to reason about staleness; the human README is where both delivery routes (host-loaded installed copy vs. reading through the CLI) are explained.
+
+The read instruction is stated once, above the Routing table; every other mention is a bare relative path (`cli-usage/current.md`), because repeating the command prefix in ~15 rows is noise. `skill list` is dropped from SKILL.md — the manifest printed by a bare `skill read` already covers discovery, so `list` stays an operator convenience behind `--help` and `cli-usage/cli-overview.md`.
+
+The version principle opens the body (before routing): `skill read` is always current with the CLI, an installed copy can lag, and on mismatch the fix is `skill install` + re-read.
 
 ## Install targets and registry (review amendments)
 
@@ -111,7 +115,7 @@ siyuan-cli skill targets
 - **Project-scope installs are not recorded.** They belong to one checkout, not to the machine, so a bare install elsewhere must not rewrite them and the version probe must not report them. Because records are global-only, replaying `agent` alone re-resolves the same path; no scope field is needed.
 - `checkInstalledSkillVersion` probes **every** recorded install (not just the first) and names the offending path; with nothing recorded it probes the default `agents` dir as before.
 - `--agent` must stay absent-by-default in the CLI arg spec — a default value would make every call explicit and disable the sync path.
-- `--target`/`--local` are not aliased, but they are not silently ignored either: citty passes unknown flags through, so both subcommands reject them with `SKILL_FLAG_REMOVED`. The guard is temporary and should be deleted once 0.16 usage has aged out.
+- `--target`/`--local` are not aliased, but they are not silently ignored either: citty passes unknown flags through, so both subcommands reject them with `SKILL_FLAG_REMOVED`. The guard stays because it satisfies both halves of the surface: nothing on the discovery path (help, docs, warnings) ever mentions the old flags, while anyone who still types them is told the call is obsolete and what to use instead.
 - `skill uninstall` without `--agent` removes only the default `agents` install (mass removal by empty args is not the symmetric behavior), and reports `absent` instead of failing when a location was never installed.
 
 ## Non-goals
