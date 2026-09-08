@@ -244,6 +244,8 @@ If `ps` is absent, unverifiable, or foreign, the observer keeps the native Windo
 | Truncated ancestry with a retained unresolved binding fails before networking. | Real Pi/MSYS2 `api system.version` failure with retained isolated state and `requestSent: false`; resolver fixtures. |
 | Explicit selectors bypass process observation. | Real isolated-config invocations with an uncertain binding; workspace-selection tests. |
 | Retry, cancel, unbind, expiry, malformed state, and unreadable state follow their contracts. | Protocol and CLI tests plus isolated real-runtime lifecycle runs. |
+| Distinct live native shell scopes can hold separate bindings, and unbind removes only the caller's matching record. | A concurrent two-scope Windows run with two confirmed records; each scope resolved its own workspace, and the first unbind left the second record active. |
+| Binding-selected business resolution reaches the intended Kernel. | A real `dev` flow completed bind/confirm, `current verify`, and the read-only `api system.version`, then restored real binding state to empty. |
 
 The detailed investigation and external-source trail are in `.dev/changes/process-binding-reliability/process-binding-reliability.TECH-REPORT.md`. That report owns experimental detail; this document owns the current model and maintenance consequences.
 
@@ -254,12 +256,16 @@ The detailed investigation and external-source trail are in `.dev/changes/proces
 | Pi CLI on Windows/MSYS2 | Distinct CLI calls reach one long-lived Pi process; bind/confirm/retry/which/cancel/unbind and fail-before-request behavior verified. |
 | Git for Windows Bash `5.2.26`, runtime/`ps 3.4.10` | Independent CLI-shaped observations reach the same long-lived Git Bash instance; owning and foreign tables are distinguished. |
 | Standalone MSYS2 runtime/`ps 3.6.7` | Pi flow and reverse multi-install ownership check verified. |
+| Windows PowerShell 5.1 native caller | Independent bind/confirm/which/unbind calls selected the long-lived PowerShell instance using Windows PID and CIM start identity, without `ps` or MSYS. |
+| Two concurrent Windows shell scopes | Two bindings coexisted in one state directory; each scope selected its own workspace, and unbind removed only its own record. The shells were reported as VS Code and WezTerm, but the contract rests on their distinct process anchors rather than product identity. |
 | Codex CLI | Process binding validated with a distinguishable CLI process scope; exact version not recorded here. |
 | OpenCode CLI | Process binding validated with a distinguishable CLI process scope; exact version not recorded here. |
 | Codex App | Multiple logical agent sessions observed converging at one App process; binding is app-wide, not session-scoped. |
 | Linux/macOS | Existing success behavior is protected by platform fixtures; untested versions remain unverified rather than hard-excluded. |
 
 This table is evidence, not a product-name whitelist. For an unlisted harness, inspect its topology: process binding can isolate only scopes represented by distinct, reliably identifiable long-lived OS process instances.
+
+In every Windows topology measured during the final verification pass—Pi/MSYS2, Git Bash, native PowerShell, and two terminal-hosted PowerShell scopes—the native tail ended at an exited creator before reaching a trustworthy root. Consequently, real Windows verification exercised match and insufficient no-match, while complete conclusive no-match remained fixture-covered. This is a measured boundary of those topologies, not a universal Windows rule; do not weaken the conclusive-no-match contract to manufacture a fall-through.
 
 ### Revalidation
 

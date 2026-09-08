@@ -21,20 +21,23 @@ status: complete
 2. **当前 Pi + MSYS2 环境中，所需关系仍然可以恢复。** MSYS 自己维护 CLI 与 shell 的逻辑父子关系，并提供对应的 Windows 进程号；走完 MSYS 这一段后，可以切回 Windows 关系继续找到 Pi。
 3. **两个独立 Pi Bash 工具调用已经找到同一个 Pi Node 进程。** 每次调用的 CLI、`sh` 和外层 `bash` 都不同，但两条合并后的关系在 Pi 进程处相交。这符合现有两步绑定设计。
 4. **真实 Git for Windows 运行时也验证了同一路线。** 一个长期 Git Bash harness 通过 npm-shim 形态的入口先后启动两次本仓库 CLI；两次 CLI 的 Windows PID 和 MSYS PID 均不同，Git 的进程表都能把它们接到同一个仍存活的 Git Bash 实例，再从该实例的 Windows PID 接回同一条 Windows 关系。
-5. **继承的标准输入输出管道可能提供一条更短的辅助证据。** 在当前 Pi 环境中，两次独立调用都从继承的标准错误管道查到同一个 Pi 进程号。但该接口的文档保证、重定向行为和不同运行框架下的范围都不足以支撑它单独承担绑定。
-6. Job Object、控制台进程列表、Windows 登录会话、环境变量、事后启动的事件监听等路线都不能在现有限制下唯一、稳定地表示同一个 Agent。
-7. 因此，当前需求在技术上**不是做不到**。已验证的主要路线是“MSYS 逻辑关系 + Windows 原生关系”；管道另一端的进程号可作为补充证据或快速线索，但不能直接取代进程关系。
+5. **完整协议已经在真实运行时通过。** Pi/MSYS2、Git for Windows Bash 和原生 Windows PowerShell 都完成了独立 bind/confirm、which、cancel 与 unbind；真实 `dev` 配置还完成了只读 verify 和业务请求。两个并存的原生 shell scope 能各自选择 workspace，且 unbind 只删除当前 scope 的记录。
+6. **继承的标准输入输出管道可能提供一条更短的辅助证据。** 在当前 Pi 环境中，两次独立调用都从继承的标准错误管道查到同一个 Pi 进程号。但该接口的文档保证、重定向行为和不同运行框架下的范围都不足以支撑它单独承担绑定。
+7. Job Object、控制台进程列表、Windows 登录会话、环境变量、事后启动的事件监听等路线都不能在现有限制下唯一、稳定地表示同一个 Agent。
+8. 因此，当前需求在技术上**不是做不到**。已验证的主要路线是“MSYS 逻辑关系 + Windows 原生关系”；管道另一端的进程号可作为补充证据或快速线索，但不能直接取代进程关系。
 
 ## 验证环境
 
 - Windows 10 专业版，版本 `10.0.19045.6466`；
 - 当前 Pi 的 Bash 工具运行在 MSYS2，`ps` 版本 `3.6.7`；
 - Git for Windows 安装在 `G:\Enviroment\Git`，Git Bash 为 GNU Bash `5.2.26`，所带 `ps` 版本 `3.4.10`；
-- Node.js `24.12.0`；
-- N2 使用本仓库构建产物 `siyuan-cli 0.17.0-dev.2`；
-- 正式代码未修改；本地实验和三个独立子 Agent 的只读调查共同提供证据。
+- Windows PowerShell `5.1.19041.6456`；
+- Node.js `24.12.0`，pnpm `10.24.0`；
+- 本仓库构建产物 `siyuan-cli 0.17.0-dev.2`；
+- N7 的真实只读请求目标为 dev SiYuan `3.8.2`；
+- N2 技术实验没有修改正式代码；N7 验证的是实现基线 `ca2850e`，其后的并行提交只涉及 `.dev/` 文档。
 
-Git for Windows 已在真实运行时中完成 Agent-like 长期 caller 下的两次独立 CLI 调用验证。当前 Pi 会话本身仍使用 MSYS2 工具 shell；“Pi 被配置为直接使用 Git Bash”没有在本次实验中声称已经验证，也不是 N2 判断 Git 运行时、进程表和 Windows handoff 是否成立所必需的条件。
+Git for Windows 已在真实运行时中完成长期 caller 下的完整绑定流程。当前 Pi 会话本身仍使用 MSYS2 工具 shell；“Pi 被配置为直接使用 Git Bash”没有在本次实验中声称已经验证，也不是判断 Git 运行时、进程表和 Windows handoff 是否成立所必需的条件。
 
 ## 当前实现为什么失败
 
@@ -160,6 +163,23 @@ N2 在真实 `G:\Enviroment\Git\bin\bash.exe` 中启动一个长期存活的 Git
 输出格式方面，Git `ps 3.4.10` 的 `ps -e -l` 提供 `PID PPID PGID WINPID ...`，而组合写法 `ps -efl` 输出另一种格式且没有 WINPID。此次非 TTY 调用中，把 `COLUMNS` 设为 `20` 没有复现截断，输出宽度与 `4096` 时相同；这不推翻此前环境中观察到的截断差异，因此实现仍应清除或设置足够大的 `COLUMNS`，并以表头和必需数值列校验实际输出，不能依赖固定空格位置。
 
 N2 由此关闭了 Git for Windows 运行时的关键技术缺口：两次真实 Git Bash CLI-shaped 调用能够通过 owning MSYS 表和 Windows handoff 找到同一个长期 caller。该结论只覆盖上述实测环境与调用拓扑，不把其他平台或版本写成硬性不适用。
+
+### 完整协议运行验证（N7）
+
+N7 使用构建后的 `node bin/siyuan.mjs`，没有调用全局 CLI。除一次经授权的真实 `dev` 只读流程外，状态和 catalog 均位于隔离的 `SIYUAN_CLI_CONFIG`。
+
+- Pi/MSYS2 的 bind 与 confirm 来自两个独立工具调用，最终选择同一个长期 Pi Node 实例；记录的 start ID 与独立 CIM 查询得到的 UTC ticks 完全相同。
+- Git for Windows 长期 Bash harness 通过 npm-shim 形态入口完成 bind、confirm、which、confirmed-only unbind 和 targeted cancel。PATH 选中的 Git `ps 3.4.10` 含当前 WINPID，独立 MSYS2 `ps 3.6.7` 不含；anchor 为长期 Bash 实例。
+- 原生 PowerShell 长期 caller 完成四次独立调用，anchor 的 PID/start ID 与预先记录的 CIM 实例相同；该路径不调用 `ps`，也不依赖 MSYS。
+- 两个同时存活的原生 shell scope 在同一状态目录中持有两个 confirmed records，各自解析到自己的 workspace。第一个 scope 的 unbind 只删除自己的记录，另一个 scope 随后仍能解析其 workspace。
+- 同一 nonce 在项目冲突失败后保留，错误包含 retry/cancel 和 `requestSent: false`；修复冲突后可用原 nonce 确认，`createdAt` 与文件 mtime 没有延长。取消、过期、PID 缺失和权威 start ID 不同的回收行为均符合合同。
+- 一个 live 但身份不足的 retained anchor 在真实 Pi/MSYS2 与原生 PowerShell topology 中触发 `PROCESS_BINDING_OBSERVATION_INSUFFICIENT`；业务调用在联网前退出并保留记录。相同状态下三个显式 selector 均绕过观察并实际走到网络错误，形成对照。
+- 没有 confirmed record 时，即使让 `powershell.exe` 无法从 PATH 解析，`current which` 仍正常走 global；加入记录后同一环境明确报告观察失败，证明“无记录跳过观察”和“查询失败不等于 absence”都成立。
+- 真实配置完成 bind/confirm、`current verify` 和只读 `api system.version`，随后 unbind；真实 pending/bindings 恢复为空，项目文件恢复到原 blob。
+
+所有实测 Windows caller 的 native tail 都在已退出 creator 处停止，因此完整关系上的 conclusive no-match 没有真实触发；该分支由确定性 fixture 保护。这是本机这些 topology 的测量结果，不是 Windows 的普遍结论，也不能据此放宽 insufficient 的 fail-loud 合同。
+
+第一次“双终端”尝试实际使用两个共享 VS Code host chain 的集成终端，不能证明 host isolation，因而不作为该声明的证据。后续并存记录和精确 unbind 的声明只依赖两个不同、仍存活的 shell anchor 及 CLI 输出，不依赖产品名称来判断 scope。
 
 ### 可以采用的接合方式
 
@@ -294,17 +314,13 @@ Windows 的 `GetNamedPipeServerProcessId` 可以查询命名管道服务端的�
 - 无法恢复已经退出的中间进程原来的父进程；
 - 不能满足已确认的 Windows/MSYS 验证目标。
 
-## 留待实现与集成验证的技术事项
+## 集成验证后的边界
 
-N2 已完成真实 Git for Windows 调用和多安装归属验证。后续节点仍需完成：
+N7 已完成实现、fixture 和真实运行时验证。Windows 创建时间来源、Git/MSYS 表格解析、多安装归属、handoff 失败、PID reuse、状态生命周期和完整协议均有对应证据。当前 ancestry 路线在要求验证的环境中成立，因此不激活管道进程号候选路线。
 
-1. 统一 Windows 创建时间来源和精度，确保同一进程在 `bind`、`confirm` 和后续匹配中得到相同标识；
-2. 用 fixture 覆盖旧 Git Bash 输出中的可选状态前缀、`<defunct>`、缺列和损坏行，并验证解析器不会从不完整表格猜测关系；
-3. 构造 MSYS 表缺失、current WINPID 缺失、handoff 实例已退出和 PID 已复用等失败，证明程序能够识别并停止；
-4. 在 N7 运行集成后的 bind、confirm、后续业务调用、cancel 和 unbind；如果实际可配置，再补充 Pi 直接使用 Git Bash 的产品级验证；
-5. 只有 ancestry 路线在要求验证的环境中被证明确实不足时，才按 graph 条件重新调查管道进程号。
+仍需诚实保留两个边界：本轮没有让 Pi 自身改用 Git Bash 工具 shell；Linux/macOS 保留既有 fixture 成功行为，但没有完成本轮真实运行时验证。两者都应写成未验证范围，而不是硬性不支持。
 
-产品行为已经由 accepted DEV-SPEC 确定；本报告中的技术发现不得自行扩大或缩小最终文档声称的实测范围。
+产品行为由 accepted DEV-SPEC 和最终代码决定；本报告中的技术发现不得自行扩大或缩小持久文档声称的实测范围。
 
 ## 主要外部依据
 
