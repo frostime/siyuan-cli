@@ -205,8 +205,8 @@ nodes:
     N6:
         title: Integrate binding outcomes into workspace resolution
         lai_issue: 23
-        status: active
-        active_owner: S647
+        status: accepted
+        accepted_at: 2026-09-08
         depends_on: [N4, N5]
         purpose: >-
             Connect accepted observation outcomes and binding state to effective
@@ -224,7 +224,7 @@ nodes:
     N7:
         title: Verify process binding under declared runtime conditions
         lai_issue: 24
-        status: waiting
+        status: frontier
         depends_on: [N6]
         purpose: >-
             Verify the integrated behavior against the declared runtime boundary and
