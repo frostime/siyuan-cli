@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { join as joinPath } from 'pathe';
@@ -10,35 +10,89 @@ import { loadConfig } from '../src/workspace/config.ts';
 import {
     confirmPendingProbe,
     createPendingProbe
-} from '../src/workspace/process-binding.ts';
+} from '../src/workspace/binding/protocol.ts';
+import type {
+    ProcessObserver,
+    ProcessScopeObservation
+} from '../src/workspace/binding/observation.ts';
+import {
+    inspectProcessInstance,
+    type AncestryTermination,
+    type ProcessAncestry,
+    type ProcessNode
+} from '../src/workspace/binding/process-tree.ts';
 import { CliError } from '../src/shared/errors.ts';
-import type { ProcessTreeHost } from '../src/workspace/process-tree.ts';
 import type { AppConfig } from '../src/workspace/config.ts';
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
-/** Build a /proc/<pid>/stat body: state(0) ppid(1) ... starttime(19). */
-function linuxStat(pid: number, comm: string, ppid: number, starttime: number): string {
-    const fields = ['S', String(ppid), ...Array<string>(17).fill('0'), String(starttime)];
-    return `${pid} (${comm}) ${fields.join(' ')}`;
+function processNode(pid: number, ppid: number, startId: number): ProcessNode {
+    return {
+        pid,
+        ppid,
+        name: pid === 1 ? 'init' : pid === 200 ? 'agent' : 'cli',
+        startId: String(startId)
+    };
 }
 
-/**
- * An "agent scope": every CLI call runs as a child of the agent process 200.
- * `selfPid` varies per call; the agent's start identity is stable.
- */
-function scopeHost(selfPid: number): ProcessTreeHost {
-    const files: Record<string, string> = {};
-    files['/proc/1/stat'] = linuxStat(1, 'init', 0, 1);
-    files['/proc/200/stat'] = linuxStat(200, 'agent', 1, 2000);
-    files[`/proc/${selfPid}/stat`] = linuxStat(selfPid, 'cli', 200, 3000 + selfPid);
+/** One short-lived CLI below a stable long-lived caller and the machine root. */
+function scope(
+    selfPid: number,
+    anchorPid = 200,
+    termination: AncestryTermination = { kind: 'root' }
+): ProcessAncestry {
     return {
         platform: 'linux',
-        pid: selfPid,
-        run: () => undefined,
-        readTextFile: (path) => files[path],
-        readSymlink: () => undefined
+        chain: [
+            processNode(selfPid, anchorPid, 3000 + selfPid),
+            processNode(anchorPid, 1, 2000 + anchorPid),
+            processNode(1, 0, 1)
+        ],
+        termination
     };
+}
+
+function observerFor(
+    ancestry: ProcessAncestry,
+    visibleProcesses: readonly ProcessNode[] = ancestry.chain,
+    calls?: { capture: number; inspect: number }
+): ProcessObserver {
+    const byPid = new Map(visibleProcesses.map((node) => [node.pid, node]));
+    return {
+        captureBindingAncestry() {
+            if (calls) calls.capture += 1;
+            return ancestry;
+        },
+        inspectAnchorsAndCurrentScope(anchors): ProcessScopeObservation {
+            if (calls) calls.inspect += 1;
+            const anchorInspections = anchors.map((anchor) =>
+                inspectProcessInstance(anchor, byPid.get(anchor.pid), true)
+            );
+            return {
+                platform: ancestry.platform,
+                anchorInspections,
+                ...(anchorInspections.some(({ state }) => state !== 'stale')
+                    ? { ancestry }
+                    : {})
+            };
+        }
+    };
+}
+
+function scopeObserver(
+    selfPid: number,
+    anchorPid = 200,
+    calls?: { capture: number; inspect: number }
+): ProcessObserver {
+    return observerFor(scope(selfPid, anchorPid), undefined, calls);
+}
+
+function bindingFileNames(): string[] {
+    try {
+        return readdirSync(join(configRoot, 'process-binding', 'bindings'));
+    } catch {
+        return [];
+    }
 }
 
 const CONFIG_YAML = `
@@ -79,8 +133,8 @@ test.afterEach(() => {
 
 /** Bind `workspace` to the agent scope using the fake two-step protocol. */
 function bindWorkspace(workspace: string): void {
-    const probe = createPendingProbe(workspace, scopeHost(101));
-    confirmPendingProbe(probe.nonce, scopeHost(102));
+    const probe = createPendingProbe(workspace, scopeObserver(101));
+    confirmPendingProbe(probe.nonce, scopeObserver(102));
 }
 
 function writeProjectFile(workspace?: string): string {
@@ -105,7 +159,7 @@ test('process binding selects the workspace when nothing else does', () => {
         loadTestConfig(),
         {},
         projectRoot,
-        { processTreeHost: scopeHost(103) }
+        { processObserver: scopeObserver(103) }
     );
     assert.equal(resolved.name, 'dev');
     assert.equal(resolved.source, 'process-binding');
@@ -113,41 +167,120 @@ test('process binding selects the workspace when nothing else does', () => {
     assert.equal(resolved.binding?.strength, 'pid+start');
 });
 
-test('a scope outside the anchor does not see the binding', () => {
+test('a complete unrelated scope falls through without seeing the live binding', () => {
     bindWorkspace('dev');
-    const unrelated = scopeHost(103);
-    // Replace the fake ancestry with one that does not contain the agent.
-    const files: Record<string, string> = {
-        '/proc/1/stat': linuxStat(1, 'init', 0, 1),
-        '/proc/400/stat': linuxStat(400, 'other-agent', 1, 500),
-        '/proc/103/stat': linuxStat(103, 'cli', 400, 600)
-    };
-    const outside: ProcessTreeHost = {
-        ...unrelated,
-        readTextFile: (path) => files[path]
-    };
+    const unrelated = scope(103, 400);
+    const liveBindingAnchor = processNode(200, 1, 2200);
+    const outside = observerFor(unrelated, [
+        ...unrelated.chain,
+        liveBindingAnchor
+    ]);
+
     const resolved = resolveEffectiveWorkspace(
         loadTestConfig(),
         {},
         projectRoot,
-        { processTreeHost: outside }
+        { processObserver: outside }
     );
+
     assert.equal(resolved.name, 'home');
     assert.equal(resolved.source, 'global-current');
     assert.equal(resolved.binding, undefined);
 });
 
-test('project file alone keeps project-file provenance', () => {
+test('a truncated unrelated scope fails loudly while its live binding remains', () => {
+    bindWorkspace('dev');
+    const truncated = scope(103, 400, {
+        kind: 'parent-missing',
+        parentPid: 999
+    });
+    const liveBindingAnchor = processNode(200, 1, 2200);
+
+    assert.throws(
+        () =>
+            resolveEffectiveWorkspace(loadTestConfig(), {}, projectRoot, {
+                processObserver: observerFor(truncated, [
+                    ...truncated.chain,
+                    liveBindingAnchor
+                ])
+            }),
+        (error: unknown) => {
+            if (!(error instanceof CliError)) return false;
+            assert.equal(
+                error.errorType,
+                'PROCESS_BINDING_OBSERVATION_INSUFFICIENT'
+            );
+            assert.equal(
+                (error.details as { requestSent?: boolean }).requestSent,
+                false
+            );
+            return true;
+        }
+    );
+    assert.equal(bindingFileNames().length, 1);
+});
+
+test('a conclusively reused anchor is reclaimed before global fallback', () => {
+    bindWorkspace('dev');
+    const calls = { capture: 0, inspect: 0 };
+    const current = scope(103, 400);
+    const reusedAnchor = processNode(200, 1, 9999);
+
+    const resolved = resolveEffectiveWorkspace(
+        loadTestConfig(),
+        {},
+        projectRoot,
+        {
+            processObserver: observerFor(
+                current,
+                [...current.chain, reusedAnchor],
+                calls
+            )
+        }
+    );
+
+    assert.equal(resolved.name, 'home');
+    assert.equal(resolved.source, 'global-current');
+    assert.deepEqual(calls, { capture: 0, inspect: 1 });
+    assert.deepEqual(bindingFileNames(), []);
+});
+
+test('project selection cannot bypass uncertainty from a retained binding', () => {
+    bindWorkspace('dev');
     const cwd = writeProjectFile('home');
+    const truncated = scope(103, 400, {
+        kind: 'parent-missing',
+        parentPid: 999
+    });
+    const liveBindingAnchor = processNode(200, 1, 2200);
+
+    assert.throws(
+        () =>
+            resolveEffectiveWorkspace(loadTestConfig(), {}, cwd, {
+                processObserver: observerFor(truncated, [
+                    ...truncated.chain,
+                    liveBindingAnchor
+                ])
+            }),
+        (error: unknown) =>
+            error instanceof CliError &&
+            error.errorType === 'PROCESS_BINDING_OBSERVATION_INSUFFICIENT'
+    );
+});
+
+test('project file alone keeps project-file provenance without process observation', () => {
+    const cwd = writeProjectFile('home');
+    const calls = { capture: 0, inspect: 0 };
     const resolved = resolveEffectiveWorkspace(
         loadTestConfig(),
         {},
         cwd,
-        { processTreeHost: scopeHost(103) }
+        { processObserver: scopeObserver(103, 200, calls) }
     );
     assert.equal(resolved.name, 'home');
     assert.equal(resolved.source, 'project-file');
     assert.equal(resolved.binding, undefined);
+    assert.deepEqual(calls, { capture: 0, inspect: 0 });
 });
 
 test('agreeing project file and binding resolve with binding provenance', () => {
@@ -157,7 +290,7 @@ test('agreeing project file and binding resolve with binding provenance', () => 
         loadTestConfig(),
         {},
         cwd,
-        { processTreeHost: scopeHost(103) }
+        { processObserver: scopeObserver(103) }
     );
     assert.equal(resolved.name, 'dev');
     assert.equal(resolved.source, 'process-binding');
@@ -171,7 +304,7 @@ test('disagreeing project file and binding fail with a configuration error', () 
     assert.throws(
         () =>
             resolveEffectiveWorkspace(loadTestConfig(), {}, cwd, {
-                processTreeHost: scopeHost(103)
+                processObserver: scopeObserver(103)
             }),
         (error: unknown) => {
             if (!(error instanceof CliError)) return false;
@@ -188,33 +321,37 @@ test('disagreeing project file and binding fail with a configuration error', () 
     );
 });
 
-test('a workspace flag outranks binding and project file without conflict', () => {
+test('a workspace flag bypasses binding observation and project conflict', () => {
     bindWorkspace('dev');
     const cwd = writeProjectFile('home');
+    const calls = { capture: 0, inspect: 0 };
     const resolved = resolveEffectiveWorkspace(
         loadTestConfig(),
         { workspace: 'home' },
         cwd,
-        { processTreeHost: scopeHost(103) }
+        { processObserver: scopeObserver(103, 200, calls) }
     );
     assert.equal(resolved.name, 'home');
     assert.equal(resolved.source, 'flag');
     assert.equal(resolved.binding, undefined);
+    assert.deepEqual(calls, { capture: 0, inspect: 0 });
 });
 
-test('the environment variable outranks binding and project file without conflict', () => {
+test('the environment variable bypasses binding observation and project conflict', () => {
     bindWorkspace('dev');
     const cwd = writeProjectFile('home');
+    const calls = { capture: 0, inspect: 0 };
     process.env['SIYUAN_CLI_WORKSPACE'] = 'home';
     try {
         const resolved = resolveEffectiveWorkspace(
             loadTestConfig(),
             {},
             cwd,
-            { processTreeHost: scopeHost(103) }
+            { processObserver: scopeObserver(103, 200, calls) }
         );
         assert.equal(resolved.name, 'home');
         assert.equal(resolved.source, 'env');
+        assert.deepEqual(calls, { capture: 0, inspect: 0 });
     } finally {
         delete process.env['SIYUAN_CLI_WORKSPACE'];
     }
@@ -225,37 +362,41 @@ test('a bound workspace missing from the catalog fails as WORKSPACE_NOT_FOUND', 
     assert.throws(
         () =>
             resolveEffectiveWorkspace(loadTestConfig(), {}, projectRoot, {
-                processTreeHost: scopeHost(103)
+                processObserver: scopeObserver(103)
             }),
         (error: unknown) =>
             error instanceof CliError && error.errorType === 'WORKSPACE_NOT_FOUND'
     );
 });
 
-test('ad-hoc baseUrl bypasses binding and project file', () => {
+test('ad-hoc baseUrl bypasses binding observation and project discovery', () => {
     bindWorkspace('dev');
     const cwd = writeProjectFile('home');
+    const calls = { capture: 0, inspect: 0 };
     const resolved = resolveEffectiveWorkspace(
         loadTestConfig(),
         { baseUrl: 'http://127.0.0.1:9999' },
         cwd,
-        { processTreeHost: scopeHost(103) }
+        { processObserver: scopeObserver(103, 200, calls) }
     );
     assert.equal(resolved.name, '<ad-hoc>');
     assert.equal(resolved.source, 'ad-hoc');
     assert.equal(resolved.binding, undefined);
+    assert.deepEqual(calls, { capture: 0, inspect: 0 });
 });
 
-test('without binding or project file the selection falls back to global current', () => {
+test('without binding or project file the global fallback skips process observation', () => {
+    const calls = { capture: 0, inspect: 0 };
     const resolved = resolveEffectiveWorkspace(
         loadTestConfig(),
         {},
         projectRoot,
-        { processTreeHost: scopeHost(103) }
+        { processObserver: scopeObserver(103, 200, calls) }
     );
     assert.equal(resolved.name, 'home');
     assert.equal(resolved.source, 'global-current');
     assert.equal(resolved.binding, undefined);
+    assert.deepEqual(calls, { capture: 0, inspect: 0 });
 });
 
 test('project permission overlays survive a binding-selected workspace', () => {
@@ -268,7 +409,7 @@ test('project permission overlays survive a binding-selected workspace', () => {
         loadTestConfig(),
         {},
         projectRoot,
-        { processTreeHost: scopeHost(103) }
+        { processObserver: scopeObserver(103) }
     );
     assert.equal(resolved.name, 'dev');
     assert.equal(resolved.source, 'process-binding');

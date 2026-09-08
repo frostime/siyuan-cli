@@ -250,7 +250,7 @@ export function cancelPendingProbe(
 }
 
 export function unbindProcessScope(
-    observer: ProcessObserver = createProcessObserver()
+    observer?: ProcessObserver
 ): UnbindResult {
     const files = loadValidBindingFiles();
     if (files.length === 0) return { removed: 0, reclaimed: 0 };
@@ -280,7 +280,7 @@ export function unbindProcessScope(
  * instances are reclaimed, while uncertain records are always retained.
  */
 export function findActiveBinding(
-    observer: ProcessObserver = createProcessObserver()
+    observer?: ProcessObserver
 ): ScopeBinding | undefined {
     const files = loadValidBindingFiles();
     if (files.length === 0) return undefined;
@@ -339,11 +339,13 @@ function loadValidBindingFiles(): ValidBindingFile[] {
 
 function inspectBindings(
     files: ValidBindingFile[],
-    observer: ProcessObserver
+    observer?: ProcessObserver
 ): InspectedBindings {
     let observation;
     try {
-        observation = observer.inspectAnchorsAndCurrentScope(
+        observation = (
+            observer ?? createProcessObserver()
+        ).inspectAnchorsAndCurrentScope(
             files.map(({ record }) => record.anchor)
         );
     } catch (error) {

@@ -2,15 +2,24 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-    captureProcessAncestry,
     findNearestCommonAncestor,
     inspectProcessInstance,
     matchProcessInstance,
     summarizeArgvTokens,
-    type ProcessNode,
-    type ProcessTreeHost
-} from '../src/workspace/process-tree.ts';
+    type ProcessAncestry,
+    type ProcessNode
+} from '../src/workspace/binding/process-tree.ts';
+import {
+    createProcessObserver,
+    type ObservationHost
+} from '../src/workspace/binding/observation.ts';
 import { CliError } from '../src/shared/errors.ts';
+
+type ProcessTreeHost = ObservationHost;
+
+function captureProcessAncestry(host: ProcessTreeHost): ProcessAncestry {
+    return createProcessObserver(host).captureBindingAncestry();
+}
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
