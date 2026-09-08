@@ -101,6 +101,15 @@ accepted_state:
           process semantics, observation, persisted state, and protocol are separate;
           Windows capture owns a nested MSYS process-table helper selected by capability,
           and workspace resolution consumes domain outcomes rather than platform stop reasons.
+    - id: A10
+      validity: current
+      evidence: N7 real-runtime matrix, TECH-REPORT, and .dev/docs/process-binding.md on 2026-09-08
+      statement: >-
+          The complete protocol is verified in real Pi/MSYS2, Git for Windows Bash,
+          and native PowerShell caller scopes, including read-only dev resolution,
+          retry/cancel/unbind, conservative reclamation, explicit-selector bypass,
+          fail-before-request uncertainty, and precise unbind with concurrent records.
+          Complete no-match remains fixture-covered because all measured Windows tails truncated.
 
 nodes:
     N1:
@@ -224,8 +233,8 @@ nodes:
     N7:
         title: Verify process binding under declared runtime conditions
         lai_issue: 24
-        status: active
-        active_owner: S647
+        status: accepted
+        accepted_at: 2026-09-08
         depends_on: [N6]
         purpose: >-
             Verify the integrated behavior against the declared runtime boundary and
@@ -244,8 +253,8 @@ nodes:
     N9:
         title: Document process-binding technical foundations
         lai_issue: 26
-        status: active
-        active_owner: S647
+        status: accepted
+        accepted_at: 2026-09-08
         depends_on: [N6]
         purpose: >-
             Preserve the cross-platform process model, design rationale, verified evidence,
@@ -268,7 +277,7 @@ nodes:
     N8:
         title: Finalize process-binding guidance and change artifacts
         lai_issue: 25
-        status: waiting
+        status: frontier
         depends_on: [N7, N9]
         purpose: >-
             Publish only verified behavior and leave code, durable contracts, skill
