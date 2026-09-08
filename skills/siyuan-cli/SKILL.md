@@ -20,7 +20,7 @@ siyuan-cli --help
 siyuan-cli current which
 ```
 
-If `siyuan-cli` is missing: `npm install -g @frostime/siyuan-cli`. Always invoke this package as `siyuan-cli`; on SiYuan 3.7.0 or later, `siyuan` may resolve to SiYuan's native CLI instead. If no workspace is configured, read `recipes/connect-workspace.md`. When adding a connection, stop and ask if the target SiYuan workspace is ambiguous, no token source is available, or neither its base URL nor local directory is known; choose a local CLI alias only after the target itself is clear.
+If `siyuan-cli` is missing: `npm install -g @frostime/siyuan-cli`. Always invoke this package as `siyuan-cli`; on SiYuan 3.7.0 or later, `siyuan` may resolve to SiYuan's native CLI instead. If no workspace is configured, read `recipes/workspace.md`. When adding a connection, stop and ask if the target SiYuan workspace is ambiguous, no token source is available, or neither its base URL nor local directory is known; choose a local CLI alias only after the target itself is clear.
 
 ## Workspace selection
 
@@ -28,7 +28,7 @@ Before content work, run `siyuan-cli current which` to inspect persistent/ambien
 
 Choose the narrowest scope: one or a few calls → `--workspace <name>`; repeated project work → `.siyuan-cli.yaml`; long-lived work without a project → experimental process binding; deliberate machine-wide default change → `current global <name>` (not isolation).
 
-Before process binding, read `cli-usage/current.md`. Run bind and confirm as separate tool/CLI calls from the same long-lived caller, not one disposable shell block. Cancel an abandoned nonce with the exact command bind printed; unbind after confirmation. If project and binding disagree, use a one-call `--workspace` exception or fix the conflict.
+Before process binding, read `cli-usage/process-binding.md`. Run bind and confirm as separate tool/CLI calls from the same long-lived caller, not one disposable shell block. Cancel an abandoned nonce with the exact command bind printed; unbind after confirmation. If project and binding disagree, use a one-call `--workspace` exception or fix the conflict.
 
 ## Command discovery
 
@@ -154,8 +154,8 @@ Read a resource with `siyuan-cli skill read <path>`. Paths are relative to this 
 
 | Need | Read |
 |------|------|
-| workspace selection/binding | `cli-usage/current.md` |
-| workspace connect/debug | `recipes/connect-workspace.md` |
+| workspace unconfigured, wrong, unreachable, or scope must be chosen | `recipes/workspace.md` |
+| workspace binding chosen there | `cli-usage/process-binding.md` |
 | config schema (behavior, rawApi, defaults, project-file) | `cli-usage/workspace-config.md` |
 | locate user-named doc/block | `recipes/find-target.md` |
 | read content ranges/paging/ids | `recipes/read-content.md` |
@@ -166,6 +166,7 @@ Read a resource with `siyuan-cli skill read <path>`. Paths are relative to this 
 | permissions/approval config | `cli-usage/permission.md` |
 | custom API/tool extension | `cli-usage/extension.md` |
 | deep CLI mechanics: flags, input-source edge cases, stdout/stderr, Approval Center, MSYS | `cli-usage/cli-overview.md` |
+| **blocked** after `--help` / `--print json` / `--debug`: behaviour contradicts docs, or an exact runtime shape is required | `cli-usage/read-source.md` |
 
 ## Layer choice
 
@@ -199,8 +200,8 @@ Read a resource with `siyuan-cli skill read <path>`. Paths are relative to this 
 - `--showId true` injects `@@id@@type` markers; never use them as brute-edit source/search text.
 - Endpoint choice: registered > `api raw`; avoid long-lived `rawApi.allow: ["*"]`.
 
-## Internals
+## Last resort
 
-For extension typing: read `cli-usage/extension.md`, then inspect installed `dist/shared/schema.d.mts`.
+The published package is unbundled ESM, so its code can be read when nothing else answers a question. Treat it as a fallback, not a habit: only after command output, structured errors, and the routed resource have failed, and only for the specific blocking question. Paths are in `cli-usage/read-source.md`. Never edit installed files.
 
 GitHub: [siyuan-cli](https://github.com/frostime/siyuan-cli) · [SiYuan kernel API](https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go)

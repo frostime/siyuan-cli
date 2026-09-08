@@ -130,5 +130,5 @@ Convert hpath to id before writes.
 
 - `recipes/read-content.md` — reading after target found
 - `recipes/edit-content.md` — editing after target found
-- `siyuan-guide/document-tree-and-paths.md` — path semantics
+- `siyuan-guide/siyuan-block.md` — block fields, ownership, and path semantics
 - `siyuan-guide/sql-query-guide.md` — SQL patterns

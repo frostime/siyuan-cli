@@ -139,12 +139,13 @@ and emit a warning.
 siyuan-cli tool brute-edit <doc-id> --check true --print json
 # If SAFE, checkpoint once before this high-risk edit group:
 siyuan-cli tool checkpoint-doc <doc-id>
-siyuan-cli tool get-block-content <doc-id> --range children --limit=-1 --bodyOnly true > "$TMPDIR/doc.md"
-# ... edit $TMPDIR/doc.md locally ...
-siyuan-cli tool brute-edit <doc-id> --overwrite @file:$TMPDIR/doc.md --dry-run
-siyuan-cli tool brute-edit <doc-id> --overwrite @file:$TMPDIR/doc.md --yes
-rm "$TMPDIR/doc.md"
+siyuan-cli tool get-block-content <doc-id> --range children --limit=-1 --bodyOnly true > ./doc.md
+# ... edit ./doc.md locally ...
+siyuan-cli tool brute-edit <doc-id> --overwrite @file:./doc.md --dry-run
+siyuan-cli tool brute-edit <doc-id> --overwrite @file:./doc.md --yes
 ```
+
+Write the round-trip file to a path you chose in this task, then remove it yourself. Do not rely on `$TMPDIR`: it is unset in many shells, including Windows MSYS, where `"$TMPDIR/doc.md"` becomes `/doc.md`.
 
 Never overwrite from `--showId true` output; markers are not source text.
 

@@ -6,27 +6,6 @@ summary: Command structure, flags, input sources, and error handling for siyuan-
 
 # CLI Overview
 
-## Agent quick sections
-
-- [Input sources](#input-sources) — `@file`, `@stdin`, `@env`, heredoc
-- [Git Bash / MSYS](#git-bash--msys-path-conversion) — path rewriting workarounds
-- [Error handling](#error-handling) — exit codes, error codes
-- [Debugging](#debugging) — `--debug`, `--dry-run`, `current which`
-
-## Commands
-
-| Group | Subcommands | Role |
-|-------|-------------|------|
-| `current` | bind · confirm · unbind · global · which · verify | Select and verify the effective workspace; see [`current.md`](current.md) |
-| `workspace` | add · list · verify · show · remove | Manage catalog connections; `use` and `which` are deprecated aliases |
-| `api` | list · describe · raw · `<id>` | Call kernel endpoints |
-| `tool` | list · describe · `<id>` | Run composite workflow tools |
-| `approval` | status · list · show · approve · reject · open · stop | Manage approval broker |
-| `skill` | list · read · install · uninstall | Read the bundled skill and resources; install it to an agent skills dir |
-| `extension` | init · list · cache | Manage user extensions |
-
-Full flags and usage: `siyuan-cli --help`, `siyuan-cli <group> --help`, `siyuan-cli <group> <sub> --help`.
-
 ## Calling kernel APIs
 
 Endpoint id: `<group>.<name>` (derived from kernel path `/api/<group>/<name>`).
@@ -55,7 +34,7 @@ siyuan-cli api raw asset.getDocAssets -j '{"id":"20240922152051-7dpjfpv"}'
 
 Raw stdout is pure JSON `data` (pipe to `jq`); warnings go to stderr. Bypasses schema validation, guards, response filtering, and compact formatting. → `workspace-config.md` §Raw API fallback.
 
-Workspace selection and process binding → [`current.md`](current.md).
+Workspace selection → `recipes/workspace.md`.
 
 ## Using tools
 
@@ -235,22 +214,9 @@ Common fixes:
 - `CONTENT_DENIED` → rules may restrict writes to this notebook/path; inspect rule list
 - `APPROVAL_UNAVAILABLE` → broker not running; retry with `--yes` only when safe
 
-## Skill install targets
+## Reading bundled resources
 
-```bash
-siyuan-cli skill targets                              # every known agent, its paths, what is installed
-siyuan-cli skill install                              # sync every recorded install
-siyuan-cli skill install --agent claude-code          # just this agent, then record it
-siyuan-cli skill install --agent pi --agent codex     # repeatable, or --agent pi,codex
-siyuan-cli skill install --project                    # ./.agents/skills/, never recorded
-siyuan-cli skill uninstall [--agent <id>] [--project]
-```
-
-`--agent` takes an agent id from a fixed table — `agents` (the shared `.agents` convention), `claude-code`, `codex`, `cursor`, `gemini-cli`, `github-copilot`, `opencode`, `pi` — and unknown ids fail with the valid list instead of creating a directory. The ids and their directories match the mapping used by the `skills` installer (github.com/vercel-labs/skills). Scope: `--global` (default, under the home directory) or `--project` (under the working directory); most agents share the project-level `.agents/skills/`, while global paths differ per agent (`pi` → `~/.pi/agent/skills`, `opencode` → `~/.config/opencode/skills`).
-
-A bare install keeps the machine in sync: each global install is recorded in the config dir (`skill-installs.json`), and `skill install` without `--agent` refreshes every recorded location that still exists, falling back to the `agents` id when nothing is on record. Project-scope installs belong to one checkout, so they are deliberately not tracked and never touched by a bare install. `skill uninstall` without `--agent` removes only the default `agents` install, and reports `absent` for locations that were never installed. Version-mismatch warnings name the offending install path.
-
-Address resources by the exact path shown in the `skill read` manifest (e.g. `recipes/find-target.md`). An unmatched path fails with `SKILL_RESOURCE_NOT_FOUND` — re-read the manifest instead of guessing a filename.
+Address resources by the exact path shown in the `siyuan-cli skill read` manifest (e.g. `recipes/find-target.md`). An unmatched path fails with `SKILL_RESOURCE_NOT_FOUND` — re-read the manifest instead of guessing a filename.
 
 ## Debugging
 
@@ -263,4 +229,4 @@ siyuan-cli api <id> --debug             # curl-equivalent to stderr
 siyuan-cli api <id> ... --dry-run       # preview writes
 ```
 
-Approval commands: `siyuan-cli approval status|list|open|approve|reject`. Broker config and lifecycle → `workspace-config.md` §Behavior. Workspace selection and process binding → [`current.md`](current.md). Permission rules → `permission.md`.
+Approval commands: `siyuan-cli approval status|list|open|approve|reject`. Broker config and lifecycle → `workspace-config.md` §Behavior. Workspace selection → `recipes/workspace.md`. Permission rules → `permission.md`.
