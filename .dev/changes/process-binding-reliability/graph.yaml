@@ -165,8 +165,8 @@ nodes:
     N4:
         title: Implement reliable process observation
         lai_issue: 21
-        status: active
-        active_owner: S647
+        status: accepted
+        accepted_at: 2026-09-08
         depends_on: [N3]
         purpose: >-
             Implement platform-neutral observation plus Windows-native and
