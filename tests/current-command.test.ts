@@ -72,6 +72,20 @@ function jsonOut(result: ReturnType<typeof runCli>): Record<string, any> {
     return JSON.parse(result.stdout);
 }
 
+function currentJson(args: string[]): Record<string, any> {
+    const envelope = jsonOut(runCli([...args, '--print', 'json']));
+    assert.equal(envelope.ok, true);
+    return envelope.data;
+}
+
+async function currentJsonAsync(args: string[]): Promise<Record<string, any>> {
+    const result = await runCliAsync([...args, '--print', 'json']);
+    assert.equal(result.status, 0, result.stderr);
+    const envelope = JSON.parse(result.stdout);
+    assert.equal(envelope.ok, true);
+    return envelope.data;
+}
+
 function stderrError(result: ReturnType<typeof runCli>): Record<string, any> {
     assert.notEqual(result.status, 0, result.stdout);
     return JSON.parse(result.stderr);
@@ -107,38 +121,74 @@ test.afterEach(() => {
 test('bind → confirm → which → unbind works across independent CLI calls', () => {
     addWorkspace('dev');
 
-    const bind = jsonOut(runCli(['current', 'bind', 'dev']));
+    const bind = currentJson(['current', 'bind', 'dev']);
     assert.equal(bind.status, 'pending');
     assert.equal(bind.workspace, 'dev');
     assert.match(bind.nonce, /^[0-9a-f]{32}$/);
-    assert.equal(bind.confirm.command, `siyuan-cli current confirm ${bind.nonce}`);
-    assert.match(bind.message, /new independent call/);
+    assert.equal(bind.confirmCommand, `siyuan-cli current confirm ${bind.nonce}`);
+    assert.equal(bind.cancelCommand, `siyuan-cli current cancel ${bind.nonce}`);
+    assert.equal(bind.bindingExists, false);
 
-    const confirm = jsonOut(runCli(['current', 'confirm', bind.nonce]));
+    const confirm = currentJson(['current', 'confirm', bind.nonce]);
     assert.equal(confirm.status, 'bound');
     assert.equal(confirm.workspace, 'dev');
     assert.equal(confirm.anchor.strength, 'pid+start');
     assert.equal(typeof confirm.anchor.pid, 'number');
-    assert.match(confirm.message, /without --workspace/);
+    assert.equal(confirm.pendingRetained, false);
 
-    const which = jsonOut(runCli(['current', 'which']));
+    const which = currentJson(['current', 'which']);
     assert.equal(which.status, 'resolved');
     assert.equal(which.workspace, 'dev');
     assert.equal(which.source, 'process-binding');
     assert.equal(which.binding.strength, 'pid+start');
     assert.equal(which.binding.pid, confirm.anchor.pid);
 
-    const unbind = jsonOut(runCli(['current', 'unbind']));
+    const unbind = currentJson(['current', 'unbind']);
     assert.equal(unbind.status, 'unbound');
     assert.equal(unbind.removed, 1);
 
     // No binding left: the scope falls back to the global default, which
     // `workspace add` auto-set to the first workspace.
-    const whichAfter = jsonOut(runCli(['current', 'which']));
+    const whichAfter = currentJson(['current', 'which']);
     assert.equal(whichAfter.status, 'resolved');
     assert.equal(whichAfter.source, 'global-current');
     assert.equal(whichAfter.workspace, 'dev');
     assert.equal(whichAfter.binding, null);
+});
+
+test('bind defaults to compact instructions with exact confirm and cancel commands', () => {
+    addWorkspace('dev');
+    const bind = runCli(['current', 'bind', 'dev']);
+    assert.equal(bind.status, 0, bind.stderr);
+    assert.match(bind.stdout, /^Binding procedure started for workspace "dev"\./);
+    const nonce = bind.stdout.match(/siyuan-cli current confirm ([0-9a-f]{32})/)?.[1];
+    assert.ok(nonce);
+    assert.match(bind.stdout, new RegExp(`siyuan-cli current cancel ${nonce}`));
+    assert.match(bind.stdout, /only after confirmation succeeds/);
+});
+
+test('cancel is targeted and unbind leaves pending confirmations unchanged', () => {
+    addWorkspace('dev');
+    const first = currentJson(['current', 'bind', 'dev']);
+    currentJson(['current', 'confirm', first.nonce]);
+    const pending = currentJson(['current', 'bind', 'dev']);
+
+    const unbind = currentJson(['current', 'unbind']);
+    assert.equal(unbind.removed, 1);
+    assert.deepEqual(pendingFileNames(), [`${pending.nonce}.json`]);
+
+    const cancelled = currentJson(['current', 'cancel', pending.nonce]);
+    assert.equal(cancelled.status, 'pending-cancelled');
+    assert.equal(cancelled.pendingRetained, false);
+    assert.deepEqual(pendingFileNames(), []);
+});
+
+test('invalid print mode fails before creating binding state', () => {
+    addWorkspace('dev');
+    const result = runCli(['current', 'bind', 'dev', '--print', 'yaml']);
+    assert.equal(result.status, 1);
+    assert.equal(stderrError(result).error, 'PRINT_MODE_INVALID');
+    assert.deepEqual(pendingFileNames(), []);
 });
 
 test('bind rejects unknown workspaces with a configuration error', () => {
@@ -148,7 +198,7 @@ test('bind rejects unknown workspaces with a configuration error', () => {
 });
 
 test('confirm with an unknown nonce fails explicitly', () => {
-    const result = runCli(['current', 'confirm', 'deadbeef']);
+    const result = runCli(['current', 'confirm', '0'.repeat(32)]);
     assert.equal(result.status, 1);
     assert.equal(stderrError(result).error, 'PROCESS_BINDING_PENDING_NOT_FOUND');
 });
@@ -167,7 +217,7 @@ test('bind fails on project-file disagreement without creating pending state', (
     assert.deepEqual(pendingFileNames(), []);
 
     // Binding the name the project file selects is allowed.
-    const agreeing = jsonOut(runCli(['current', 'bind', 'home']));
+    const agreeing = currentJson(['current', 'bind', 'home']);
     assert.equal(agreeing.workspace, 'home');
     assert.equal(pendingFileNames().length, 1);
 });
@@ -176,7 +226,7 @@ test('confirm rechecks the project file and fails if it changed after bind', () 
     addWorkspace('dev');
     addWorkspace('home');
 
-    const bind = jsonOut(runCli(['current', 'bind', 'dev']));
+    const bind = currentJson(['current', 'bind', 'dev']);
     assert.equal(pendingFileNames().length, 1);
 
     // A project file appears between bind and confirm and selects a
@@ -187,7 +237,27 @@ test('confirm rechecks the project file and fails if it changed after bind', () 
     );
     const confirm = runCli(['current', 'confirm', bind.nonce]);
     assert.equal(confirm.status, 2, confirm.stdout);
-    assert.equal(stderrError(confirm).error, 'CURRENT_SELECTION_CONFLICT');
+    const error = stderrError(confirm);
+    assert.equal(error.error, 'CURRENT_SELECTION_CONFLICT');
+    assert.equal(error.details.bindingExists, false);
+    assert.equal(error.details.pendingRetained, true);
+    assert.equal(error.details.requestSent, false);
+    assert.match(error.hint, /Make the project file and binding select the same workspace/);
+    assert.equal(
+        error.details.causeHint,
+        'Make the project file and binding select the same workspace, or use explicit --workspace per call.'
+    );
+    assert.equal(
+        error.details.retryCommand,
+        `siyuan-cli current confirm ${bind.nonce}`
+    );
+    assert.equal(
+        error.details.cancelCommand,
+        `siyuan-cli current cancel ${bind.nonce}`
+    );
+    assert.match(error.hint, new RegExp(`siyuan-cli current confirm ${bind.nonce}`));
+    assert.match(error.hint, new RegExp(`siyuan-cli current cancel ${bind.nonce}`));
+    assert.equal(pendingFileNames().length, 1);
 });
 
 // ─── Deprecated workspace aliases ────────────────────────────────────────────
@@ -199,7 +269,7 @@ test('workspace use still works with a deprecation warning and sets the global d
     assert.match(use.stderr, /DEPRECATED/);
     assert.match(use.stderr, /current global/);
 
-    const which = jsonOut(runCli(['current', 'which']));
+    const which = currentJson(['current', 'which']);
     assert.equal(which.source, 'global-current');
     assert.equal(which.workspace, 'dev');
 
@@ -247,11 +317,10 @@ test('current verify resolves the selection chain and checks the kernel', async 
 
         // Async runs: the in-process kernel server must stay responsive
         // while the CLI child runs.
-        const bind = JSON.parse((await runCliAsync(['current', 'bind', 'dev'])).stdout);
-        const confirm = await runCliAsync(['current', 'confirm', bind.nonce]);
-        assert.equal(confirm.status, 0, confirm.stderr);
+        const bind = await currentJsonAsync(['current', 'bind', 'dev']);
+        await currentJsonAsync(['current', 'confirm', bind.nonce]);
 
-        const verify = JSON.parse((await runCliAsync(['current', 'verify'])).stdout);
+        const verify = await currentJsonAsync(['current', 'verify']);
         assert.equal(verify.ok, true);
         assert.equal(verify.workspace, 'dev');
         assert.equal(verify.source, 'process-binding');
@@ -268,6 +337,10 @@ test('root help lists current; workspace help marks deprecated aliases', () => {
     const rootHelp = runCli(['--help']);
     assert.equal(rootHelp.status, 0, rootHelp.stderr);
     assert.match(rootHelp.stdout, /\bcurrent\b/);
+
+    const currentHelp = runCli(['current', '--help']);
+    assert.equal(currentHelp.status, 0, currentHelp.stderr);
+    assert.match(currentHelp.stdout, /\bcancel\b/);
 
     const workspaceHelp = runCli(['workspace', '--help']);
     assert.equal(workspaceHelp.status, 0, workspaceHelp.stderr);

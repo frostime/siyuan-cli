@@ -8,14 +8,15 @@ import {
     loadConfig,
     saveConfig,
     resolveWorkspace,
+    resolveEffectiveWorkspace,
     materializeWorkspace,
+    type ResolvedWorkspace,
     type WorkspaceEntry
 } from './config.js';
 import { SiyuanClient } from '../shared/client.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
 import { diagnoseConnection } from './diagnostics.js';
 import { getConfigPath } from './paths.js';
-import { runCurrentGlobal, runCurrentWhich } from '../current/command.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,20 @@ function tryRun(fn: () => Promise<void>): Promise<void> {
 
 function emitDeprecatedWarning(message: string): void {
     process.stderr.write(JSON.stringify({ warning: 'DEPRECATED', message }) + '\n');
+}
+
+function bindingDiagnostics(resolved: ResolvedWorkspace) {
+    if (!resolved.binding) return null;
+    return {
+        workspace: resolved.name,
+        pid: resolved.binding.anchor.pid,
+        name: resolved.binding.anchor.name ?? null,
+        startId: resolved.binding.anchor.startId ?? null,
+        strength: resolved.binding.strength,
+        commandSummary: resolved.binding.anchor.commandSummary ?? null,
+        boundAt: resolved.binding.boundAt,
+        boundCwd: resolved.binding.cwd ?? null
+    };
 }
 
 // ─── add ─────────────────────────────────────────────────────────────────────
@@ -262,7 +277,22 @@ const useCommand = defineCommand({
             emitDeprecatedWarning(
                 '`workspace use` is deprecated; use `siyuan-cli current global <name>` instead.'
             );
-            await runCurrentGlobal(args.name);
+            const config = loadConfig();
+            if (!config.workspaces[args.name]) {
+                throw new CliError(
+                    ExitCode.CONFIG,
+                    'WORKSPACE_NOT_FOUND',
+                    `Workspace "${args.name}" not found in config.`,
+                    'Run `siyuan-cli workspace list` to see available workspaces.'
+                );
+            }
+            config.current = args.name;
+            saveConfig(config);
+            out({
+                status: 'current-set',
+                current: args.name,
+                note: 'Global default updated. This is machine-wide; prefer `siyuan-cli current bind` for caller-scoped selection.'
+            });
         })
 });
 
@@ -472,7 +502,37 @@ const whichCommand = defineCommand({
             emitDeprecatedWarning(
                 '`workspace which` is deprecated; use `siyuan-cli current which` instead.'
             );
-            await runCurrentWhich(args.cwd ?? process.cwd());
+            const config = loadConfig();
+            let resolved: ResolvedWorkspace;
+            try {
+                resolved = resolveEffectiveWorkspace(
+                    config,
+                    {},
+                    args.cwd ?? process.cwd()
+                );
+            } catch (error) {
+                if (error instanceof CliError && error.errorType === 'NO_WORKSPACE') {
+                    out({
+                        status: 'none',
+                        workspace: null,
+                        source: 'none',
+                        projectConfigPath: null,
+                        binding: null,
+                        hint: error.hint ?? error.message
+                    });
+                    return;
+                }
+                throw error;
+            }
+            out({
+                status: 'resolved',
+                workspace: resolved.name,
+                source: resolved.source,
+                baseUrl: resolved.baseUrl ?? null,
+                workspaceDir: resolved.workspaceDir ?? null,
+                projectConfigPath: resolved.projectConfigPath ?? null,
+                binding: bindingDiagnostics(resolved)
+            });
         })
 });
 
