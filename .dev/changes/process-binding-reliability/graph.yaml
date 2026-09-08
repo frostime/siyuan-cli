@@ -277,8 +277,8 @@ nodes:
     N8:
         title: Finalize process-binding guidance and change artifacts
         lai_issue: 25
-        status: active
-        active_owner: S647
+        status: accepted
+        accepted_at: 2026-09-08
         depends_on: [N7, N9]
         purpose: >-
             Publish only verified behavior and leave code, durable contracts, skill

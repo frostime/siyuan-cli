@@ -2,7 +2,7 @@
 name: process-binding-reliability
 summary: 在不改动 Agent 运行框架的前提下，稳定跨平台进程绑定，并整理其状态、输出和代码边界。
 updated: 2026-09-08
-status: accepted
+status: completed
 ---
 
 # 进程绑定可靠性
@@ -11,9 +11,9 @@ status: accepted
 
 本 Change 从产品需求和已经验证的运行事实重新开始。外部技术的验证结果见 `process-binding-reliability.TECH-REPORT.md`。
 
-用户已经确认：保留两步进程绑定；允许使用同一个确认码重试；默认输出面向 Agent 使用紧凑文本；MSYS 只是 Windows 捕获器内部按能力启用的支线；源码采用 workspace 领域下独立 `binding/` 子模块的组织方向。正常业务调用无法可靠判断绑定时遵循 fail loudly；待确认记录按固定时间过期，正式绑定只在能够确证 anchor 已死亡或 PID 已复用时回收；进程实例继续沿用既有身份合同；文档只声明实际验证范围，不把尚未验证写成硬性不支持。
+最终实现保留两步进程绑定，允许使用同一个确认码重试，默认输出采用面向 Agent 的紧凑文本。MSYS 是 Windows 捕获器内部按能力启用的支线，源码按 workspace 领域下独立 `binding/` 子模块组织。正常业务调用无法可靠判断绑定时遵循 fail loudly；待确认记录按固定时间过期，正式绑定只在能够确证 anchor 已死亡或 PID 已复用时回收；进程实例沿用既有身份合同；文档只声明实际验证范围，不把尚未验证写成硬性不支持。
 
-剩余产品行为已经闭合，本文状态为 `accepted`。正式实现仍需等待真实 Git Bash 技术验证和用户接受后续 SHAPE。
+产品合同、实现、自动化测试和要求范围内的真实运行验证均已完成。稳定维护说明位于 `.dev/docs/process-binding.md`；本文作为本次 Change 的需求记录，状态为 `completed`。
 
 上一轮 `caller-current` Change 以及 LAI #1、#10、#11 只保留为历史材料，其中的表述、推测、建议方案和范围都不再是本轮需求。本轮工作以本文和用户后续确认的修改为准。
 

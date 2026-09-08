@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: completed
 updated: 2026-09-08
 ---
 
@@ -291,13 +291,16 @@ N4 and N5 are logically independent behind `ProcessObserver`, but they need not 
 - No broad workspace-directory reorganization.
 - No abstraction created solely to remove a few lines from deprecated aliases.
 
-## Acceptance requested
+## Final comparison
 
-Before implementation, confirm these linked decisions as one shape:
+The implemented change matches the accepted shape:
 
-1. responsibility-first `binding/` decomposition with a narrow conditional Windows→MSYS dependency;
-2. one binding-specific observer contract separating N4 from N5;
-3. separate persisted-state mechanics and lifecycle policy;
-4. resolver consumes domain match/absence/error semantics, never platform stop reasons;
-5. current command moves into workspace while deprecated aliases use existing domain/config operations locally;
-6. compatible state migration and sequential implementation path described above.
+- `workspace/binding/` contains the process model, observer, state, protocol, and nested Windows/MSYS capture modules predicted above;
+- workspace resolution consumes binding-domain outcomes and preserves explicit-selector short circuits;
+- `current` moved into the workspace domain, while deprecated workspace aliases use workspace/config operations directly;
+- existing confirmed-state records remain compatible, and pending records gained only optional observation termination;
+- compact/JSON output uses the existing output utility; no generic evidence, plugin, identity, or output framework was introduced;
+- the transitional process-tree/process-binding facades and their fixture compatibility input were removed;
+- required Pi/MSYS2, Git for Windows, and Windows-native runtime checks passed, so the conditional pipe-endpoint candidate was not activated.
+
+No material architecture deviation remains.
