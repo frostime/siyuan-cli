@@ -24,6 +24,36 @@ SiYuan is a **block-centric database** with Markdown as representation, SQL as q
 | `ial` | Inline attribute list |
 | `created` / `updated` | Timestamps |
 
+### Ownership versus location
+
+Three relationships are easy to conflate:
+
+| Question | Fields |
+|---|---|
+| Who is my direct parent? | `parent_id` |
+| Which document owns me? | `root_id` (and `box` for the notebook) |
+| Where does that document sit? | `path`, `hpath` |
+
+**`path` and `hpath` on any block describe its containing document, not the block itself.** Every block in one document shares them, so neither can address a block. Hierarchy comes from `parent_id`; ownership from `root_id`.
+
+| | `path` | `hpath` |
+|---|---|---|
+| Format | ID-based, `.sy` suffix | Title-based |
+| Example | `/20260107143325-zbrtqup/20260107143334-l5eqs5i.sy` | `/SiYuan Development/Document Structure` |
+| Stability | stable within a notebook | changes on rename, and duplicates are possible |
+| Use for | automation, permission rules | display to the user |
+
+Addressing priority is **`id` > `root_id` > `path`**. Never use `hpath` or a title as a stable key.
+
+A document block satisfies `type='d'`, `root_id = id`, and empty `parent_id`; its `path` points at its own `.sy` file:
+
+```text
+/data/20260101215354-j0c5gvk/20260107143325-zbrtqup/20260107143334-l5eqs5i.sy
+      └── box (notebook) ──┘ └── parent doc ─────┘ └── this doc ──────────┘
+```
+
+Resolve between the two forms with `filetree.getIDsByHPath --notebook <id> --path "/..."`, `filetree.getHPathByID --id <id>`, or `filetree.getPathByID --id <id>`. On Git Bash/MSYS a leading `/` may be rewritten — use `MSYS_NO_PATHCONV=1` or the `//path` form. Browse structure with `tool list-doc-tree --entry <notebook-or-doc-id> --depth <n>`.
+
 ## 2. Block types
 
 | type | subtype | Category | Description |
@@ -81,17 +111,19 @@ Some SiYuan features (block refs, embed queries, IAL) extend standard Markdown �
 
 ### Embed block / query block
 
-- An select SQL code wrapped with `{{}}`, MUST be oneline, `\n` -> `__newline__`.
+A `SELECT` statement wrapped in `{{}}`, or JS starting with a `//!js` shebang that returns a block-id array. The JS form executes in SiYuan's editor (it receives `protyle`/`Query` there), so the CLI can only write it, never test it.
+
+**The content must occupy one line.** A `{{...}}` containing real newlines stays a plain paragraph (`type='p'`) instead of becoming `query_embed`. Encode every internal line break as the literal token `_esc_newline_`:
 
 ```md
-{{SELECT * FROM blocks WHERE _esc_newline_ type='d' LIMIT 5}}
+{{SELECT * FROM blocks_esc_newline_WHERE type='d'_esc_newline_LIMIT 5}}
 ```
-
-- An js code, startwith `//!js` shebang, return BlockID array.
 
 ```md
-{{//!js_esc_newline_const search = async () =&gt; ['20260512171313-c5johcu']_esc_newline_return search()}}
+{{//!js_esc_newline_const search = async () => ['20260512171313-c5johcu'];_esc_newline_return search()}}
 ```
+
+The token is stored verbatim in `blocks.markdown`, so reads return it unchanged. Do not "clean it up" into newlines when round-tripping an existing embed block — that converts the block to a paragraph and stops the query from running.
 
 
 ### Tag

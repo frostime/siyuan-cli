@@ -1,7 +1,7 @@
 ---
 name: error-model
 description: "Process-level error contract for structured stderr output, exit categories, agent handling, and framework warnings."
-updated: 2026-08-10
+updated: 2026-09-08
 scope:
   - /src/shared/errors.ts
   - /src/shared/permission.ts
@@ -49,7 +49,7 @@ The complete set of codes is owned by their source call sites; this document rec
 |---|---|---|
 | Input and transport | `INVALID_JSON`, `PAYLOAD_INVALID`, `STDIN_CONFLICT`, `STDIN_IS_TTY`, `ENV_NOT_SET`, `FILE_READ_ERROR` | Fix invocation input before retrying. |
 | Workspace/config | `NO_WORKSPACE`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_MISSING_CONNECTION`, `CONF_JSON_UNREADABLE`, `PORT_NOT_FOUND`, `WORKSPACE_VERIFY_FAILED`, `PROJECT_CONFIG_*`, `TOKEN_MODE_CONFLICT`, `VERIFY_MODE_CONFLICT`, `CURRENT_SELECTION_CONFLICT` | Correct local configuration or make the target explicit. |
-| Process binding | `PROCESS_TREE_UNSUPPORTED`, `PROCESS_TREE_UNAVAILABLE`, `PROCESS_BINDING_PENDING_NOT_FOUND`, `PROCESS_BINDING_PENDING_EXPIRED`, `PROCESS_BINDING_SAME_CALL`, `PROCESS_BINDING_NO_COMMON_ANCESTOR`, `PROCESS_BINDING_ANCHOR_UNIDENTIFIABLE` | Use the two-step binding flow again, or use a project file / explicit `--workspace` when the process scope cannot be identified. |
+| Process binding | `PROCESS_TREE_UNSUPPORTED`, `PROCESS_TREE_UNAVAILABLE`, `PROCESS_BINDING_NONCE_INVALID`, `PROCESS_BINDING_PENDING_*`, `PROCESS_BINDING_SAME_CALL`, `PROCESS_BINDING_NO_COMMON_ANCESTOR`, `PROCESS_BINDING_OBSERVATION_*`, `PROCESS_BINDING_STATE_UNAVAILABLE`, `PROCESS_BINDING_PERSISTENCE_FAILED` | Follow the structured retry/cancel details when pending state survives. Use a project file or explicit `--workspace` when implicit caller scope cannot be established; do not treat unknown state as absent. |
 | Endpoint/compatibility | `ENDPOINT_NOT_FOUND`, `UNSUPPORTED_KERNEL_VERSION`, `KERNEL_VERSION_UNRECOGNIZED`, `RAW_API_*` | Use a registered/allowed endpoint or a compatible Kernel. |
 | Permission | `ENDPOINT_DENIED`, `CONTENT_DENIED`, `BLOCK_NOT_FOUND` | Follow the configured policy or choose an allowed target. |
 | Approval | `APPROVAL_UNAVAILABLE`, `APPROVAL_BROKER_UNAVAILABLE`, `APPROVAL_REJECTED`, `APPROVAL_TIMEOUT`, `APPROVAL_CANCELLED` | Inspect the broker, retry, or surface the human decision. |
@@ -70,6 +70,9 @@ When adding a new user-visible code, assign it to the appropriate exit category,
 | exit `1` + `CHECKPOINT_PARTIAL_FAILURE` | Preserve the successful layer reported in `details`; inspect before retrying. |
 | exit `1` + `PAYLOAD_INVALID` | Fix the payload; retrying unchanged input is not useful. |
 | exit `1` + `KERNEL_ERROR` | Surface the Kernel message as a data-level failure. |
+| Process-binding error with `pendingRetained: true` and `canRetry: true` | Use the exact `retryCommand` before the original expiry, or the exact `cancelCommand`; do not start parallel retries with invented nonces. |
+| `PROCESS_BINDING_OBSERVATION_INSUFFICIENT` with `bindingExists: true` | Do not delete the retained record or assume it belongs to another caller. Use explicit `--workspace` for the intended call. |
+| Process-binding error with `requestSent: false` | Treat the target request as not sent; resolve the binding/configuration problem before deciding whether to retry. |
 
 ## Framework warnings
 

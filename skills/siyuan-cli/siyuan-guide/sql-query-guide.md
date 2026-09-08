@@ -6,13 +6,15 @@ summary: High-value SQL guidance for querying SiYuan blocks, refs, attributes, a
 
 # SQL Query Guide
 
-SiYuan maintains a runtime SQLite database. For agents, the most important tables are not just three, but at least these five:
+SiYuan maintains a runtime SQLite database. Five tables matter for agent work:
 
-- `blocks`
-- `refs`
-- `attributes`
-- `assets`
-- `spans`
+| Table | Holds |
+|---|---|
+| `blocks` | primary content |
+| `refs` | reference relationships |
+| `attributes` | block metadata |
+| `assets` | referenced files |
+| `spans` | inline elements |
 
 ## Core rule
 
@@ -279,14 +281,3 @@ WHERE box = '<notebook-id>'
 LIMIT 32
 ```
 
-For field selection and scope narrowing: always `LIMIT`, narrow with `root_id`/`box`/`type` before fuzzy `LIKE`.
-
-## 8. One-sentence summary
-
-- `blocks`: primary content
-- `refs`: reference relationships
-- `attributes`: metadata
-- `assets`: resource files
-- `spans`: inline elements
-
-Once an agent clearly separates the responsibilities of these five tables, most SiYuan queries become much less error-prone.

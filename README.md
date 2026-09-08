@@ -261,10 +261,10 @@ After `workspace verify <name>`, choose the narrowest selection scope:
 
 - one or a few calls: pass `--workspace <name>`;
 - repeated work in a project: add `workspace: <name>` to `.siyuan-cli.yaml`;
-- long-lived work without a project file: use `siyuan-cli current bind <name>`, then run `siyuan-cli current confirm <nonce>` in a new independent call;
+- long-lived work without a project file: use the experimental process binding flow, `siyuan-cli current bind <name>` followed by `siyuan-cli current confirm <nonce>` in a separate caller invocation;
 - deliberately change the machine-wide fallback: use `siyuan-cli current global <name>`.
 
-Before content work, inspect the result with `siyuan-cli current which`. If you used process binding, run `siyuan-cli current unbind` manually before ending the task. Process binding is not logical Agent/session isolation; use a project file or explicit `--workspace` when callers share a process.
+Before content work, inspect persistent/ambient selection with `siyuan-cli current which`; a one-off business command's explicit `--workspace` still determines that call. If confirmation is abandoned, run the printed `siyuan-cli current cancel <nonce>` command; after successful binding, run `siyuan-cli current unbind` before ending the task. Process binding follows observable OS process scope, not logical Agent/session identity; use a project file or explicit `--workspace` when callers share a process or ancestry cannot establish a reliable scope.
 
 ### Project-level pinning
 

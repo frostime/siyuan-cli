@@ -49,7 +49,7 @@ function windowsHost(
 }
 
 const WINDOWS_FIXTURE = JSON.stringify({
-    chain: [
+    processes: [
         {
             pid: 4242,
             ppid: 39872,
@@ -220,7 +220,7 @@ test('command summaries redact secret flag values and long random tokens', () =>
 
 // ─── Windows capture ─────────────────────────────────────────────────────────
 
-test('Windows CIM capture maps chain entries and drops raw command lines', () => {
+test('Windows CIM capture maps process entries and drops raw command lines', () => {
     const ancestry = captureProcessAncestry(windowsHost(WINDOWS_FIXTURE));
     assert.equal(ancestry.platform, 'win32');
     assert.deepEqual(
@@ -251,11 +251,13 @@ test('Windows capture failures raise PROCESS_TREE_UNAVAILABLE instead of degradi
     // Malformed JSON
     assertCaptureUnavailable(windowsHost('not json'));
     // Empty chain
-    assertCaptureUnavailable(windowsHost(JSON.stringify({ chain: [] })));
+    assertCaptureUnavailable(windowsHost(JSON.stringify({ processes: [] })));
     // Chain does not start at the requested PID
     assertCaptureUnavailable(
         windowsHost(
-            JSON.stringify({ chain: [{ pid: 9999, ppid: 1, name: 'x.exe' }] })
+            JSON.stringify({
+                processes: [{ pid: 9999, ppid: 1, name: 'x.exe' }]
+            })
         )
     );
 });

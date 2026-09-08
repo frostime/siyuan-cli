@@ -102,22 +102,14 @@ Run it:
 siyuan-cli api custom.echo --text "hello"
 ```
 
-### Where is the definition of SiYuan Kernel API
+### Finding an unwrapped kernel endpoint
 
-The agent can visit the website (if it is capable), and generate the extension file.
+The kernel registers its routes in [`kernel/api/router.go`](https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go), and each handler lives under `kernel/api/*.go`. That source is authoritative for the payload shape; reading it with `gh` avoids cloning.
 
-**Reference**
+Community-maintained schemas are easier to skim but may lag behind new endpoints:
 
-1. [Source Code](https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go)
-   1. All SiYuan API is located under `/kernel/api/*.go`
-   2. Most reliable, but needs agent analyse code by it self
-   3. Recommend to use `gh` CLI to analyse github code
-
-2. Document provided by community, could be out-dated (missing new endpoint)
-
-   - `https://leolee9086.github.io/siyuan-kernelApi-docs/`, provided by leolee9086
-   - `https://leolee9086.github.io/siyuan-kernelApi-docs/index.html`, provided by leolee9086
-   - `https://github.com/siyuan-community/siyuan-sdk/tree/main/schemas/kernel/api`, provided by Zuoqiu-Yingyi
+- <https://leolee9086.github.io/siyuan-kernelApi-docs/>
+- <https://github.com/siyuan-community/siyuan-sdk/tree/main/schemas/kernel/api>
 
 ## Writing a Tool Extension
 
@@ -181,33 +173,9 @@ export const tool: ToolSchema = {
 
 The `guard.payloadTargets` schema is the same as for endpoints (see "Permission schema coupling" below). Use `skipEmpty: true` for optional fields.
 
-## Schema Cache
+## Discovery cache
 
-On first execution of an extension, siyuan-cli writes a sidecar `*.schema.json` next to the `.ts` file. This cache is used for:
-
-- `siyuan-cli api list` / `siyuan-cli tool list` — fast discovery without importing `.ts`
-- `siyuan-cli api -h` / `siyuan-cli tool -h` — showing command metadata
-
-If you see `[uncached]` in `list` output, run `siyuan-cli extension cache` to populate all caches without executing logic.
-
-The cache is invalidated automatically when the `.ts` file mtime changes.
-
-## TypeScript Configuration
-
-`siyuan-cli extension init` generates a `tsconfig.json` with `paths` pointing to the global siyuan-cli installation. The key entry is:
-
-```json
-"@frostime/siyuan-cli/schema": ["<pkg>/shared/schema.d.mts"]
-```
-
-This ensures `import type { EndpointSchema, ToolSchema } from "@frostime/siyuan-cli/schema"` resolves correctly in your IDE.
-
-If you prefer a local `node_modules` install instead of `paths`:
-
-```bash
-npm install --save-dev @frostime/siyuan-cli
-# then remove the paths entries from tsconfig.json
-```
+`list` and `--help` read a sidecar `*.schema.json` rather than importing the module. After editing an extension, run `siyuan-cli extension cache`; `[uncached]` in `list` output means it has not been generated yet.
 
 ## Calling kernel APIs from a Tool
 
@@ -270,22 +238,10 @@ async run(ctx, input) {
 
 For repeated use, or when you need payload schema validation, permission guards, approval behavior, response filtering, compact formatting, or discoverable help, write an API extension instead of continuing to use raw calls.
 
-For workflow policy or user-specific conventions, use a downstream Agent SKILL instead; see "Extension or downstream SKILL?" above.
 
-For the full list of kernel APIs, inspect the upstream source:
-https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go
+## Type authority
 
-## Package-local reference
-
-This resource ships inside the same installed package as the runtime code. `siyuan-cli --help` prints the skill root; from it, inspect the sibling `dist/` directory in that package when documentation is incomplete.
-
-| File | What it contains |
-|------|-----------------|
-| `dist/shared/schema.d.mts` | `EndpointSchema`, `ToolSchema`, `ToolContext`, `GlobalArgs` type declarations |
-| `dist/shared/client.mjs` | `SiyuanClient` — HTTP client with `call(endpoint, payload)` |
-| `dist/api/registry.mjs` | `EndpointRegistry` — endpoint registration and lookup |
-| `dist/tool/registry.mjs` | `ToolRegistry`, `createToolContext` — assembles `ToolContext` at runtime |
-
+`EndpointSchema`, `ToolSchema`, and `ToolContext` are declared in the installed package's `shared/schema.d.mts`, reachable as `@frostime/siyuan-cli/schema`. Read those declarations for exact field names and optionality instead of trusting a prose copy. `siyuan-cli --help` prints the skill root, whose sibling `dist/` is that package.
 
 ## Permission schema coupling
 
