@@ -20,7 +20,9 @@ replacement: ""
 Read this document when changing process observation, binding identity or lifecycle, workspace-resolution integration, runtime support, or related failure handling. It records cross-file contracts and external constraints that cannot be recovered safely from one source file. Command usage belongs in `skills/siyuan-cli/cli-usage/current.md`.
 
 > [!IMPORTANT]
-> Process binding is experimental. It relies on process topology exposed by the operating system and Agent harness rather than a stable Agent-session identity API. Use it only in tested or otherwise verified topologies. Project workspace files and explicit `--workspace` remain the reliable alternatives.
+> Process binding is experimental. It relies on process topology exposed by the operating system and Agent harness rather than a stable Agent-session identity API. Prefer a tested topology. In an unverified topology, the command may decline to select a workspace rather than guess; project workspace files and explicit `--workspace` remain reliable alternatives.
+>
+> On Windows, an unrelated retained binding can force another caller with incomplete ancestry to select a workspace explicitly. This is the deliberate cost of preventing an uncertain caller from silently using the wrong workspace.
 
 ## Why this exists
 
@@ -42,7 +44,7 @@ The hard part is that process ancestry is imperfect evidence. PIDs are reused, t
 
 Process binding maps a named workspace to an observable OS process scope. It does not identify a logical Agent or application session. Logical callers that share the selected process instance share its binding.
 
-> **Known topology limitation:** CLI harnesses such as Pi, Codex CLI, and OpenCode have been validated with distinguishable long-lived process scopes. Integrated GUI harnesses may multiplex sessions into one host process. In the observed Codex App topology, different agent sessions ultimately reach the same Codex App process, so binding is app-wide rather than session-scoped. Use a project file or explicit `--workspace` when those sessions require isolation.
+> **Known topology limitation:** Process binding can distinguish callers only when their ancestry exposes distinct long-lived process instances. A harness that multiplexes logical sessions into one host process gives those sessions one shared scope. This has been observed in Codex App, where separate agent sessions converged on the same App process and therefore shared an app-wide binding. Use a project file or explicit `--workspace` when logical sessions require isolation.
 
 ### Two-observation anchor selection
 
@@ -229,43 +231,56 @@ The table is used only when it contains the current CLI WINPID. This distinguish
 
 MSYS PID/PPID provides relation order only. Canonical and persisted nodes use Windows PID, Windows start ID, and Windows-derived signature. Do not apply Windows parent-before-child creation ordering to an MSYS logical edge: exec can preserve logical PID while replacing WINPID and Windows creation time.
 
-If `ps` is absent, unverifiable, or foreign, the observer keeps the native Windows result. Optional-capability failure never turns a truncated native chain into a complete no-match.
+If `ps` is absent or its table does not contain the current WINPID, the observer keeps the native Windows result. Once the table claims the current process, duplicate ownership, a missing logical parent, a defunct row, or a cycle makes the composed observation incomplete or inconsistent; it does not silently become a complete native result.
 
-## Evidence and verification boundary
+### Why these sources are used
 
-### Claims and evidence
+Windows APIs expose the current process table, not historical ancestry. `Win32_Process.ParentProcessId` may refer to a process that has already terminated, and the PID may already have been reused; Microsoft explicitly directs callers to compare creation time. Toolhelp snapshots have the same current-state boundary. Once an intermediate creator is gone, neither API can recover its former parent.
 
-| Claim | Evidence |
+MSYS runtime state supplies a different relation rather than repairing the Windows relation. Its process records retain logical PID/PPID and map each record to a Windows PID; `ps -e -l` exposes the columns needed to join that relation to the same Windows snapshot. The Windows PID and normalized creation time remain the canonical instance identity.
+
+Other Windows signals do not substitute for this scope model:
+
+| Candidate | Why it is not used as binding identity |
 |---|---|
-| Windows native ancestry can stop at an exited creator. | Real Windows process snapshots summarized in the technical report; `tests/windows-process-tree.test.ts`. |
-| MSYS logical ancestry can recover the relation to a long-lived caller. | Independent real Pi/MSYS2 and Git-for-Windows CLI-shaped calls; hybrid fixtures. |
-| The correct MSYS installation can be selected without a product whitelist. | Real Git→MSYS2 and MSYS2→Git current-WINPID rejection tests; parser fixtures for `ps` 3.4 and 3.6. |
-| Start identity prevents PID-reuse matches and enables stale cleanup. | Independent CIM start-ID comparison; process identity, lifecycle, and resolver tests. |
-| Truncated ancestry with a retained unresolved binding fails before networking. | Real Pi/MSYS2 `api system.version` failure with retained isolated state and `requestSent: false`; resolver fixtures. |
-| Explicit selectors bypass process observation. | Real isolated-config invocations with an uncertain binding; workspace-selection tests. |
-| Retry, cancel, unbind, expiry, malformed state, and unreadable state follow their contracts. | Protocol and CLI tests plus isolated real-runtime lifecycle runs. |
-| Distinct live native shell scopes can hold separate bindings, and unbind removes only the caller's matching record. | A concurrent two-scope Windows run with two confirmed records; each scope resolved its own workspace, and the first unbind left the second record active. |
-| Binding-selected business resolution reaches the intended Kernel. | A real `dev` flow completed bind/confirm, `current verify`, and the read-only `api system.version`, then restored real binding state to empty. |
+| Native ancestry alone | Cannot recover the parent of an exited intermediate creator. |
+| Standard-stream pipe endpoint | Identifies the process at one end of a particular stream, which changes with redirection and wrapper topology; it is not a general caller-scope contract. |
+| Job object or console membership | Depends on how the launcher groups or attaches processes and does not provide a stable, distinct identity for every long-lived caller. |
+| Login session, window station, or process group | Commonly groups unrelated terminals and Agents, so its scope is too broad. |
+| WMI/ETW process-creation events | Historical reconstruction requires observation to start before the CLI process is created and may require additional privileges or persistent infrastructure. |
+| Process name, command text, or inherited environment | Is not instance-unique; command text and environment may also contain sensitive data. |
 
-The detailed investigation and external-source trail are in `.dev/changes/process-binding-reliability/process-binding-reliability.TECH-REPORT.md`. That report owns experimental detail; this document owns the current model and maintenance consequences.
+Source anchors for revalidation:
 
-### Tested runtime topologies
+- Microsoft: [`Win32_Process`](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process), [`PROCESSENTRY32W`](https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/ns-tlhelp32-processentry32w), [`GetNamedPipeServerProcessId`](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getnamedpipeserverprocessid), [Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects), and [`GetConsoleProcessList`](https://learn.microsoft.com/en-us/windows/console/getconsoleprocesslist).
+- [MSYS2 runtime commit `8fbd9808`](https://github.com/msys2/msys2-runtime/commit/8fbd9808447ee78ed485deead9b79cd1e40c07b7): `winsup/utils/ps.cc`, `winsup/cygwin/pinfo.cc`, `spawn.cc`, and `sigproc.cc`.
+- [Git for Windows runtime commit `710e5275`](https://github.com/git-for-windows/msys2-runtime/commit/710e5275eb86d54b45b5f4d71ecc4e1cac1b9302): the corresponding process-table sources use the same core relation model.
 
-| Runtime or harness | Verified result |
+## Verification and support boundary
+
+### Claims maintainers must preserve
+
+| Maintenance claim | Durable check | Consequence if it changes |
+|---|---|---|
+| An exited Windows creator makes the remaining native ancestry incomplete; absence from the snapshot does not reveal its former parent. | `tests/windows-process-tree.test.ts` and the Windows API constraints above. | Do not turn `parent-missing` into a complete no-match or attempt to reconstruct an unknown native edge. |
+| A PATH-selected `ps -e -l` table must contain the current WINPID before MSYS augmentation can activate; every logical step must then resolve to one consistent owner. | `tests/msys-process-table.test.ts`, hybrid Windows fixtures, and built-binary checks with Git for Windows and standalone MSYS2. | A foreign table remains unused; duplicate or inconsistent claims produce incomplete evidence rather than a guessed relation. |
+| Authoritative start identity distinguishes a reused PID; incomplete identity remains unknown. | `tests/process-tree.test.ts`, `tests/process-binding.test.ts`, and `tests/workspace-selection.test.ts`. | Only PID absence or an authoritative start mismatch permits stale-record deletion. |
+| A retained binding plus incomplete or unresolved ancestry fails before networking, while explicit selectors and an empty binding set bypass observation. | `tests/workspace-selection.test.ts` and built-binary failure/bypass checks. | Query failure must not masquerade as absence or silently select another workspace. |
+| Retry preserves the original pending lifetime; cancel is nonce-scoped; unbind changes confirmed records only and only in the caller's matched scope. | `tests/process-binding.test.ts`, `tests/current-command.test.ts`, and concurrent-scope built-binary checks. | Lifecycle operations must not widen their deletion scope or rewrite uncertainty as success. |
+
+### Runtime baseline
+
+| Topology | Verified behavior |
 |---|---|
-| Pi CLI on Windows/MSYS2 | Distinct CLI calls reach one long-lived Pi process; bind/confirm/retry/which/cancel/unbind and fail-before-request behavior verified. |
-| Git for Windows Bash `5.2.26`, runtime/`ps 3.4.10` | Independent CLI-shaped observations reach the same long-lived Git Bash instance; owning and foreign tables are distinguished. |
-| Standalone MSYS2 runtime/`ps 3.6.7` | Pi flow and reverse multi-install ownership check verified. |
-| Windows PowerShell 5.1 native caller | Independent bind/confirm/which/unbind calls selected the long-lived PowerShell instance using Windows PID and CIM start identity, without `ps` or MSYS. |
-| Two concurrent Windows shell scopes | Two bindings coexisted in one state directory; each scope selected its own workspace, and unbind removed only its own record. The shells were reported as VS Code and WezTerm, but the contract rests on their distinct process anchors rather than product identity. |
-| Codex CLI | Process binding validated with a distinguishable CLI process scope; exact version not recorded here. |
-| OpenCode CLI | Process binding validated with a distinguishable CLI process scope; exact version not recorded here. |
-| Codex App | Multiple logical agent sessions observed converging at one App process; binding is app-wide, not session-scoped. |
-| Linux/macOS | Existing success behavior is protected by platform fixtures; untested versions remain unverified rather than hard-excluded. |
+| Pi on Windows with standalone MSYS2 `ps 3.6.7` | Separate CLI calls selected one long-lived Pi process. The full lifecycle, fail-before-request behavior, and a binding-selected read-only request to the designated `dev` Kernel were exercised. |
+| Git for Windows Bash `5.2.26` with `ps 3.4.10` | Separate CLI calls selected one long-lived Bash instance through the PATH-selected Git table. A separate probe confirmed that standalone MSYS2 did not contain the Git process, demonstrating the installations' table isolation rather than a CLI comparison between tables. |
+| Windows PowerShell 5.1 | Separate CLI calls selected the long-lived PowerShell instance using Windows PID and CIM start identity. The capability gate and fixtures establish that MSYS augmentation is optional; the runtime check established native anchor selection. |
+| Two concurrent interactive shell scopes | Each long-lived shell anchor held its own confirmed record and resolved its own workspace. Unbind in one scope left the other record active. |
+| Linux and macOS adapters | Platform fixtures protect the existing behavior; no runtime version was validated as part of the current baseline. |
 
-This table is evidence, not a product-name whitelist. For an unlisted harness, inspect its topology: process binding can isolate only scopes represented by distinct, reliably identifiable long-lived OS process instances.
+These rows describe process capabilities that were observed, not a product whitelist or a fixed supported-version range. For another harness or version, inspect the reported anchor and termination: isolation requires a distinct, reliably identified, long-lived process instance.
 
-In every Windows topology measured during the final verification pass—Pi/MSYS2, Git Bash, native PowerShell, and two terminal-hosted PowerShell scopes—the native tail ended at an exited creator before reaching a trustworthy root. Consequently, real Windows verification exercised match and insufficient no-match, while complete conclusive no-match remained fixture-covered. This is a measured boundary of those topologies, not a universal Windows rule; do not weaken the conclusive-no-match contract to manufacture a fall-through.
+Every Windows runtime check that surfaced ancestry termination ended at an exited creator before reaching a trustworthy root. The Git Bash check selected its anchor successfully and did not expose termination; earlier process-table analysis separately established its native-chain break. Runtime checks therefore covered reliable matches and insufficient no-match, while complete conclusive no-match is protected by deterministic fixtures only. This is not a universal Windows claim, and it is not a reason to weaken the fail-loud rule.
 
 ### Revalidation
 
@@ -285,7 +300,7 @@ Changes to observation, identity, lifecycle, or support claims also require a bu
 4. verify `current which --print json` reports the expected workspace and stable anchor PID/start ID;
 5. verify retry preserves the original expiry, cancel leaves confirmed state unchanged, and unbind leaves pending state unchanged;
 6. run a safe read-only business request when the designated dev SiYuan is available;
-7. for Windows/MSYS changes, verify both the owning and a foreign process table;
+7. for Windows/MSYS changes, verify that the current WINPID appears in the owning table and not in a foreign installation's table, then run the focused Windows fixture that proves a foreign table cannot augment native ancestry;
 8. stop temporary harnesses by recorded PID and start identity, remove isolated state, and prove no pending/binding residue remains.
 
 ## Maintenance reference
