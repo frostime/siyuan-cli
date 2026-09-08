@@ -1,7 +1,7 @@
 ---
 name: workspace-resolution
 summary: Maintenance contract for workspace selection, project-file overlays, credentials, and local workspaceDir materialization.
-updated: 2026-08-10
+updated: 2026-09-08
 scope:
   - /src/workspace/**
   - /src/api/guard.ts
@@ -39,12 +39,17 @@ For a business invocation, the effective priority is:
 
 ## Process binding
 
-A caller can attach a catalog workspace to its observable OS process scope through `siyuan-cli current bind` / `confirm` / `unbind`. Process observation (ancestry capture, instance identity) is owned by `src/workspace/process-tree.ts`; binding state and the two-step protocol are owned by `src/workspace/process-binding.ts`. Resolution only consumes `findActiveBinding()` and must not read process state directly.
+A caller can attach a catalog workspace to its observable OS process scope through `siyuan-cli current bind` and a separate `confirm` invocation. `src/workspace/binding/process-tree.ts` owns process identity and ancestry semantics; `src/workspace/binding/observation.ts` and its platform modules own host evidence; `src/workspace/binding/state.ts` owns persistence; and `src/workspace/binding/protocol.ts` owns lifecycle and active lookup. Resolution consumes `findActiveBinding()` and does not interpret platform stop reasons or read binding files directly. See `/.dev/docs/process-binding.md` for the cross-module maintenance model.
 
 Constraints:
 
+- `--baseUrl`, `--workspace`, and `SIYUAN_CLI_WORKSPACE` return before binding state or process observation is consulted;
 - binding state lives under the config directory's `process-binding/` folder and never in `config.yaml`;
+- if no confirmed record remains after stale reclamation, active lookup returns no binding without capturing caller ancestry;
+- a confirmed record is stale only when its PID is absent or an authoritative start identity proves PID reuse; incomplete identity or query failure is unknown and the record is retained;
+- a reliable anchor match selects the binding; complete ancestry that conclusively rules out every retained anchor may fall through; incomplete or unresolved no-match fails before any Kernel request;
 - the anchor is a process instance, matched by PID + start identity, degrading to PID + command signature; bare PID never matches;
+- `current cancel <nonce>` removes only one pending confirmation without process observation; `current unbind` removes only confirmed records matching the caller scope and does not remove pending state;
 - a bound workspace that is missing from the catalog fails with `WORKSPACE_NOT_FOUND`;
 - process binding is explicit selection provenance, not authorization — permission, token, and approval behavior follow the selected workspace.
 

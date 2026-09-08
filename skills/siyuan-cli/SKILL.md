@@ -20,13 +20,15 @@ siyuan-cli --help
 siyuan-cli current which
 ```
 
-If `siyuan-cli` is missing: `npm install -g @frostime/siyuan-cli`. Always invoke this package as `siyuan-cli`; on SiYuan 3.7.0 or later, `siyuan` may resolve to SiYuan's native CLI instead. If no workspace is configured: read `recipes/connect-workspace.md`. If URL/token/workspace are unknown: stop and ask user.
+If `siyuan-cli` is missing: `npm install -g @frostime/siyuan-cli`. Always invoke this package as `siyuan-cli`; on SiYuan 3.7.0 or later, `siyuan` may resolve to SiYuan's native CLI instead. If no workspace is configured, read `recipes/connect-workspace.md`. When adding a connection, stop and ask if the target SiYuan workspace is ambiguous, no token source is available, or neither its base URL nor local directory is known; choose a local CLI alias only after the target itself is clear.
 
 ## Workspace selection
 
-Before content work, run `siyuan-cli current which` and confirm the resolved workspace matches the user's intent. For writes, ask if only machine-wide `config.current` is selected and the user has not named that target.
+Before content work, run `siyuan-cli current which` to inspect persistent/ambient selection. For a one-off call with explicit `--workspace <name>`, that flag determines the target even if `current which` shows a different ambient workspace; keep the flag on the business command. For writes, ask if only machine-wide `config.current` is selected and the user has not named that target.
 
-Choose the narrowest scope: one or a few calls → `--workspace <name>`; repeated work in a project → `.siyuan-cli.yaml` with `workspace: <name>`; long-lived work without a project → `current bind <name>` then an independent `current confirm <nonce>`; deliberately changing the shared default → `current global <name>` (not isolation). If project and binding disagree, stop and use a one-call `--workspace` exception or fix the conflict. After using `bind`, always run `siyuan-cli current unbind` manually before ending the task. Details: `cli-usage/current.md`.
+Choose the narrowest scope: one or a few calls → `--workspace <name>`; repeated project work → `.siyuan-cli.yaml`; long-lived work without a project → experimental process binding; deliberate machine-wide default change → `current global <name>` (not isolation).
+
+Before process binding, read `cli-usage/current.md`. Run bind and confirm as separate tool/CLI calls from the same long-lived caller, not one disposable shell block. Cancel an abandoned nonce with the exact command bind printed; unbind after confirmation. If project and binding disagree, use a one-call `--workspace` exception or fix the conflict.
 
 ## Command discovery
 

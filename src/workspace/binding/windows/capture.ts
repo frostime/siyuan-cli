@@ -74,11 +74,7 @@ export function captureWindowsSnapshot(
         );
     }
 
-    let parsed: {
-        processes?: WindowsSnapshotEntry[];
-        /** Accepted only by the pre-N4 compatibility facade's fixtures. */
-        chain?: WindowsSnapshotEntry[];
-    };
+    let parsed: { processes?: WindowsSnapshotEntry[] };
     try {
         parsed = JSON.parse(result.stdout) as typeof parsed;
     } catch {
@@ -88,7 +84,7 @@ export function captureWindowsSnapshot(
             result
         );
     }
-    const entries = parsed.processes ?? parsed.chain;
+    const entries = parsed.processes;
     if (!Array.isArray(entries)) {
         throw windowsCaptureFailure(
             'native-snapshot',

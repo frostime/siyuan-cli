@@ -19,7 +19,7 @@ Use the narrowest scope that covers the work:
 | Long-lived work without a project file | Process binding | Use the two-step `bind` → independent `confirm` flow below. |
 | Deliberately change the machine default | `current global <name>` | Writes shared `config.current`; it is not an isolation mechanism. |
 
-Before content work, run `siyuan-cli current which`. For a write, the resolved workspace must match the user's intent. If resolution falls back to the machine-wide `config.current` and the user has not specified that target, ask before writing rather than guessing.
+Before content work, run `siyuan-cli current which` to inspect persistent/ambient selection. For a one-off business call with explicit `--workspace <name>`, the flag determines that call's target and `current which` does not preview it. For other writes, the resolved workspace must match the user's intent. If resolution falls back to machine-wide `config.current` and the user has not specified that target, ask before writing rather than guessing.
 
 The business-call selection order is:
 
@@ -34,6 +34,8 @@ A project file and process binding may coexist. If they select the same name, th
 `--baseUrl` is ad-hoc mode: it bypasses named workspace selection, project discovery, process binding, and permission overlays.
 
 ## Commands
+
+`current` commands print compact Agent-facing text by default. Use `--print json` when the caller needs the standard `{ ok, data, extra }` envelope and structured binding diagnostics.
 
 ### `current which`
 
@@ -59,54 +61,73 @@ siyuan-cli current global <name>
 
 Sets `config.current`, the machine-global fallback. It changes shared local configuration and does not create a process binding. Use it only when changing the default is intentional. It is the replacement for the deprecated `workspace use <name>` alias.
 
-## Process binding
+## Process binding (experimental)
 
-Process binding is for a long-lived caller scope that has no project workspace anchor. It attaches an existing catalog workspace to an observable OS process scope, so later `api` and `tool` calls in that scope can omit `--workspace`. It is not a logical Agent/session identity or an authorization mechanism; permission, token, and approval behavior still come from the selected workspace.
+Process binding attaches an existing catalog workspace to an observable OS process scope. It is useful for repeated calls from a long-lived caller when no project workspace file is appropriate. It does not identify a logical Agent/session and it does not grant permission: callers that converge on the same anchor share the binding, while token, permission, and approval behavior still come from the selected workspace.
 
-One OS process can host several logical callers. They share a binding by contract. If that separation is not acceptable, use a project file or explicit `--workspace` instead.
+Prefer a project file when work belongs to one directory. In an unverified process topology, binding may decline to select a workspace rather than guess; use explicit `--workspace <name>` when a caller must proceed independently.
 
-### Bind, use, and release
+### Bind and confirm
 
-Run the two commands as separate CLI invocations from the same caller scope:
+Run bind and confirm as separate CLI processes from the intended long-lived scope:
 
 ```text
 siyuan-cli current bind dev
-  → prints a one-time nonce
+  → prints nonce, confirm command, cancel command, and expiry
 siyuan-cli current confirm <nonce>
-  → binds dev to the process scope
+  → binds dev to the nearest reliably identified common process
 siyuan-cli current which
   → source: process-binding
-siyuan-cli api ...
-  → no --workspace needed in this scope
-siyuan-cli current unbind
-  → release the binding before ending the task
 ```
 
-`current bind <name>` accepts only a workspace already present in the catalog. It captures the first call's process ancestry and creates a pending probe. `current confirm <nonce>` must run in a new independent call; it pairs the probe with the second ancestry and chooses the nearest identifiable common process instance. A same-process confirm is rejected.
+The nonce has a fixed 15-minute lifetime. A retryable confirm failure preserves the pending record and reports `canRetry: true`, the exact `retryCommand`, and the exact `cancelCommand`. Retrying does not extend the original expiry. When `canRetry` is false, start a new bind instead of retrying the old nonce.
 
-The pending nonce expires after 15 minutes. If it expires, start a new bind. If the two calls have no usable common ancestor, use a project file or explicit `--workspace` instead. The binding becomes inactive when its anchor process exits, but do not rely on that for task cleanup: **after using bind, always run `siyuan-cli current unbind` manually before ending the task.** `unbind` removes bindings matching the current process scope and cancels pending probes.
+Bind and confirm must be different CLI processes. In an Agent harness, make them separate tool calls—not two commands in one shell block. A disposable wrapper can become the nearest common anchor, so its binding correctly becomes stale when that wrapper exits. The process that launches both calls should have the lifetime you want the binding to have.
 
-If a project workspace and a pending or confirmed binding disagree, bind/confirm or business resolution fails with `CURRENT_SELECTION_CONFLICT`; do not silently choose one. `current which` is the no-network way to inspect the result.
+### Cancel or release
+
+If confirmation is no longer wanted, use the exact command printed by bind:
+
+```bash
+siyuan-cli current cancel <nonce>
+```
+
+`cancel` removes only that pending nonce, performs no process observation, and does not change confirmed bindings.
+
+After successful confirmation, release the binding before ending the task:
+
+```bash
+siyuan-cli current unbind
+```
+
+`unbind` removes only confirmed bindings matching the current process scope. It does not remove pending confirmations. A binding also becomes stale after its anchor exits, but explicit unbind is the normal cleanup path.
+
+### Implicit resolution and uncertainty
+
+`current which` is the no-network way to inspect the effective result. A project workspace and process binding may coexist only when they select the same workspace; otherwise resolution fails with `CURRENT_SELECTION_CONFLICT`.
+
+When no confirmed record exists, implicit selection does not perform process observation. When a confirmed record remains but the current caller cannot reliably match or rule it out, workspace-aware commands fail before a SiYuan request and report `requestSent: false`. Use explicit `--workspace <name>` for that call instead of editing binding files to force fallback.
 
 ## Windows shell note
 
-There are two unrelated MSYS/Git Bash issues:
+MSYS path conversion and process observation are separate concerns:
 
-- MSYS path conversion can rewrite arguments that begin with `/`; use `MSYS_NO_PATHCONV=1` or the `//path` form described in `cli-overview.md`.
-- The MSYS/Git Bash fork layer can truncate the Windows ancestry visible to the CLI. In that environment `current bind` may succeed but `current confirm` can fail with `PROCESS_BINDING_NO_COMMON_ANCESTOR`. Use a native PowerShell or cmd shell for the two-step binding flow. The `pnpm run` wrapper is not the cause; the complete flow works through pnpm in a native Windows shell.
+- MSYS can rewrite arguments beginning with `/`; use `MSYS_NO_PATHCONV=1` or the `//path` form described in `cli-overview.md`.
+- Git Bash and standalone MSYS2 are handled by process-table capability, not product name. When available ancestry cannot establish whether retained binding state applies, the command fails before networking and recommends explicit `--workspace`.
 
 ## Selection errors
 
 | Code | Meaning | Next action |
 |---|---|---|
 | `CURRENT_SELECTION_CONFLICT` | Project and process binding select different workspaces. | Use explicit `--workspace` for one call, or fix the project/binding. |
-| `PROCESS_BINDING_PENDING_NOT_FOUND` | The nonce is missing or unusable. | Start `current bind <name>` again. |
-| `PROCESS_BINDING_PENDING_EXPIRED` | The 15-minute pending window elapsed. | Start the two-step flow again. |
-| `PROCESS_BINDING_SAME_CALL` | Bind and confirm ran in one process. | Confirm in a new independent CLI call. |
-| `PROCESS_BINDING_NO_COMMON_ANCESTOR` | The calls do not share a usable process ancestor. | Run both calls in the same shell/Agent scope, or use `--workspace`. |
-| `PROCESS_BINDING_ANCHOR_UNIDENTIFIABLE` | The common ancestor cannot be identified reliably. | Retry the flow; otherwise use a project file or `--workspace`. |
-| `PROCESS_TREE_UNSUPPORTED` | The platform has no supported ancestry implementation. | Use a project file or explicit `--workspace`. |
-| `PROCESS_TREE_UNAVAILABLE` | Ancestry capture failed at runtime. | Retry; if it persists, use a project file or `--workspace`. |
+| `PROCESS_BINDING_NONCE_INVALID` | The nonce syntax is invalid. | Copy the exact nonce printed by bind. |
+| `PROCESS_BINDING_PENDING_NOT_FOUND` / `PROCESS_BINDING_PENDING_EXPIRED` | The pending confirmation cannot be used. | Start `current bind <name>` again. |
+| `PROCESS_BINDING_SAME_CALL` | Bind and confirm ran in one process. | Confirm in a separate caller invocation. |
+| `PROCESS_BINDING_NO_COMMON_ANCESTOR` | Complete observations prove that the calls share no usable scope. | Run both calls from the intended long-lived caller, or use a project file / `--workspace`. |
+| `PROCESS_BINDING_OBSERVATION_INSUFFICIENT` | Observation ended before binding applicability could be established. | Follow `retryCommand` when present; otherwise use explicit `--workspace`. |
+| `PROCESS_BINDING_OBSERVATION_FAILED` / `PROCESS_TREE_UNAVAILABLE` | The platform query failed or returned unusable data. | Retry; if it persists, use a project file or explicit `--workspace`. |
+| `PROCESS_BINDING_STATE_UNAVAILABLE` / `PROCESS_BINDING_PERSISTENCE_FAILED` | Existing state cannot be read or safely updated. | Restore access and follow the error's state/recovery details; do not assume state was removed. |
+| `PROCESS_TREE_UNSUPPORTED` | The platform has no available ancestry implementation. | Use a project file or explicit `--workspace`. |
 | `VERIFY_MODE_CONFLICT` | A selection verification command received a named-connection mode. | Use `current verify` without a name, or `workspace verify <name|--all>`. |
 
 ## Related commands and docs

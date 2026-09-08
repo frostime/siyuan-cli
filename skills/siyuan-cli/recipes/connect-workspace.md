@@ -54,7 +54,6 @@ Use this when the kernel URL and token are known.
 ```bash
 siyuan-cli workspace add main --url http://127.0.0.1:6806 --token <token>
 siyuan-cli workspace verify main
-siyuan-cli current which
 ```
 
 ## 3. Add a local workspace by directory
@@ -64,7 +63,6 @@ Use this when the local workspace path is known but the kernel port is not.
 ```bash
 siyuan-cli workspace add devspace --workspace-dir /path/to/SiYuanDevSpace --token <token>
 siyuan-cli workspace verify devspace
-siyuan-cli current which
 ```
 
 The CLI resolves the runtime base URL from local workspace metadata when possible.
@@ -75,10 +73,12 @@ After a named connection is verified, choose the narrowest selection scope:
 
 - one or a few calls: pass `--workspace <name>` on each business command;
 - repeated work in this project: add `workspace: <name>` to `.siyuan-cli.yaml`;
-- long-lived work without a project file: read [`cli-usage/current.md`](../cli-usage/current.md) and use the two-step process binding flow;
+- long-lived work without a project file, where separate calls share a long-lived OS process: read [`cli-usage/current.md`](../cli-usage/current.md) before using experimental process binding;
 - deliberately change the machine-wide fallback: use `siyuan-cli current global <name>`.
 
-If process binding is used, run `siyuan-cli current unbind` manually before ending the task. Do not use `current global` as an isolation mechanism.
+If bind is abandoned before confirmation, run the exact `current cancel <nonce>` command it printed. After successful confirmation, run `siyuan-cli current unbind` before ending the task. `cancel` changes pending state only; `unbind` changes confirmed state only. Do not use `current global` as an isolation mechanism.
+
+After configuring a persistent selection source—project file, process binding, or global fallback—run `siyuan-cli current which`. A one-call `--workspace` flag is different: pass it to the business command itself; `current which` does not preview another command's flag.
 
 ## 5. Anchor a project to a workspace
 
@@ -109,7 +109,7 @@ If these fail, fix connection/auth/workspace resolution before continuing.
 # Success checks
 
 - `workspace verify <name>` succeeds
-- `current which` shows the intended workspace source and name
+- `current which` shows the intended persistent source and name, or the one-off business command carries the intended `--workspace` flag
 - a read-only command can list notebooks or a bounded tree
 - the resolved base URL matches the expected kernel
 
@@ -132,12 +132,12 @@ If these fail, fix connection/auth/workspace resolution before continuing.
 
 - inspect precedence with `siyuan-cli current which`
 - check whether `.siyuan-cli.yaml` overrides the current directory
-- set the intended workspace explicitly with `--workspace <name>` for one command, or fix the project/global config
+- set the intended workspace explicitly with `--workspace <name>` for one command, or fix the winning env, project-file, process-binding, or global selection source
 
 ## Multiple agents share the machine
 
 - avoid relying on the machine-global `siyuan-cli current global` for project work
-- commit `.siyuan-cli.yaml` only when it contains safe fields (`schemaVersion`, `workspace`, permission overrides)
+- commit `.siyuan-cli.yaml` only when it contains allowed non-secret fields; for permission or behavior overrides, follow `cli-usage/workspace-config.md` rather than inventing keys
 - never store token/baseUrl in `.siyuan-cli.yaml`
 
 # Related docs
