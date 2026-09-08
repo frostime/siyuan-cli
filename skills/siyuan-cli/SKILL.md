@@ -20,15 +20,20 @@ siyuan-cli --help
 siyuan-cli current which
 ```
 
-If `siyuan-cli` is missing: `npm install -g @frostime/siyuan-cli`. Always invoke this package as `siyuan-cli`; on SiYuan 3.7.0 or later, `siyuan` may resolve to SiYuan's native CLI instead. If no workspace is configured, read `recipes/workspace.md`. When adding a connection, stop and ask if the target SiYuan workspace is ambiguous, no token source is available, or neither its base URL nor local directory is known; choose a local CLI alias only after the target itself is clear.
+If `siyuan-cli` is missing: `npm install -g @frostime/siyuan-cli`. Always invoke as `siyuan-cli` (on SiYuan ≥3.7.0, bare `siyuan` may resolve to SiYuan's own CLI). No workspace configured → `recipes/workspace.md`.
 
 ## Workspace selection
 
-Before content work, run `siyuan-cli current which` to inspect persistent/ambient selection. For a one-off call with explicit `--workspace <name>`, that flag determines the target even if `current which` shows a different ambient workspace; keep the flag on the business command. For writes, ask if only machine-wide `config.current` is selected and the user has not named that target.
+```text
+┌─ one/few calls?         → --workspace <name>
+├─ project directory?     → .siyuan-cli.yaml with workspace: <name>
+├─ long-lived caller?     → process binding (cli-usage/process-binding.md)
+└─ change machine default → current global <name>
+```
 
-Choose the narrowest scope: one or a few calls → `--workspace <name>`; repeated project work → `.siyuan-cli.yaml`; long-lived work without a project → experimental process binding; deliberate machine-wide default change → `current global <name>` (not isolation).
+Before content work: `siyuan-cli current which`. Writing to `config.current` only (`source: global-current`) when user never named that target? → ask.
 
-Before process binding, read `cli-usage/process-binding.md`. Run bind and confirm as separate tool/CLI calls from the same long-lived caller, not one disposable shell block. Cancel an abandoned nonce with the exact command bind printed; unbind after confirmation. If project and binding disagree, use a one-call `--workspace` exception or fix the conflict.
+Binding: read `cli-usage/process-binding.md` first. Bind and confirm must be two separate tool/CLI calls from the same long-lived caller, not one shell block. Cancel with the exact command bind printed; unbind after work completes. Project file + binding disagreement → use one-call `--workspace` exception or fix the conflict.
 
 ## Command discovery
 
@@ -41,7 +46,7 @@ siyuan-cli api list              # endpoints + classification/severity labels
 siyuan-cli tool list             # tools
 ```
 
-Before using `@file:`/`@stdin`/`@env:` on a parameter, check `--help` → `INPUT SOURCES`. If absent, use literal or whole-payload `-j`/`-f`.
+Input sources: check `--help` INPUT SOURCES per parameter. When absent, use literal value or whole-payload `-j <json>` / `-f <file>`.
 
 ## Safety anchors
 
@@ -55,21 +60,6 @@ Before using `@file:`/`@stdin`/`@env:` on a parameter, check `--help` → `INPUT
 | 6 | `--yes` is not a safety check; use only after target verified + action intended. |
 | 7 | `api raw` bypasses schema/resource guards/response filtering; one-off only. |
 | 8 | Approval browser auto-open may be debounced; parse every `APPROVAL_PENDING` stderr event, not browser opens. |
-
-```text
-Small localized edit with known block ids
-  → tool update-block (preserves custom attrs)
-
-Broad/complex/text-level edit
-  → brute-edit <doc-id> --check true
-    SAFE   → checkpoint-doc once → --dry-run → inspect → --yes
-    UNSAFE → block-level fallback
-
-Before a group of high-risk edits, call checkpoint-doc explicitly once. Do not
-repeat it for later edits in the same group; brute-edit never creates a
-checkpoint automatically. A checkpoint is recovery material, not permission
-to bypass an unsafe check.
-```
 
 Ask user when: no token/URL · wrong workspace · multiple plausible write targets · destructive operation lacks confirmation · daily-note notebook unknown.
 
@@ -101,39 +91,40 @@ siyuan-cli api attr.batchSetBlockAttrs -f ./attrs.json --yes
 
 ## Hot paths
 
-### Append
+Top goals with command choice and key flags. Full syntax: `<command> --help`.
 
-Use `block.appendBlock` with §Canonical input patterns. Daily note example:
-
+**Append to known target:**
 ```bash
-# Notebook id must be known; if unknown, list notebooks or ask.
-siyuan-cli api block.appendDailyNoteBlock --notebook <notebook-id> --data @stdin --yes <<'EOF'
-Entry.
+siyuan-cli block.appendBlock --parentID <id> --data @stdin <<'EOF'
+...
 EOF
 ```
+Daily note: use `block.appendDailyNoteBlock --notebook <id> --atDate <date>` instead.
 
-### Search/read
+**Find document by title/keyword:**
+- known exact/substring → `filetree.searchDocs --k "..."`
+- have doc ID, want details → `block.getBlockByRootID --rootID <id>` or `tool get-block-info <id>`
+- browse notebook tree → `tool list-doc-tree --entry <notebook-id> --depth <n>`
+- complex filter → `api query.sql "SELECT ... FROM blocks WHERE type='d' AND ... LIMIT 50"`
 
+**Find blocks by content phrase:**
 ```bash
-siyuan-cli api filetree.searchDocs --k "<keyword>"    # candidates; verify before writing
-siyuan-cli tool get-block-info <id>                   # identity, meta data (ref, toc, child etc.)
-siyuan-cli tool search-backlinks <target-id>          # inbound refs; redirects first-block hits by default
-siyuan-cli tool get-block-content <id> --range children --limit 50
-siyuan-cli tool get-block-content <id> --range context --limit 7 --showId true
-siyuan-cli tool locate-block --id <doc-id> --pattern "%keyword%"  # SQL LIKE, not regex
+siyuan-cli tool locate-block --pattern "%phrase%" [--id <doc> | --box <notebook>]
 ```
 
-### Update known block
-
-Fast command, slow pre-flight. Required: workspace confirmed; stable block id; current content inspected; user intent maps exactly to block. Else read `recipes/edit-content.md`.
-
+**Read document/block:**
 ```bash
-siyuan-cli tool update-block --blocks @stdin --yes <<'EOF'
-[{"id":"<block-id>","data":"Replacement."}]
-EOF
+siyuan-cli tool get-block-content <id> [--range children] [--limit=-1]
 ```
+Default `--limit` exists for safety; use `--limit=-1` for full read. `--showId true` injects block IDs for edit targeting.
 
-> ⚠️ Do NOT use raw `block.updateBlock` / `block.batchUpdateBlock` — they erase custom attributes. Always use `tool update-block`.
+**Update block:**
+```bash
+siyuan-cli tool update-block <id> --markdown "..." [--dry-run] [--yes]
+```
+Preserves `custom-*` attributes. Never use raw `block.updateBlock` (it erases them).
+
+All: use `@stdin` / `@file:path` for multiline or special-char content to avoid shell escaping.
 
 ## Error triage
 
@@ -196,9 +187,9 @@ Read a resource with `siyuan-cli skill read <path>`. Paths are relative to this 
 
 ## Gotchas
 
-- Windows Git Bash/MSYS rewrites leading `/` paths → `MSYS_NO_PATHCONV=1 ...` or `//path`.
-- `--showId true` injects `@@id@@type` markers; never use them as brute-edit source/search text.
-- Endpoint choice: registered > `api raw`; avoid long-lived `rawApi.allow: ["*"]`.
+- MSYS/Git Bash rewrites leading `/` → `MSYS_NO_PATHCONV=1` or `//path`
+- `--showId true` markers are edit targets, never brute-edit search text
+- Registered endpoints > `api raw`; avoid permanent `rawApi.allow: ["*"]`
 
 ## Last resort
 
