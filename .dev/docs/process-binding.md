@@ -1,6 +1,6 @@
 ---
 name: process-binding
-description: "Technical basis, architecture, evidence model, and maintenance constraints for caller-process workspace binding."
+description: "Maintainer model for caller-process workspace binding: algorithm, module contracts, platform observation, evidence, and revalidation."
 updated: 2026-09-08
 scope:
   - /src/workspace/binding/**
@@ -17,156 +17,140 @@ replacement: ""
 
 # Process Binding
 
-## Core contract
+Read this document when changing process observation, binding identity or lifecycle, workspace-resolution integration, runtime support, or related failure handling. It records cross-file contracts and external constraints that cannot be recovered safely from one source file. Command usage belongs in `skills/siyuan-cli/cli-usage/current.md`.
 
-Process binding lets separate short-lived CLI invocations from one observable OS process scope reuse a named workspace without repeating `--workspace`. It does not identify a logical Agent or session. Logical callers that share the selected OS process instance share its binding.
+## System model
 
-Binding uses two independent CLI processes because either call alone sees only its own ancestry. The first call records one observation; the second chooses the nearest reliably identified process instance present in both observations:
+Process binding maps a named workspace to an observable OS process scope. It does not identify a logical Agent or application session. Logical callers that share the selected process instance share its binding.
+
+> **Known topology limitation:** CLI harnesses such as Pi, Codex CLI, and OpenCode have been validated with distinguishable long-lived process scopes. Integrated GUI harnesses may multiplex sessions into one host process. In the observed Codex App topology, different agent sessions ultimately reach the same Codex App process, so binding is app-wide rather than session-scoped. Use a project file or explicit `--workspace` when those sessions require isolation.
+
+### Two-observation anchor selection
+
+Each CLI invocation is short-lived. One invocation cannot distinguish its intended long-lived caller from transient wrappers in its own ancestry, so confirmation compares two independent observations.
 
 ```text
-first CLI  ─┐
-            ├─ nearest reliable common instance → confirmed binding
-second CLI ─┘
+bind observation A:     CLI-A → wrapper-A → scope-X → outer processes
+confirm observation B:  CLI-B → wrapper-B → scope-X → outer processes
+                                           ↑
+                         nearest reliably identified common instance
 ```
 
-The selected anchor determines scope and lifetime. If both calls are launched by one disposable shell, that shell may be the nearest common anchor and the binding correctly dies with it. To bind an outer long-lived caller, do not combine bind and confirm inside a short-lived wrapper that exists only for those commands.
+`src/workspace/binding/process-tree.ts → findNearestCommonAncestor()` walks observation A from self outward. The first node that reliably identifies the same process instance in observation B becomes the anchor. Consequently:
 
-The protocol deliberately does not use process names, executable names, terminal identity, login session, or a bare PID as caller identity. Those values are either too broad or reusable.
+- the anchor is nearest from the bind caller's perspective;
+- bind and confirm must be different CLI processes;
+- the machine root is not a useful caller scope and is rejected;
+- a reliable common anchor found before a truncated tail is valid;
+- the anchor's lifetime defines the binding lifetime.
 
-## Workspace-selection boundary
+Two CLI processes launched sequentially by one shell are independent calls. If that shell is disposable, it can still be the nearest common anchor and the binding will correctly become stale when it exits. Do not combine bind and confirm inside a short-lived wrapper when the intended scope is an outer caller.
 
-Process binding participates only in implicit named-workspace resolution:
+### Active-binding lookup
+
+A later invocation does not repeat the two-observation protocol. It inspects confirmed anchors and compares retained records with its current ancestry:
+
+```text
+load confirmed records
+        ↓
+inspect anchor instances
+        ├─ stale   → delete
+        ├─ live    → retain
+        └─ unknown → retain
+        ↓
+no retained records? ── yes → return no binding without caller observation
+        │ no
+        ↓
+capture current ancestry
+        ├─ nearest reliable anchor match → return binding
+        ├─ complete, conclusive no-match → return no binding
+        └─ incomplete or unresolved      → fail before any SiYuan request
+```
+
+This ordering is important: stale cleanup happens before scope matching, and process ancestry is not captured when no confirmed record can affect selection.
+
+### Workspace-selection boundary
+
+Process binding participates only in implicit named-workspace selection:
 
 ```text
 --baseUrl
   → --workspace
   → SIYUAN_CLI_WORKSPACE
-  → project file / process binding
+  → project workspace / process binding
   → config.current
 ```
 
-`--baseUrl`, `--workspace`, and `SIYUAN_CLI_WORKSPACE` return before process-binding state or process observation is consulted. A project workspace and a matching process binding may coexist; disagreement is `CURRENT_SELECTION_CONFLICT`.
+`--baseUrl`, `--workspace`, and `SIYUAN_CLI_WORKSPACE` return before binding state or process observation is consulted. A project workspace and process binding may coexist only when they select the same name. `src/workspace/resolve.ts` consumes binding-domain outcomes; it never interprets platform-specific stop reasons.
 
-When no explicit selector exists, `src/workspace/resolve.ts → resolveEffectiveWorkspace()` asks `src/workspace/binding/protocol.ts → findActiveBinding()` for one of three domain outcomes:
+## Responsibilities and dependencies
 
-| Outcome | Resolver behavior |
-|---|---|
-| Reliable matching anchor | Use the binding; preserve anchor provenance. |
-| Conclusive no-match | Continue to the project or global selection. |
-| Insufficient observation | Fail non-zero before constructing a SiYuan request; recommend explicit `--workspace`. |
+```text
+current-command.ts ─┬→ resolve.ts ─────→ binding/protocol.ts
+                    └──────────────────→ binding/protocol.ts
+                                             ├→ binding/state.ts
+                                             ├→ binding/process-tree.ts
+                                             └→ binding/observation.ts
+                                                        └→ binding/windows/capture.ts
+                                                                   └→ windows/msys-process-table.ts
+```
 
-The resolver never interprets Windows, MSYS, Linux, or macOS stop reasons. Platform evidence is converted to these domain semantics inside the binding subsystem.
+| Owner | Responsibility | Primary verification |
+|---|---|---|
+| `binding/process-tree.ts` | Canonical process instance, identity comparison, ancestry termination, nearest common anchor, command redaction | `tests/process-tree.test.ts` |
+| `binding/observation.ts` | `ProcessObserver`, host I/O, platform dispatch, Linux and macOS capture | `tests/process-tree.test.ts` |
+| `binding/windows/capture.ts` | One Windows process snapshot, native ancestry, anchor inspection, optional MSYS composition | `tests/windows-process-tree.test.ts` |
+| `binding/windows/msys-process-table.ts` | `ps -e -l` execution, header parsing, ownership check, logical walk | `tests/msys-process-table.test.ts` |
+| `binding/state.ts` | Validated pending/confirmed JSON I/O and atomic file replacement | `tests/process-binding.test.ts` |
+| `binding/protocol.ts` | Bind, confirm, retry, cancel, unbind, reclamation, active lookup, recovery errors | `tests/process-binding.test.ts` |
+| `resolve.ts` | Selection precedence, project/binding agreement, binding provenance | `tests/workspace-selection.test.ts` |
+| `current-command.ts` | CLI arguments and compact/JSON presentation | `tests/current-command.test.ts` |
 
-## Process evidence model
+Platform observation must not choose workspaces or mutate binding state. Protocol code must not invoke PowerShell, `ps`, or `/proc` directly. Resolver code must not branch on Windows, MSYS, Linux, or macOS evidence.
 
-### Canonical process instance
+## Stable contracts
 
-`src/workspace/binding/process-tree.ts` owns `ProcessNode` and process-instance comparison. Its persisted fields contain Windows/native PID values and safe identity metadata, never raw process command lines.
+### Process-instance identity
 
-Identity comparison is intentionally asymmetric in strength:
+A `ProcessNode` persists native PID and safe identity metadata, never a logical MSYS PID or raw command line.
 
-| Available evidence | Result |
+| Evidence | Interpretation |
 |---|---|
 | Same PID and equal authoritative start ID | `pid+start` match |
-| Same PID and different authoritative start ID | Conclusive PID reuse; no match |
-| A start ID is missing, but PID and command signature match | `pid+signature` degraded match |
-| Same PID with incomplete or different non-authoritative evidence | Unknown; never a bare-PID match |
+| Same PID and different authoritative start ID | Conclusive PID reuse; stale record |
+| A start ID is unavailable, but PID and command signature match | `pid+signature` degraded match |
+| Same PID with incomplete or different non-authoritative evidence | Unknown, not a match and not proof of reuse |
 | Different PID | No match |
 
-A command-signature difference cannot prove PID reuse. Only authoritative start-identity disagreement or conclusive PID absence permits automatic reclamation.
+Bare PID is never sufficient for a binding match. The same-PID guard used to reject bind and confirm inside one CLI process is a conservative protocol rejection, not an identity match.
 
-### Observation termination
+### Ancestry and sufficiency
 
-An ancestry observation is an ordered self-first chain plus an explicit termination reason. Current reasons include:
+`ProcessAncestry` is a self-first chain plus an explicit termination:
 
-- `root`: traversal reached a trustworthy root;
-- `parent-missing`: a creator exited before capture;
-- `cycle` or `depth-limit`: the relation cannot be followed safely;
-- `inconsistent`: native, MSYS-table, or handoff evidence contradicted itself.
+| Termination | Meaning |
+|---|---|
+| `root` | Traversal reached a trustworthy root. |
+| `parent-missing` | A creator exited before observation. |
+| `cycle` / `depth-limit` | Traversal cannot continue safely. |
+| `inconsistent` | Native, MSYS-table, or handoff evidence contradicts itself. |
 
-Sufficiency is operation-relative:
+Sufficiency depends on the operation:
 
-- bind/confirm may succeed when both observations contain the same reliable anchor before either truncated tail;
-- no common anchor is conclusive only when the observations establish a complete boundary;
-- active lookup may match an anchor before a truncated tail;
-- active lookup with retained records, no match, and an incomplete tail is insufficient and must fail loudly;
-- capture-command failure or an unverifiable output format is an error, not an empty or complete chain.
+| Situation | Result |
+|---|---|
+| Bind and confirm contain a reliable non-root common anchor | Confirm, even if a later tail is incomplete. |
+| Bind/confirm have no usable common anchor and both observations are complete | Conclusive confirmation failure. |
+| Bind/confirm have no common anchor and either observation is incomplete or legacy-unknown | Retryable insufficient observation; retain the nonce until its original expiry. |
+| Active ancestry reliably contains a retained anchor | Match. |
+| Active ancestry is complete and rules out every retained anchor | Conclusive no-match; continue selection. |
+| Active ancestry is incomplete, or contains an anchor PID without enough identity evidence | Insufficient; fail before request and retain state. |
 
-The current protocol also treats a retained anchor PID appearing in the observed chain without sufficient identity evidence as unresolved, not as conclusive no-match.
+Capture-command failure or an unverifiable format is an error, not an empty observation.
 
-## Observation architecture
+### State lifecycle
 
-```text
-binding/protocol.ts
-        ↓
-binding/observation.ts
-        ├─ Linux /proc
-        ├─ macOS ps
-        └─ Windows
-             ↓
-           windows/capture.ts
-             ├─ native CIM relation
-             └─ windows/msys-process-table.ts (conditional capability)
-```
-
-`ProcessObserver` is the semantic boundary between lifecycle policy and operating-system evidence. It supports:
-
-1. capturing current ancestry for bind/confirm;
-2. inspecting recorded anchors and, only when retained records remain, capturing the current scope from the same observation session.
-
-The second operation avoids two full Windows CIM scans per business call. If all records are conclusively stale, caller ancestry and MSYS processing are skipped.
-
-### Linux
-
-Linux reads `/proc/<pid>/stat` for PPID and kernel start time, `/proc/<pid>/cmdline` for a signature and redacted diagnostic summary, and `/proc/<pid>/exe` for executable context. `/proc` start time is the authoritative process-instance value.
-
-A missing `/proc/<pid>/stat` can establish PID absence. An unreadable or malformed entry remains unknown rather than being reclaimed.
-
-### macOS
-
-macOS uses `ps` to read PPID, `lstart`, command, and executable context. The start-time rendering is the process-instance value used by the existing successful path. Per-process query failure is currently conservative: it does not by itself prove PID absence, so reclamation remains unknown.
-
-### Windows native observation
-
-`src/workspace/binding/windows/capture.ts` executes one `Get-CimInstance Win32_Process` query and normalizes every process into a map keyed by Windows PID. `CreationDate` is converted to UTC .NET ticks inside that same query, so bind, confirm, lookup, and reclamation use one source and precision.
-
-Native `ParentProcessId` edges are checked against creation time: a currently observed parent that started after its alleged child means the PID was reused and the edge is inconsistent. A missing parent remains an explicit truncation because Windows does not retain the exited creator's former parent relation.
-
-### Conditional MSYS-to-Windows handoff
-
-MSYS-family shells maintain a logical process table that can survive exec/fork behavior which breaks the native Windows creator chain visible after the fact. Git for Windows Bash uses this MSYS runtime mechanism; it is not a separate process-identity model.
-
-The Windows observer conditionally performs this sequence:
-
-```text
-current Windows PID
-      ↓
-PATH-selected `ps -e -l`
-      ↓ table must contain current WINPID exactly once
-MSYS PID/PPID logical walk
-      ↓ every live row maps through WINPID
-same Windows CIM snapshot
-      ↓ from outer MSYS instance
-native Windows parent walk
-```
-
-`windows/msys-process-table.ts` owns the external table format:
-
-- invokes exactly `ps -e -l` rather than the version-dependent `ps -efl` form;
-- sets a wide `COLUMNS` value to avoid silent row truncation;
-- locates `PID`, `PPID`, and `WINPID` by header name rather than fixed spacing;
-- accepts known optional row-status prefixes and spaced trailing fields;
-- rejects duplicate ownership, duplicate logical PIDs, cycles, defunct rows, missing parents, and malformed required columns.
-
-The table is considered the owning runtime only when it contains the current CLI WINPID. This rejects a foreign standalone MSYS2 table while running under Git for Windows, and vice versa. PATH and capability determine the branch; product names such as `Git Bash`, `MINGW64`, `MSYS2`, `bash.exe`, or `Pi` do not.
-
-MSYS PID and PPID express relation order only. Persisted identity always uses the mapped Windows PID, Windows start ID, and Windows-derived signature. Windows parent-before-child creation ordering must not be applied to an MSYS logical edge: MSYS exec may preserve the logical PID while replacing its WINPID and Windows creation time.
-
-If `ps` is absent, has an unverifiable format, or does not own the current WINPID, Windows native ancestry remains the evidence. A native truncated chain therefore stays truncated; failure to activate the optional branch never converts incomplete native evidence into a complete no-match.
-
-## Binding state and lifecycle
-
-State lives outside human-edited `config.yaml`:
+State is stored outside human-edited `config.yaml`:
 
 ```text
 <config>/process-binding/
@@ -174,96 +158,93 @@ State lives outside human-edited `config.yaml`:
 └── bindings/<anchor-derived-key>.json
 ```
 
-`src/workspace/binding/state.ts` owns validated JSON I/O, filenames, and atomic replacement. `src/workspace/binding/protocol.ts` owns all lifecycle decisions.
-
-### Pending confirmation
-
-- `current bind` validates workspace/project agreement, captures ancestry, and creates a random 32-character hexadecimal nonce.
-- Pending records expire 15 minutes after their original `createdAt`.
-- `current confirm` revalidates the workspace/project relation and captures a second independent observation.
-- A failed but unexpired confirm retains the same record and original expiry; errors provide exact retry and cancel commands.
-- `current cancel <nonce>` deletes only that nonce and performs no process observation.
-- Invalid or expired nonces are not retryable.
-
-A pending record created by an older version without termination metadata may still confirm when a reliable common anchor is present. Without such a match its observation is insufficient, never conclusively absent.
-
-### Confirmed binding
-
-Confirmed records have no wall-clock TTL. Before implicit selection or unbind, recorded anchors are inspected:
-
-| Inspection | State action |
+| State | Lifetime and transitions |
 |---|---|
-| PID conclusively absent | Delete as stale |
-| PID present with authoritative start ID changed | Delete as reused/stale |
-| Identity reliably matches | Retain as live |
-| Query fails or identity is incomplete | Retain as unknown |
+| Pending | Fixed 15-minute TTL from original `createdAt`; failed confirm does not extend it; `cancel <nonce>` removes only that record without process observation. |
+| Confirmed | No wall-clock TTL; replaced by a new binding in the same observed scope; removed by matching unbind or conclusive stale reclamation. |
+| Invalid JSON/shape | Self-healed by deletion. |
+| Existing but unreadable state | Retained and reported as unavailable; never treated as absence. |
 
-After reclamation:
+`current unbind` removes confirmed bindings in the current scope and does not consume pending records. An unrelated unreadable pending record does not block a new bind because pending records do not participate in active selection.
 
-- no retained confirmed record means no caller-ancestry capture;
-- retained records require current-scope observation;
-- `current unbind` removes only confirmed records matching that scope;
-- pending confirmations are unaffected by unbind.
+### Failures and sensitive process data
 
-Malformed JSON or structurally invalid records are self-healed by deletion. A file or directory that exists but is temporarily unreadable is not malformed: it is retained and causes an explicit state-unavailable error. An unrelated unreadable pending nonce does not block creation of another pending bind because pending records do not participate in active selection.
+Binding failures use the project error contract in `.dev/docs/error-model.md`. Relevant details state whether a binding exists, whether pending state remains and is retryable, exact recovery commands, and whether a SiYuan request was sent. Fatal implicit-selection uncertainty reports `requestSent: false` and recommends explicit `--workspace`.
 
-## Failure and security boundaries
+Raw process command lines may contain tokens, prompts, and paths. Observation adapters may use them transiently, but persisted and returned nodes contain only:
 
-All binding failures use the project's structured stderr error model. Recovery details identify, where relevant:
+- a SHA-256 signature used for degraded identity matching;
+- a bounded, best-effort redacted summary used for diagnostics.
 
-- whether a confirmed binding was created or still exists;
-- whether pending state remains and can be retried;
-- exact retry, cancel, inspect, or unbind commands;
-- whether a SiYuan request was sent.
+Normal output, state files, fixtures derived from real machines, and issue reports must not contain raw command lines or process tables. Platform stderr is represented only by a diagnostic hash when needed.
 
-A fatal implicit-selection error reports `requestSent: false`. Explicit selectors can bypass process binding when the caller intentionally chooses a target.
+## Platform observation
 
-Raw command lines can contain tokens, prompts, paths, or other sensitive data. They exist only inside an observation adapter. Persisted/returned nodes contain:
+Every platform adapter must implement the same `ProcessObserver` contract: capture current ancestry, inspect recorded instances as live/stale/unknown, preserve termination, and avoid caller capture when every anchor is conclusively stale.
 
-- a SHA-256 command signature for degraded identity matching;
-- a bounded, best-effort redacted summary for diagnostics;
-- no raw PowerShell or `ps` stderr. Platform stderr is represented only by a diagnostic hash when needed.
+| Platform path | Relation source | Start identity | Important boundary |
+|---|---|---|---|
+| Linux | `/proc/<pid>/stat` PPID | `/proc` kernel starttime | Missing process file can prove absence; unreadable/malformed evidence remains unknown. |
+| macOS | `ps` PPID | `ps lstart` | Per-process query failure currently remains unknown rather than proving absence. |
+| Windows native | One `Get-CimInstance Win32_Process` snapshot | `CreationDate` normalized to UTC .NET ticks | An exited creator's former parent is not recoverable from the current native table. |
 
-Do not add raw process tables or command lines to normal output, persisted records, fixtures copied from a real machine, or issue reports.
+### Optional MSYS ancestry augmentation on Windows
 
-## Source and test map
+MSYS-family runtimes maintain a logical process relation that can remain useful after fork/exec behavior breaks the native Windows creator chain. This is an implementation of the Windows observer's “obtain ancestry” responsibility, not part of the binding algorithm.
 
-| Question | Authority |
+```text
+current Windows PID
+      ↓
+PATH-selected `ps -e -l`
+      ↓ table contains current WINPID exactly once
+MSYS PID/PPID logical walk
+      ↓ map every row through WINPID
+same Windows snapshot
+      ↓ continue native walk above the outer MSYS process
+canonical ProcessAncestry
+```
+
+`msys-process-table.ts` invokes `ps -e -l`, sets a wide `COLUMNS`, locates `PID`/`PPID`/`WINPID` by header, and rejects duplicate ownership, duplicate logical PIDs, cycles, defunct rows, missing parents, and malformed required columns.
+
+The table is used only when it contains the current CLI WINPID. This distinguishes the owning Git for Windows or standalone MSYS2 runtime from another installation without relying on product or process names. Git Bash is therefore a tested MSYS-capability runtime, not a separate `git-bash` code path.
+
+MSYS PID/PPID provides relation order only. Canonical and persisted nodes use Windows PID, Windows start ID, and Windows-derived signature. Do not apply Windows parent-before-child creation ordering to an MSYS logical edge: exec can preserve logical PID while replacing WINPID and Windows creation time.
+
+If `ps` is absent, unverifiable, or foreign, the observer keeps the native Windows result. Optional-capability failure never turns a truncated native chain into a complete no-match.
+
+## Evidence and verification boundary
+
+### Claims and evidence
+
+| Claim | Evidence |
 |---|---|
-| What constitutes one process instance? | `src/workspace/binding/process-tree.ts` |
-| How is platform evidence captured? | `src/workspace/binding/observation.ts` |
-| Why and how does Windows use MSYS? | `src/workspace/binding/windows/capture.ts`, `windows/msys-process-table.ts` |
-| What is persisted and how is corruption handled? | `src/workspace/binding/state.ts` |
-| What are bind/confirm/cancel/unbind and reclamation rules? | `src/workspace/binding/protocol.ts` |
-| Where does binding affect workspace precedence? | `src/workspace/resolve.ts`, `src/workspace/workspace-resolution.SPEC.md` |
-| What does the CLI expose? | `src/workspace/current-command.ts` |
-| Identity and termination invariants | `tests/process-tree.test.ts` |
-| Git/MSYS table compatibility | `tests/msys-process-table.test.ts` |
-| Native/hybrid Windows composition | `tests/windows-process-tree.test.ts` |
-| Lifecycle, persistence, and recovery | `tests/process-binding.test.ts` |
-| Selection bypass, match, no-match, and uncertainty | `tests/workspace-selection.test.ts` |
-| End-to-end command output | `tests/current-command.test.ts` |
+| Windows native ancestry can stop at an exited creator. | Real Windows process snapshots summarized in the technical report; `tests/windows-process-tree.test.ts`. |
+| MSYS logical ancestry can recover the relation to a long-lived caller. | Independent real Pi/MSYS2 and Git-for-Windows CLI-shaped calls; hybrid fixtures. |
+| The correct MSYS installation can be selected without a product whitelist. | Real Git→MSYS2 and MSYS2→Git current-WINPID rejection tests; parser fixtures for `ps` 3.4 and 3.6. |
+| Start identity prevents PID-reuse matches and enables stale cleanup. | Independent CIM start-ID comparison; process identity, lifecycle, and resolver tests. |
+| Truncated ancestry with a retained unresolved binding fails before networking. | Real Pi/MSYS2 `api system.version` failure with retained isolated state and `requestSent: false`; resolver fixtures. |
+| Explicit selectors bypass process observation. | Real isolated-config invocations with an uncertain binding; workspace-selection tests. |
+| Retry, cancel, unbind, expiry, malformed state, and unreadable state follow their contracts. | Protocol and CLI tests plus isolated real-runtime lifecycle runs. |
 
-## Verification basis
+The detailed investigation and external-source trail are in `.dev/changes/process-binding-reliability/process-binding-reliability.TECH-REPORT.md`. That report owns experimental detail; this document owns the current model and maintenance consequences.
 
-The implementation is protected by deterministic fixtures for Linux, macOS, Windows native ancestry, Git-for-Windows/MSYS2 table variants, hybrid handoff, truncation, PID reuse, malformed evidence, lifecycle transitions, output, and workspace-resolution ordering.
+### Tested runtime topologies
 
-Real runtime evidence currently establishes:
-
-| Environment | Established evidence |
+| Runtime or harness | Verified result |
 |---|---|
-| Windows 10 `10.0.19045`, Node.js `24.12.0` | Windows CIM start identity and native-chain behavior observed against the built CLI. |
-| Pi on Windows with MSYS2 runtime / `ps 3.6.7` | Independent CLI calls reach the same long-lived Pi process through MSYS-to-Windows handoff; full bind/confirm/which, retry, cancel, unbind, stale cleanup, and real fail-before-request behavior observed. |
-| Git for Windows Bash `5.2.26`, runtime/`ps 3.4.10` | Two real CLI-shaped observations reach the same long-lived Git Bash instance; PATH-selected owning table includes current WINPID and standalone MSYS2 rejects it. |
-| Multiple MSYS installations | Owning-table selection and rejection work in both Git→MSYS2 and MSYS2→Git directions. |
+| Pi CLI on Windows/MSYS2 | Distinct CLI calls reach one long-lived Pi process; bind/confirm/retry/which/cancel/unbind and fail-before-request behavior verified. |
+| Git for Windows Bash `5.2.26`, runtime/`ps 3.4.10` | Independent CLI-shaped observations reach the same long-lived Git Bash instance; owning and foreign tables are distinguished. |
+| Standalone MSYS2 runtime/`ps 3.6.7` | Pi flow and reverse multi-install ownership check verified. |
+| Codex CLI | Process binding validated with a distinguishable CLI process scope; exact version not recorded here. |
+| OpenCode CLI | Process binding validated with a distinguishable CLI process scope; exact version not recorded here. |
+| Codex App | Multiple logical agent sessions observed converging at one App process; binding is app-wide, not session-scoped. |
+| Linux/macOS | Existing success behavior is protected by platform fixtures; untested versions remain unverified rather than hard-excluded. |
 
-These are tested environments, not a hard support whitelist. An unlisted runtime may work when it provides the required native identity and ancestry capabilities. Missing or inconsistent capability must fail explicitly rather than guess.
+This table is evidence, not a product-name whitelist. For an unlisted harness, inspect its topology: process binding can isolate only scopes represented by distinct, reliably identifiable long-lived OS process instances.
 
-The investigation record, sample topology, and external-source references are in `.dev/changes/process-binding-reliability/process-binding-reliability.TECH-REPORT.md`. Those observations justify the design; normal maintainers should start with this document and the current code/tests rather than reconstructing the Change history.
+### Revalidation
 
-### Revalidation procedure
-
-For ordinary changes:
+Run the repository gates for every change:
 
 ```bash
 pnpm run typecheck
@@ -271,28 +252,42 @@ pnpm run test
 pnpm run build
 ```
 
-For a runtime or process-observation change, additionally use the built binary in an isolated config and a real long-lived caller:
+Changes to observation, identity, lifecycle, or support claims also require a built-binary runtime check:
 
-1. create a temporary catalog with a non-sensitive workspace entry;
-2. run bind and confirm as separate CLI processes from the intended caller scope;
-3. verify `current which --print json` reports `process-binding`, the expected workspace, and one stable anchor PID/start ID;
-4. verify a pending retry preserves `createdAt`, targeted cancel leaves confirmed state unchanged, and unbind leaves pending state unchanged;
-5. run a safe read-only business request when the designated dev SiYuan is available;
-6. inspect both owning and foreign MSYS tables when changing Windows/MSYS behavior;
-7. stop temporary harness processes by recorded PID and start identity, remove isolated state, and confirm no binding or pending residue remains.
+1. use `node bin/siyuan.mjs`, never a globally installed CLI;
+2. use an isolated `SIYUAN_CLI_CONFIG` unless a designated real-config check is required;
+3. run bind and confirm as separate CLI processes from the intended long-lived scope;
+4. verify `current which --print json` reports the expected workspace and stable anchor PID/start ID;
+5. verify retry preserves the original expiry, cancel leaves confirmed state unchanged, and unbind leaves pending state unchanged;
+6. run a safe read-only business request when the designated dev SiYuan is available;
+7. for Windows/MSYS changes, verify both the owning and a foreign process table;
+8. stop temporary harnesses by recorded PID and start identity, remove isolated state, and prove no pending/binding residue remains.
 
-Never validate this repository with a globally installed `siyuan`/`siyuan-cli`; use `node bin/siyuan.mjs` after building.
+## Maintenance reference
 
-## Maintenance constraints
+### Diagnostic routing
+
+| Observation | First owner to inspect |
+|---|---|
+| Bind and confirm have no common scope | `process-tree.ts` identity/common-anchor rules, then the platform observation termination. |
+| Binding works only until a wrapper exits | Expected anchor lifetime; check whether bind/confirm were combined inside a disposable shell. |
+| Separate GUI sessions see the same binding | Harness topology; compare reported anchor instances before changing ancestry code. |
+| Git Bash/MSYS does not bridge | `windows/msys-process-table.ts`: PATH-selected `ps -e -l`, headers, current WINPID ownership, logical completeness. |
+| Binding record is not reclaimed | Instance inspection may be unknown; only PID absence or authoritative start mismatch permits deletion. |
+| Project selection unexpectedly fails with a binding present | `protocol.ts` sufficiency result, then `resolve.ts` project/binding agreement. |
+| Explicit workspace still encounters binding observation | `resolve.ts` short-circuit ordering is broken. |
+| State disappears after a read error | `state.ts` is misclassifying unreadable state as invalid. |
+
+### Update triggers
 
 Update this document in the same change when any of these moves materially:
 
-- `ProcessNode`, identity strength, command redaction, or authoritative start-ID source;
-- observation termination or the rule for conclusive no-match;
+- process-instance identity, command redaction, or authoritative start-ID source;
+- observation termination or conclusive-no-match rules;
 - platform capture commands, MSYS columns, ownership detection, or handoff semantics;
-- pending/confirmed record shape, TTL, retry, cancellation, unbind, or reclamation;
-- workspace-selection precedence, conflict handling, or fail-before-request behavior;
-- the tested runtime matrix or reproducible verification procedure;
-- module ownership or the source/test paths in the map above.
+- pending/confirmed shape, TTL, retry, cancellation, unbind, or reclamation;
+- selection precedence, project conflict, or fail-before-request behavior;
+- harness topology guarantees or the tested runtime matrix;
+- module ownership, diagnostic routing, or revalidation procedure.
 
-Do not expand this page with local helper behavior recoverable from one obvious source file. Code and tests remain authority for implementation mechanics; this document owns the cross-file model, external constraints, rationale, evidence boundary, and safe maintenance path.
+Do not copy local helper mechanics that a maintainer can recover from one obvious source file. Code and tests own implementation details; this document owns the cross-module model, external constraints, evidence boundary, and safe maintenance path.
