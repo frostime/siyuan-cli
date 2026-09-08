@@ -185,7 +185,8 @@ nodes:
     N5:
         title: Implement binding lifecycle and Agent-facing commands
         lai_issue: 22
-        status: frontier
+        status: active
+        active_owner: S647
         depends_on: [N3]
         purpose: >-
             Implement the accepted pending/confirmed state transitions and current
