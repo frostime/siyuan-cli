@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0-dev.3] - 2026-09-08
+
+### Changed
+
+- Agent skill resources restructured: workspace selection merged into a single `recipes/workspace.md` entry with conditional handoff to `cli-usage/process-binding.md`; `document-tree-and-paths.md` merged into `siyuan-block.md`; `current.md` and `connect-workspace.md` removed.
+- Added `cli-usage/read-source.md` as last-resort reference for reading installed package source when `--help` and structured errors are insufficient.
+- `SKILL.md` compressed 10.6% (9.9 KB → 8.8 KB) by replacing prose with flowchart form, dropping procedural demonstrations, and tightening phrasing. All decision gates and safety contracts preserved.
+
+### Fixed
+
+- Corrected embed-block documentation: multi-line queries must use literal `_esc_newline_` token; real newlines cause the block to stay a paragraph instead of becoming `query_embed`.
+- Fixed unsafe `$TMPDIR` round-trip recipe that expanded to `rm "/doc.md"` on MSYS (where `TMPDIR` is unset).
+
+### Removed
+
+- Skill-install operator instructions, schema-cache internals, process-observation rationale, and other content an Agent performing content tasks cannot act on.
+- Command inventory tables and error-code catalogs already provided by `--help` and runtime structured errors.
+
+## [0.17.0-dev.2] - 2026-09-07
+
 ### Added
 
 - Experimental caller-process workspace binding: `current bind <workspace>` plus a separate `current confirm <nonce>` selects the nearest reliable common process scope. Pending confirmation can be retried without extending its expiry or removed with `current cancel <nonce>`; `current unbind` releases confirmed bindings only. Windows native, MSYS2, and Git Bash observation preserves uncertainty and fails before a request rather than silently choosing another workspace. A conflicting project workspace remains an error.
