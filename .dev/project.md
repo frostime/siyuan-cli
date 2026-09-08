@@ -111,6 +111,7 @@ Format: `- [name](docs/<file>) — one-line summary`
 - [EndpointSchema](docs/endpoint-schema.md) — Authored contract for endpoint identity, classification/severity metadata, guard coupling, CLI semantics, output precedence, and cache boundaries
 - [permission-model](docs/permission-model.md) — Permission engine architecture: rule-list model, two-phase evaluation, tool-level enforcement, bypassPermission, rule cascade, project override semantics, and approval effect semantics
 - [error-model](docs/error-model.md) — Process-level error contract: structured stderr output, exit categories, agent handling, and framework warnings
+- [process-binding](docs/process-binding.md) — Read when changing workspace binding, process observation, runtime support, or related failure handling; covers process identity, Windows/MSYS handoff, lifecycle, evidence, and revalidation
 - [contributing](docs/contributing/README.md) — Contributor workflows for adding documented/private endpoints and multi-step tools; read when changing `src/api/endpoints/**` or `src/tool/**`
 
 ## Module SPEC Index
