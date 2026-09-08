@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
     captureProcessAncestry,
     findNearestCommonAncestor,
+    inspectProcessInstance,
     matchProcessInstance,
     summarizeArgvTokens,
     type ProcessNode,
@@ -150,6 +151,33 @@ test('nearest common ancestor can match degraded instances by command signature'
     assert.equal(match?.strength, 'pid+signature');
 });
 
+test('instance inspection proves PID reuse only from authoritative start identity', () => {
+    const anchor: ProcessNode = {
+        pid: 7,
+        ppid: 1,
+        startId: 'old',
+        commandSignature: 'sha256:same'
+    };
+    assert.equal(
+        inspectProcessInstance(
+            anchor,
+            { pid: 7, ppid: 1, startId: 'new', commandSignature: 'sha256:same' },
+            true
+        ).state,
+        'stale'
+    );
+    assert.equal(
+        inspectProcessInstance(
+            { pid: 8, ppid: 1, commandSignature: 'sha256:old' },
+            { pid: 8, ppid: 1, commandSignature: 'sha256:new' },
+            true
+        ).state,
+        'unknown'
+    );
+    assert.equal(inspectProcessInstance(anchor, undefined, true).state, 'stale');
+    assert.equal(inspectProcessInstance(anchor, undefined, false).state, 'unknown');
+});
+
 test('nearest common ancestor returns undefined for disjoint chains', () => {
     assert.equal(
         findNearestCommonAncestor(
@@ -283,6 +311,7 @@ test('Linux capture stops on a PID cycle instead of looping forever', () => {
         ancestry.chain.map((node) => node.pid),
         [700, 800]
     );
+    assert.deepEqual(ancestry.termination, { kind: 'cycle', pid: 700 });
 });
 
 test('Linux capture fails explicitly when the self process is unreadable', () => {
@@ -353,6 +382,10 @@ test('macOS capture ends the chain at an ancestor that ps cannot read', () => {
         ancestry.chain.map((node) => node.pid),
         [900]
     );
+    assert.deepEqual(ancestry.termination, {
+        kind: 'parent-missing',
+        parentPid: 400
+    });
 });
 
 // ─── Real-host smoke (runs the actual platform adapter) ─────────────────────
