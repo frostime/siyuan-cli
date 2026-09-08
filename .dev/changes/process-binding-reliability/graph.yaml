@@ -244,11 +244,13 @@ nodes:
     N9:
         title: Document process-binding technical foundations
         lai_issue: 26
-        status: waiting
-        depends_on: [N7]
+        status: active
+        active_owner: S647
+        depends_on: [N6]
         purpose: >-
             Preserve the cross-platform process model, design rationale, verified evidence,
             and maintenance constraints as durable project developer documentation.
+            Drafting may proceed alongside N7; acceptance waits for N7 evidence to be incorporated.
         allowed_effects:
             - Create and maintain .dev/docs/process-binding.md and its .dev/project.md index entry.
             - Reference final source, tests, durable contracts, and external evidence without changing runtime behavior.
@@ -267,7 +269,7 @@ nodes:
         title: Finalize process-binding guidance and change artifacts
         lai_issue: 25
         status: waiting
-        depends_on: [N9]
+        depends_on: [N7, N9]
         purpose: >-
             Publish only verified behavior and leave code, durable contracts, skill
             content, and Change artifacts in their final state.
