@@ -205,7 +205,8 @@ nodes:
     N6:
         title: Integrate binding outcomes into workspace resolution
         lai_issue: 23
-        status: frontier
+        status: active
+        active_owner: S647
         depends_on: [N4, N5]
         purpose: >-
             Connect accepted observation outcomes and binding state to effective
