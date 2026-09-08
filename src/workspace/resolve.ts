@@ -14,12 +14,12 @@ import {
 } from './project-config.js';
 import { CliError, ExitCode } from '../shared/errors.js';
 import { resolveWorkspaceDirToBaseUrl } from './resolver.js';
-import { findActiveBinding } from './process-binding.js';
+import { findActiveBinding } from './binding/protocol.js';
+import type { ProcessObserver } from './binding/observation.js';
 import type {
     ProcessIdentityStrength,
-    ProcessNode,
-    ProcessTreeHost
-} from './process-tree.js';
+    ProcessNode
+} from './binding/process-tree.js';
 import type { AppConfig, WorkspaceEntry, TokenSource } from './config.js';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -166,8 +166,8 @@ export function resolveWorkspace(
  * and should not be perturbed by the current directory or the binding.
  */
 export interface ResolveEffectiveOptions {
-    /** Injectable process ancestry for tests; defaults to the real host. */
-    processTreeHost?: ProcessTreeHost;
+    /** Injectable binding-level process observation for tests. */
+    processObserver?: ProcessObserver;
 }
 
 export function resolveEffectiveWorkspace(
@@ -201,7 +201,7 @@ export function resolveEffectiveWorkspace(
     // Caller-scoped selection: the process binding and the project file must
     // agree when both select a workspace. When both agree, the binding is
     // reported as the source because it carries the anchor diagnostics.
-    const scope = findActiveBinding(options.processTreeHost);
+    const scope = findActiveBinding(options.processObserver);
     const boundName = scope?.binding.workspace;
     const projectName = projectConfig?.workspace;
 

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'pathe';
 import { workspaceCommand } from './workspace/command.js';
-import { currentCommand } from './current/command.js';
+import { currentCommand } from './workspace/current-command.js';
 import { apiCommand, getEndpointHelpEntry, renderGroupedApiHelp } from './api/command.js';
 import { toolCommand, getToolHelpText, renderGroupedToolHelp } from './tool/command.js';
 import { skillCommand } from './skill/command.js';

@@ -1,87 +1,141 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+    existsSync,
+    mkdirSync,
+    mkdtempSync,
+    readFileSync,
+    readdirSync,
+    rmSync,
+    writeFileSync
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import {
+    cancelPendingProbe,
     confirmPendingProbe,
     createPendingProbe,
     findActiveBinding,
-    unbindProcessScope
-} from '../src/workspace/process-binding.ts';
+    getPendingProbe,
+    unbindProcessScope,
+    type ProcessBinding
+} from '../src/workspace/binding/protocol.ts';
+import type {
+    ProcessObserver,
+    ProcessScopeObservation
+} from '../src/workspace/binding/observation.ts';
+import type {
+    AncestryTermination,
+    ProcessAncestry,
+    ProcessInstanceState,
+    ProcessNode
+} from '../src/workspace/binding/process-tree.ts';
 import { CliError } from '../src/shared/errors.ts';
-import type { ProcessNode, ProcessTreeHost } from '../src/workspace/process-tree.ts';
 
-// ─── Fixtures ────────────────────────────────────────────────────────────────
-
-/** Build a /proc/<pid>/stat body: state(0) ppid(1) ... starttime(19). */
-function linuxStat(pid: number, comm: string, ppid: number, starttime: number): string {
-    const fields = ['S', String(ppid), ...Array<string>(17).fill('0'), String(starttime)];
-    return `${pid} (${comm}) ${fields.join(' ')}`;
+function node(
+    pid: number,
+    ppid: number,
+    startId = `start-${pid}`
+): ProcessNode {
+    return { pid, ppid, startId };
 }
 
-interface FakeProcess {
-    pid: number;
-    ppid: number;
-    name: string;
-    starttime: number;
-    argv?: string[];
+function ancestry(
+    chain: ProcessNode[],
+    termination: AncestryTermination = { kind: 'root' }
+): ProcessAncestry {
+    return { platform: 'linux', chain, termination };
 }
 
-/** Linux host whose /proc contains exactly the given processes. */
-function fakeLinuxHost(selfPid: number, processes: FakeProcess[]): ProcessTreeHost {
-    const files: Record<string, string> = {};
-    for (const proc of processes) {
-        files[`/proc/${proc.pid}/stat`] = linuxStat(proc.pid, proc.name, proc.ppid, proc.starttime);
-        if (proc.argv) {
-            files[`/proc/${proc.pid}/cmdline`] = proc.argv.join('\0') + '\0';
-        }
-    }
+function scope(selfPid: number, anchorPid = 200): ProcessAncestry {
+    return ancestry([node(selfPid, anchorPid), node(anchorPid, 1), node(1, 0)]);
+}
+
+function captureObserver(observation: ProcessAncestry): ProcessObserver {
     return {
-        platform: 'linux',
-        pid: selfPid,
-        run: () => undefined,
-        readTextFile: (path) => files[path],
-        readSymlink: () => undefined
+        captureBindingAncestry: () => observation,
+        inspectAnchorsAndCurrentScope: () => {
+            throw new Error('scope inspection was not expected');
+        }
     };
 }
 
-/** An "agent scope": one long-lived agent process (200) under init. */
-function scopeHost(selfPid: number, agentStarttime = 2000, argv?: string[]): ProcessTreeHost {
-    return fakeLinuxHost(selfPid, [
-        { pid: selfPid, ppid: 200, name: 'cli', starttime: agentStarttime + selfPid, argv },
-        { pid: 200, ppid: 1, name: 'agent', starttime: agentStarttime, argv },
-        { pid: 1, ppid: 0, name: 'init', starttime: 1 }
-    ]);
+function scopeObserver(options: {
+    states: Record<number, ProcessInstanceState>;
+    ancestry?: ProcessAncestry;
+    calls?: { inspect: number };
+}): ProcessObserver {
+    return {
+        captureBindingAncestry: () => {
+            throw new Error('binding capture was not expected');
+        },
+        inspectAnchorsAndCurrentScope(anchors): ProcessScopeObservation {
+            if (options.calls) options.calls.inspect += 1;
+            return {
+                platform: 'linux',
+                anchorInspections: anchors.map((anchor) => {
+                    const state = options.states[anchor.pid] ?? 'unknown';
+                    return {
+                        anchor,
+                        state,
+                        reason:
+                            state === 'live'
+                                ? 'identity-match'
+                                : state === 'stale'
+                                  ? 'pid-not-found'
+                                  : 'identity-incomplete'
+                    };
+                }),
+                ...(options.ancestry ? { ancestry: options.ancestry } : {})
+            };
+        }
+    };
 }
 
-function pendingDir(configRoot: string): string {
+function pendingDir(): string {
     return join(configRoot, 'process-binding', 'pending');
 }
 
-function bindingsDir(configRoot: string): string {
+function bindingsDir(): string {
     return join(configRoot, 'process-binding', 'bindings');
 }
 
-function fileNames(dir: string): string[] {
+function fileNames(directory: string): string[] {
     try {
-        return readdirSync(dir);
+        return readdirSync(directory).sort();
     } catch {
         return [];
     }
 }
 
-function assertProtocolError(fn: () => unknown, errorType: string) {
-    assert.throws(
-        fn,
-        (error: unknown) => error instanceof CliError && error.errorType === errorType
-    );
+function writeBinding(
+    fileName: string,
+    workspace: string,
+    anchor: ProcessNode
+): void {
+    mkdirSync(bindingsDir(), { recursive: true });
+    const binding: ProcessBinding = {
+        workspace,
+        anchor,
+        boundAt: '2026-09-08T00:00:00.000Z'
+    };
+    writeFileSync(join(bindingsDir(), fileName), JSON.stringify(binding));
 }
 
-// Per-test isolated config root; node:test runs tests in a file sequentially.
-let configRoot: string;
+function protocolError(fn: () => unknown, errorType: string): CliError {
+    let caught: unknown;
+    try {
+        fn();
+    } catch (error) {
+        caught = error;
+    }
+    assert.ok(caught instanceof CliError);
+    assert.equal(caught.errorType, errorType);
+    return caught;
+}
+
+let configRoot = '';
 let previousConfigRoot: string | undefined;
 
 test.before(() => {
@@ -89,7 +143,8 @@ test.before(() => {
 });
 
 test.after(() => {
-    if (previousConfigRoot === undefined) delete process.env['SIYUAN_CLI_CONFIG'];
+    if (previousConfigRoot === undefined)
+        delete process.env['SIYUAN_CLI_CONFIG'];
     else process.env['SIYUAN_CLI_CONFIG'] = previousConfigRoot;
 });
 
@@ -102,243 +157,402 @@ test.afterEach(() => {
     rmSync(configRoot, { recursive: true, force: true });
 });
 
-// ─── Two-step protocol ───────────────────────────────────────────────────────
-
-test('bind + confirm anchors the nearest common ancestor and consumes the nonce', () => {
-    const bindHost = scopeHost(101);
-    const probe = createPendingProbe('dev', bindHost);
-    assert.equal(probe.workspace, 'dev');
-    assert.equal(probe.selfPid, 101);
-    assert.match(probe.nonce, /^[0-9a-f]{32}$/);
-    assert.equal(fileNames(pendingDir(configRoot)).length, 1);
-
-    const { binding } = confirmPendingProbe(probe.nonce, scopeHost(102));
-    assert.equal(binding.workspace, 'dev');
-    assert.equal(binding.anchor.pid, 200);
-    assert.equal(binding.anchor.startId, '2000');
-    assert.equal(binding.cwd, process.cwd());
-    // Nonce consumed, binding persisted.
-    assert.deepEqual(fileNames(pendingDir(configRoot)), []);
-    assert.equal(fileNames(bindingsDir(configRoot)).length, 1);
-});
-
-test('confirm from the same process as bind is rejected', () => {
-    const bindHost = scopeHost(101);
-    const probe = createPendingProbe('dev', bindHost);
-    // Same pid as the bind invocation, different ancestry position.
-    assertProtocolError(
-        () => confirmPendingProbe(probe.nonce, scopeHost(101)),
-        'PROCESS_BINDING_SAME_CALL'
-    );
-    // The pending probe is kept: a real sibling call may still confirm it.
-    assert.equal(fileNames(pendingDir(configRoot)).length, 1);
-});
-
-test('confirm without a pending nonce fails explicitly', () => {
-    assertProtocolError(
-        () => confirmPendingProbe('deadbeef', scopeHost(102)),
-        'PROCESS_BINDING_PENDING_NOT_FOUND'
-    );
-});
-
-test('expired pending probes are deleted and reported as expired', () => {
-    const bindTime = Date.now();
-    const probe = createPendingProbe('dev', scopeHost(101), () => bindTime);
-    const fifteenMinutesLater = bindTime + 16 * 60_000;
-    assertProtocolError(
-        () => confirmPendingProbe(probe.nonce, scopeHost(102), () => fifteenMinutesLater),
-        'PROCESS_BINDING_PENDING_EXPIRED'
-    );
-    assert.deepEqual(fileNames(pendingDir(configRoot)), []);
-});
-
-test('bind and confirm sharing only the machine root fail without writing a binding', () => {
-    // The two scopes have no common ancestor except init (pid 1): anchoring
-    // there would be machine-global, so confirm must fail.
+test('bind and confirm persist a reliable common anchor and consume the nonce', () => {
+    const bindTime = Date.parse('2026-09-08T10:00:00.000Z');
     const probe = createPendingProbe(
         'dev',
-        fakeLinuxHost(101, [
-            { pid: 101, ppid: 300, name: 'cli', starttime: 11 },
-            { pid: 300, ppid: 1, name: 'other-scope', starttime: 22 },
-            { pid: 1, ppid: 0, name: 'init', starttime: 1 }
-        ])
+        captureObserver(scope(101)),
+        () => bindTime,
+        '/work/project'
     );
-    assertProtocolError(
-        () => confirmPendingProbe(probe.nonce, scopeHost(102)),
-        'PROCESS_BINDING_NO_COMMON_ANCESTOR'
+    const storedPending = JSON.parse(
+        readFileSync(join(pendingDir(), `${probe.nonce}.json`), 'utf8')
     );
-    // Pending kept for a retry from a proper sibling call; nothing bound.
-    assert.equal(fileNames(pendingDir(configRoot)).length, 1);
-    assert.deepEqual(fileNames(bindingsDir(configRoot)), []);
-});
+    assert.deepEqual(storedPending.termination, { kind: 'root' });
 
-test('re-confirming the same scope replaces the previous binding', () => {
-    // First binding anchored on the agent process (200).
-    const first = confirmPendingProbe(
-        createPendingProbe('dev', scopeHost(101)).nonce,
-        scopeHost(102)
+    const result = confirmPendingProbe(
+        probe.nonce,
+        captureObserver(scope(102)),
+        () => bindTime + 1_000
     );
-    assert.equal(first.binding.anchor.pid, 200);
+    assert.equal(result.binding.workspace, 'dev');
+    assert.equal(result.binding.anchor.pid, 200);
+    assert.equal(result.binding.cwd, '/work/project');
+    assert.deepEqual(fileNames(pendingDir()), []);
+    assert.equal(fileNames(bindingsDir()).length, 1);
+});
 
-    // Second bind/confirm pair shares a deeper common ancestor: a shell (250)
-    // under the agent that hosted both calls.
-    const shellScope = (selfPid: number): ProcessTreeHost =>
-        fakeLinuxHost(selfPid, [
-            { pid: selfPid, ppid: 250, name: 'cli', starttime: 3000 + selfPid },
-            { pid: 250, ppid: 200, name: 'shell', starttime: 3000 },
-            { pid: 200, ppid: 1, name: 'agent', starttime: 2000 },
-            { pid: 1, ppid: 0, name: 'init', starttime: 1 }
-        ]);
-    const second = confirmPendingProbe(
-        createPendingProbe('home', shellScope(111)).nonce,
-        shellScope(112)
+test('identity-less observations with the same self PID are rejected as the same call', () => {
+    const identitylessSelf = { pid: 101, ppid: 200 };
+    const probe = createPendingProbe(
+        'dev',
+        captureObserver(ancestry([identitylessSelf, node(200, 1), node(1, 0)]))
     );
-    assert.equal(second.binding.anchor.pid, 250);
 
-    // The new binding covers the whole confirm scope, so the old agent-200
-    // record was replaced and exactly one binding file remains.
-    assert.equal(fileNames(bindingsDir(configRoot)).length, 1);
-    const active = findActiveBinding(shellScope(113));
-    assert.equal(active?.binding.workspace, 'home');
-    assert.equal(active?.match.node.pid, 250);
+    const failure = protocolError(
+        () =>
+            confirmPendingProbe(
+                probe.nonce,
+                captureObserver(
+                    ancestry([identitylessSelf, node(200, 1), node(1, 0)])
+                )
+            ),
+        'PROCESS_BINDING_SAME_CALL'
+    );
+    assert.equal(
+        (failure.details as { pendingRetained: boolean }).pendingRetained,
+        true
+    );
+    assert.equal(getPendingProbe(probe.nonce).nonce, probe.nonce);
 });
 
-// ─── Resolution side ─────────────────────────────────────────────────────────
+test('a failed confirm retains the same nonce and original expiry for retry', () => {
+    const bindTime = Date.parse('2026-09-08T10:00:00.000Z');
+    const incomplete = { kind: 'parent-missing', parentPid: 999 } as const;
+    const probe = createPendingProbe(
+        'dev',
+        captureObserver(ancestry([node(101, 200), node(200, 999)], incomplete)),
+        () => bindTime
+    );
+    const before = readFileSync(
+        join(pendingDir(), `${probe.nonce}.json`),
+        'utf8'
+    );
 
-test('findActiveBinding matches the anchor process in the current ancestry', () => {
-    confirmPendingProbe(createPendingProbe('dev', scopeHost(101)).nonce, scopeHost(102));
+    const failure = protocolError(
+        () =>
+            confirmPendingProbe(
+                probe.nonce,
+                captureObserver(
+                    ancestry([node(102, 300), node(300, 998)], {
+                        kind: 'parent-missing',
+                        parentPid: 998
+                    })
+                ),
+                () => bindTime + 60_000
+            ),
+        'PROCESS_BINDING_OBSERVATION_INSUFFICIENT'
+    );
+    assert.deepEqual(failure.details, {
+        bindingExists: false,
+        pendingRetained: true,
+        canRetry: true,
+        retryCommand: `siyuan-cli current confirm ${probe.nonce}`,
+        cancelCommand: `siyuan-cli current cancel ${probe.nonce}`,
+        requestSent: false,
+        bindTermination: incomplete,
+        confirmTermination: { kind: 'parent-missing', parentPid: 998 }
+    });
+    assert.equal(
+        readFileSync(join(pendingDir(), `${probe.nonce}.json`), 'utf8'),
+        before
+    );
 
-    const active = findActiveBinding(scopeHost(103));
-    assert.equal(active?.binding.workspace, 'dev');
-    assert.equal(active?.match.strength, 'pid+start');
-    assert.equal(active?.match.node.pid, 200);
+    const retried = confirmPendingProbe(
+        probe.nonce,
+        captureObserver(ancestry([node(103, 200), node(200, 999)], incomplete)),
+        () => bindTime + 2 * 60_000
+    );
+    assert.equal(retried.binding.anchor.pid, 200);
+    assert.deepEqual(fileNames(pendingDir()), []);
 });
 
-test('a reused PID with a different start identity does not match', () => {
-    confirmPendingProbe(createPendingProbe('dev', scopeHost(101)).nonce, scopeHost(102));
+test('legacy pending records can confirm on a common anchor but no-match is insufficient', () => {
+    const probe = createPendingProbe('dev', captureObserver(scope(101)));
+    const path = join(pendingDir(), `${probe.nonce}.json`);
+    const legacy = JSON.parse(readFileSync(path, 'utf8'));
+    delete legacy.termination;
+    writeFileSync(path, JSON.stringify(legacy));
 
-    // Same agent PID (200) but a different start identity: the original
-    // process is gone and the PID was reused.
-    const reused = fakeLinuxHost(103, [
-        { pid: 103, ppid: 200, name: 'cli', starttime: 9000 },
-        { pid: 200, ppid: 1, name: 'agent', starttime: 9999 },
-        { pid: 1, ppid: 0, name: 'init', starttime: 1 }
-    ]);
-    assert.equal(findActiveBinding(reused), undefined);
+    const failure = protocolError(
+        () =>
+            confirmPendingProbe(probe.nonce, captureObserver(scope(102, 300))),
+        'PROCESS_BINDING_OBSERVATION_INSUFFICIENT'
+    );
+    assert.equal(
+        (failure.details as { pendingRetained: boolean }).pendingRetained,
+        true
+    );
+
+    const confirmed = confirmPendingProbe(
+        probe.nonce,
+        captureObserver(scope(103))
+    );
+    assert.equal(confirmed.binding.anchor.pid, 200);
 });
 
-test('a scope that never contained the anchor does not see the binding', () => {
-    confirmPendingProbe(createPendingProbe('dev', scopeHost(101)).nonce, scopeHost(102));
-    const otherScope = fakeLinuxHost(104, [
-        { pid: 104, ppid: 300, name: 'cli', starttime: 41 },
-        { pid: 300, ppid: 1, name: 'unrelated', starttime: 42 },
-        { pid: 1, ppid: 0, name: 'init', starttime: 1 }
-    ]);
-    assert.equal(findActiveBinding(otherScope), undefined);
-});
+test('cancel deletes only its nonce and performs no process observation', () => {
+    const first = createPendingProbe('dev', captureObserver(scope(101)));
+    const second = createPendingProbe('home', captureObserver(scope(102)));
+    writeBinding('confirmed.json', 'dev', node(200, 1));
 
-test('a binding without a start identity still resolves via command signature', () => {
-    // Hand-written record: anchor observable only by pid + command signature.
-    // The signature must match what the fake scope's argv produces so the
-    // degraded (signature-based) comparison succeeds.
-    const commandSignature = `sha256:${createHash('sha256').update('node\0cli.mjs').digest('hex')}`;
-    const bindings = join(configRoot, 'process-binding', 'bindings');
-    mkdirSync(bindings, { recursive: true });
-    const binding = {
-        workspace: 'dev',
-        anchor: {
-            pid: 200,
-            ppid: 1,
-            commandSignature
-        } satisfies Partial<ProcessNode> as ProcessNode,
-        boundAt: new Date().toISOString()
-    };
-    writeFileSync(join(bindings, '200-manual.json'), JSON.stringify(binding));
-
-    const matchingScope = fakeLinuxHost(103, [
-        {
-            pid: 103,
-            ppid: 200,
-            name: 'cli',
-            starttime: 51,
-            argv: ['node', 'cli.mjs']
-        },
-        {
-            pid: 200,
-            ppid: 1,
-            name: 'agent',
-            starttime: 52,
-            argv: ['node', 'cli.mjs']
-        },
-        { pid: 1, ppid: 0, name: 'init', starttime: 1 }
-    ]);
-    const active = findActiveBinding(matchingScope);
-    assert.equal(active?.binding.workspace, 'dev');
-    assert.equal(active?.match.strength, 'pid+signature');
-});
-
-// ─── Unbind ──────────────────────────────────────────────────────────────────
-
-test('unbind removes bindings for the current scope and cancels pending probes', () => {
-    const probe = createPendingProbe('dev', scopeHost(101));
-    confirmPendingProbe(probe.nonce, scopeHost(102));
-
-    const result = unbindProcessScope(scopeHost(103));
-    assert.equal(result.removed, 1);
-    assert.equal(findActiveBinding(scopeHost(103)), undefined);
-
-    // A later unbind in the same scope finds nothing.
-    assert.equal(unbindProcessScope(scopeHost(104)).removed, 0);
-});
-
-test('unbind cancels a pending probe so confirm can no longer pair', () => {
-    const probe = createPendingProbe('dev', scopeHost(101));
-    const result = unbindProcessScope(scopeHost(102));
-    assert.equal(result.pendingRemoved, 1);
-    assertProtocolError(
-        () => confirmPendingProbe(probe.nonce, scopeHost(103)),
+    const cancelled = cancelPendingProbe(first.nonce);
+    assert.equal(cancelled.workspace, 'dev');
+    assert.deepEqual(fileNames(pendingDir()), [`${second.nonce}.json`]);
+    assert.deepEqual(fileNames(bindingsDir()), ['confirmed.json']);
+    protocolError(
+        () => getPendingProbe(first.nonce),
         'PROCESS_BINDING_PENDING_NOT_FOUND'
     );
 });
 
-// ─── State self-healing ──────────────────────────────────────────────────────
+test('unbind removes confirmed scope bindings without consuming pending probes', () => {
+    writeBinding('confirmed.json', 'dev', node(200, 1));
+    const pending = createPendingProbe('home', captureObserver(scope(101)));
 
-test('unreadable or malformed state files are removed and ignored', () => {
-    const bindings = bindingsDir(configRoot);
-    const pending = pendingDir(configRoot);
-    mkdirSync(bindings, { recursive: true });
-    mkdirSync(pending, { recursive: true });
-    writeFileSync(join(bindings, 'garbage.json'), 'not json{');
-    writeFileSync(join(bindings, 'wrong-shape.json'), JSON.stringify({ hello: 1 }));
-    const anchor = { pid: 200, ppid: 1, startId: '2000' };
-    writeFileSync(
-        join(bindings, 'valid.json'),
-        JSON.stringify({
-            workspace: 'dev',
-            anchor,
-            boundAt: new Date().toISOString()
+    const result = unbindProcessScope(
+        scopeObserver({ states: { 200: 'live' }, ancestry: scope(102) })
+    );
+    assert.deepEqual(result, { removed: 1, reclaimed: 0 });
+    assert.equal(getPendingProbe(pending.nonce).workspace, 'home');
+    assert.deepEqual(fileNames(bindingsDir()), []);
+});
+
+test('confirming a new binding replaces an existing binding in the same scope', () => {
+    writeBinding('old.json', 'dev', node(200, 1));
+    const probe = createPendingProbe('home', captureObserver(scope(101)));
+
+    const result = confirmPendingProbe(
+        probe.nonce,
+        captureObserver(
+            ancestry([node(102, 250), node(250, 200), node(200, 1), node(1, 0)])
+        )
+    );
+    assert.equal(result.binding.workspace, 'home');
+    assert.equal(result.binding.anchor.pid, 200);
+    assert.equal(fileNames(bindingsDir()).length, 1);
+    const stored = JSON.parse(
+        readFileSync(join(bindingsDir(), fileNames(bindingsDir())[0]!), 'utf8')
+    );
+    assert.equal(stored.workspace, 'home');
+});
+
+test('active lookup skips observation when no valid binding record remains', () => {
+    mkdirSync(bindingsDir(), { recursive: true });
+    writeFileSync(join(bindingsDir(), 'malformed.json'), '{bad json');
+    const calls = { inspect: 0 };
+
+    const active = findActiveBinding(scopeObserver({ states: {}, calls }));
+    assert.equal(active, undefined);
+    assert.equal(calls.inspect, 0);
+    assert.deepEqual(fileNames(bindingsDir()), []);
+});
+
+test('active lookup reclaims conclusively stale records without caller ancestry', () => {
+    writeBinding('missing.json', 'dev', node(200, 1));
+    writeBinding('reused.json', 'home', node(300, 1));
+    const calls = { inspect: 0 };
+
+    const active = findActiveBinding(
+        scopeObserver({ states: { 200: 'stale', 300: 'stale' }, calls })
+    );
+    assert.equal(active, undefined);
+    assert.equal(calls.inspect, 1);
+    assert.deepEqual(fileNames(bindingsDir()), []);
+});
+
+test('active lookup chooses the nearest matching retained anchor', () => {
+    writeBinding('outer.json', 'outer', node(200, 1));
+    writeBinding('inner.json', 'inner', node(300, 200));
+    const current = ancestry([
+        node(103, 300),
+        node(300, 200),
+        node(200, 1),
+        node(1, 0)
+    ]);
+
+    const active = findActiveBinding(
+        scopeObserver({
+            states: { 200: 'live', 300: 'live' },
+            ancestry: current
         })
     );
-
-    const active = findActiveBinding(scopeHost(103));
-    assert.equal(active?.binding.workspace, 'dev');
-    assert.deepEqual(fileNames(bindings), ['valid.json']);
-
-    // A malformed pending file for a requested nonce reads as "not found".
-    writeFileSync(join(pending, 'broken-nonce.json'), '{oops');
-    assertProtocolError(
-        () => confirmPendingProbe('broken-nonce', scopeHost(102)),
-        'PROCESS_BINDING_PENDING_NOT_FOUND'
-    );
-    assert.deepEqual(fileNames(pending), []);
+    assert.equal(active?.binding.workspace, 'inner');
+    assert.equal(active?.match.node.pid, 300);
 });
 
-test('binding records round-trip through the state file', () => {
-    confirmPendingProbe(createPendingProbe('dev', scopeHost(101)).nonce, scopeHost(102));
-    const stored = JSON.parse(
-        readFileSync(join(bindingsDir(configRoot), fileNames(bindingsDir(configRoot))[0]!), 'utf8')
+test('complete ancestry gives conclusive absence for an unrelated retained binding', () => {
+    writeBinding('other.json', 'dev', node(400, 1));
+    const active = findActiveBinding(
+        scopeObserver({ states: { 400: 'unknown' }, ancestry: scope(103) })
     );
-    assert.equal(stored.workspace, 'dev');
-    assert.equal(stored.anchor.pid, 200);
-    assert.equal(typeof stored.boundAt, 'string');
+    assert.equal(active, undefined);
+    assert.deepEqual(fileNames(bindingsDir()), ['other.json']);
+});
+
+test('incomplete ancestry with a retained binding fails loudly and keeps the record', () => {
+    writeBinding('uncertain.json', 'dev', node(400, 1));
+    const incomplete = ancestry([node(103, 300), node(300, 999)], {
+        kind: 'parent-missing',
+        parentPid: 999
+    });
+
+    const failure = protocolError(
+        () =>
+            findActiveBinding(
+                scopeObserver({
+                    states: { 400: 'unknown' },
+                    ancestry: incomplete
+                })
+            ),
+        'PROCESS_BINDING_OBSERVATION_INSUFFICIENT'
+    );
+    assert.deepEqual(failure.details, {
+        bindingExists: true,
+        bindingCount: 1,
+        requestSent: false,
+        termination: incomplete.termination
+    });
+    assert.deepEqual(fileNames(bindingsDir()), ['uncertain.json']);
+});
+
+test('a same-PID identity gap remains unknown even with complete ancestry', () => {
+    writeBinding('signature.json', 'dev', {
+        pid: 200,
+        ppid: 1,
+        commandSignature: 'sha256:recorded'
+    });
+    const current = ancestry([
+        node(103, 200),
+        { pid: 200, ppid: 1, commandSignature: 'sha256:observed' },
+        node(1, 0)
+    ]);
+
+    protocolError(
+        () =>
+            findActiveBinding(
+                scopeObserver({
+                    states: { 200: 'unknown' },
+                    ancestry: current
+                })
+            ),
+        'PROCESS_BINDING_OBSERVATION_INSUFFICIENT'
+    );
+    assert.deepEqual(fileNames(bindingsDir()), ['signature.json']);
+});
+
+test('malformed nonce input cannot alias or remove pending state', () => {
+    const probe = createPendingProbe('dev', captureObserver(scope(101)));
+    protocolError(
+        () => getPendingProbe(`${probe.nonce}/../other`),
+        'PROCESS_BINDING_NONCE_INVALID'
+    );
+    assert.equal(getPendingProbe(probe.nonce).nonce, probe.nonce);
+});
+
+test('unreadable state is retained and fails pending and binding operations loudly', () => {
+    const unreadableNonce = 'b'.repeat(32);
+    const unreadablePending = join(pendingDir(), `${unreadableNonce}.json`);
+    mkdirSync(unreadablePending, { recursive: true });
+
+    const pendingFailure = protocolError(
+        () => cancelPendingProbe(unreadableNonce),
+        'PROCESS_BINDING_STATE_UNAVAILABLE'
+    );
+    assert.equal(
+        (pendingFailure.details as { pendingRetained: boolean })
+            .pendingRetained,
+        true
+    );
+    assert.equal(existsSync(unreadablePending), true);
+
+    const unreadableBinding = join(bindingsDir(), 'unreadable.json');
+    mkdirSync(unreadableBinding, { recursive: true });
+    const calls = { inspect: 0 };
+    protocolError(
+        () => findActiveBinding(scopeObserver({ states: {}, calls })),
+        'PROCESS_BINDING_STATE_UNAVAILABLE'
+    );
+    assert.equal(calls.inspect, 0);
+    assert.equal(existsSync(unreadableBinding), true);
+});
+
+test('an unrelated unreadable pending record does not block a new bind', () => {
+    const unreadableNonce = 'd'.repeat(32);
+    const unreadablePending = join(pendingDir(), `${unreadableNonce}.json`);
+    mkdirSync(unreadablePending, { recursive: true });
+
+    const created = createPendingProbe('dev', captureObserver(scope(101)));
+
+    assert.equal(getPendingProbe(created.nonce).workspace, 'dev');
+    assert.equal(existsSync(unreadablePending), true);
+});
+
+test('confirm write failure retains the pending nonce with retry recovery', () => {
+    const probe = createPendingProbe('dev', captureObserver(scope(101)));
+    mkdirSync(join(configRoot, 'process-binding'), { recursive: true });
+    writeFileSync(bindingsDir(), 'not a directory');
+
+    const failure = protocolError(
+        () => confirmPendingProbe(probe.nonce, captureObserver(scope(102))),
+        'PROCESS_BINDING_PERSISTENCE_FAILED'
+    );
+    const details = failure.details as Record<string, unknown>;
+    assert.equal(details['bindingExists'], false);
+    assert.equal(details['pendingRetained'], true);
+    assert.equal(
+        details['retryCommand'],
+        `siyuan-cli current confirm ${probe.nonce}`
+    );
+    assert.equal(
+        details['cancelCommand'],
+        `siyuan-cli current cancel ${probe.nonce}`
+    );
+    assert.equal(getPendingProbe(probe.nonce).nonce, probe.nonce);
+});
+
+test('confirm cleanup failure reports that the binding was already written', () => {
+    const probe = createPendingProbe('dev', captureObserver(scope(101)));
+    const pendingPath = join(pendingDir(), `${probe.nonce}.json`);
+    const observer: ProcessObserver = {
+        captureBindingAncestry() {
+            rmSync(pendingPath);
+            mkdirSync(pendingPath);
+            return scope(102);
+        },
+        inspectAnchorsAndCurrentScope() {
+            throw new Error('scope inspection was not expected');
+        }
+    };
+
+    const failure = protocolError(
+        () => confirmPendingProbe(probe.nonce, observer),
+        'PROCESS_BINDING_PERSISTENCE_FAILED'
+    );
+    const details = failure.details as Record<string, unknown>;
+    assert.equal(details['bindingExists'], true);
+    assert.equal(details['pendingRetained'], true);
+    assert.equal(details['canRetry'], false);
+    assert.equal(
+        details['cancelCommand'],
+        `siyuan-cli current cancel ${probe.nonce}`
+    );
+    assert.equal(fileNames(bindingsDir()).length, 1);
+    assert.equal(existsSync(pendingPath), true);
+});
+
+test('expired and damaged pending records are removed and cannot retry', () => {
+    const createdAt = Date.parse('2026-09-08T10:00:00.000Z');
+    const probe = createPendingProbe(
+        'dev',
+        captureObserver(scope(101)),
+        () => createdAt
+    );
+    const expired = protocolError(
+        () => getPendingProbe(probe.nonce, () => createdAt + 15 * 60_000),
+        'PROCESS_BINDING_PENDING_EXPIRED'
+    );
+    assert.equal(
+        (expired.details as { pendingRetained: boolean }).pendingRetained,
+        false
+    );
+
+    const brokenNonce = 'c'.repeat(32);
+    mkdirSync(pendingDir(), { recursive: true });
+    writeFileSync(join(pendingDir(), `${brokenNonce}.json`), '{oops');
+    protocolError(
+        () => getPendingProbe(brokenNonce),
+        'PROCESS_BINDING_PENDING_NOT_FOUND'
+    );
+    assert.deepEqual(fileNames(pendingDir()), []);
 });
