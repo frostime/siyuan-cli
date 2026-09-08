@@ -1,6 +1,6 @@
 ---
 name: process-binding
-description: "Maintainer model for caller-process workspace binding: algorithm, module contracts, platform observation, evidence, and revalidation."
+description: "Maintainer model for experimental caller-process workspace binding: motivation, algorithm, platform observation, evidence, and revalidation."
 updated: 2026-09-08
 scope:
   - /src/workspace/binding/**
@@ -15,9 +15,28 @@ deprecated: false
 replacement: ""
 ---
 
-# Process Binding
+# Process Binding (Experimental)
 
 Read this document when changing process observation, binding identity or lifecycle, workspace-resolution integration, runtime support, or related failure handling. It records cross-file contracts and external constraints that cannot be recovered safely from one source file. Command usage belongs in `skills/siyuan-cli/cli-usage/current.md`.
+
+> [!IMPORTANT]
+> Process binding is experimental. It relies on process topology exposed by the operating system and Agent harness rather than a stable Agent-session identity API. Use it only in tested or otherwise verified topologies. Project workspace files and explicit `--workspace` remain the reliable alternatives.
+
+## Why this exists
+
+An Agent often performs many SiYuan operations during one task. Requiring every API or tool invocation to repeat `--workspace` is cumbersome and makes a wrong-target omission more likely. A project file solves this when the work belongs to one directory, while the machine-global current workspace is too broad to isolate concurrent callers. Long-lived Agent work without a suitable project file needs a narrower reusable selection scope.
+
+Many CLI-oriented Agent harnesses execute each tool call as a new OS process. The individual CLI and wrapper processes disappear, but their ancestry usually converges at a longer-lived process owned by the shell or harness. That common process is an observable cross-invocation scope key available without modifying the harness:
+
+```text
+call A: short-lived CLI-A → transient wrappers ─┐
+                                                ├→ long-lived caller process
+call B: short-lived CLI-B → transient wrappers ─┘
+```
+
+The useful operation is therefore not “identify the Agent by name.” It is: capture two process chains, find their nearest reliably identified common process instance, and attach a workspace to that anchor so later calls in the same observable scope can reuse it.
+
+The hard part is that process ancestry is imperfect evidence. PIDs are reused, transient creators may exit before observation, Windows and MSYS expose different relations, and a GUI application may host several logical sessions in one process. A wrong match can silently select the wrong SiYuan workspace, so the feature must preserve uncertainty and fail rather than guess. The rest of this document defines that algorithm, its evidence boundary, and the conditions under which maintainers may claim it works.
 
 ## System model
 
