@@ -33,7 +33,9 @@ If `siyuan-cli` is missing: `npm install -g @frostime/siyuan-cli`. Always invoke
 
 Before content work: `siyuan-cli current which`. Writing to `config.current` only (`source: global-current`) when user never named that target? → ask.
 
-Binding: read `cli-usage/process-binding.md` first. Bind and confirm must be two separate tool/CLI calls from the same long-lived caller, not one shell block. Cancel with the exact command bind printed; unbind after work completes. Project file + binding disagreement → use one-call `--workspace` exception or fix the conflict.
+Binding: read `cli-usage/process-binding.md` first.
+Bind and confirm must be two separate tool/CLI calls from the same long-lived caller, not one shell block. And it anchors to the nearest process common to both calls (the harness process).
+Cancel with the exact command bind printed; unbind after work completes. Project file + binding disagreement → use one-call `--workspace` exception or fix the conflict.
 
 ## Command discovery
 

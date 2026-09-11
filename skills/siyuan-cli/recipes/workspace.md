@@ -65,7 +65,7 @@ siyuan-cli workspace verify dev
 
 | Situation | Use | Note |
 |---|---|---|
-| One or a few calls | `--workspace <name>` on each business command | Wins over project file and binding; no agreement check |
+| One or a few calls | `--workspace <name>` on each business command (place it after subcommand) | Wins over project file and binding; no agreement check |
 | Repeated work in one project | `workspace: <name>` in `.siyuan-cli.yaml` | Committable; rejects tokens and URLs by design |
 | Long-lived caller, no suitable project file | process binding | Experimental → `cli-usage/process-binding.md` |
 | Deliberately change the machine default | `siyuan-cli current global <name>` | Shared state, not isolation |
