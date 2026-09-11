@@ -74,12 +74,7 @@ All `siyuan-cli api <id>` and `siyuan-cli tool <id>` commands accept:
 | `--debug` | | Print intended request (curl-equivalent) to stderr |
 | `--json` | `-j` | Entire payload as inline JSON |
 | `--file` | `-f` | Entire payload from JSON file; `-f -` reads stdin |
-
-APIs and tools additionally accept:
-
-| Flag | Meaning |
-|------|---------|
-| `--print compact\|json` | Choose output mode; registered APIs use compact formatter text or envelope JSON, tools use compact content or envelope JSON. `api raw` ignores this and always prints raw JSON `data`. |
+| `--print compact\|json` | | Output mode: compact text or envelope JSON; defaults to compact. `api raw` ignores this and always prints raw JSON `data`. |
 
 ## Input sources
 
@@ -113,14 +108,6 @@ WHERE type = 'd' AND content LIKE '%keyword%'
 LIMIT 10
 EOF
 
-siyuan-cli api block.appendBlock --parentID <id> --data @stdin <<'EOF'
-## New section
-
-Paragraph content here.
-EOF
-
-# append endpoints default `dataType` to `markdown`; pass `--dataType dom` only when needed.
-
 # multiple long inputs in one command — use @file: for each
 siyuan-cli tool update-block --blocks @file:./updates.json --yes
 ```
@@ -140,8 +127,6 @@ A Git Bash / MSYS-specific escape also works: write the leading slash as `//` so
 
 ```bash
 siyuan-cli api filetree.getIDsByHPath --notebook <id> --path //TestDoc
-siyuan-cli api filetree.createDocWithMd --notebook <id> --path //inbox/note --markdown @file:./note.md
-siyuan-cli api filetree.createDocWithMd --notebook <id> --path //note --markdown @file:./note.md
 ```
 
 ## Error handling
@@ -189,17 +174,6 @@ Warnings and errors are written to stderr as single-line JSON, stdout remains cl
 | `ENDPOINT_DENIED` | 5 | Review permission rules |
 | `CONTENT_DENIED` | 5 | Review permission rules for notebook/path scope |
 
-### Agent error handling pattern
-
-```text
-exit 0          → parse stdout as result
-exit 1 + APPROVAL_*           → surface the decision outcome to the user
-exit 1 + APPROVAL_UNAVAILABLE → approval flow unavailable; re-invoke with --yes only if `behavior.allowYes` is true
-exit 1 + PAYLOAD_INVALID       → fix input and retry
-exit 2/3/4      → environment issue; surface to user
-exit 5          → permission policy blocks this; check config rules
-```
-
 ### Debugging permissions
 
 See `permission.md` for the full reference. Quick diagnostic:
@@ -208,11 +182,6 @@ See `permission.md` for the full reference. Quick diagnostic:
 siyuan-cli current which                # see resolved workspace and selection source
 siyuan-cli api <id> --debug             # see assembled payload
 ```
-
-Common fixes:
-- `ENDPOINT_DENIED` → use `siyuan-cli current which` to confirm the target, then inspect the applicable permission rules
-- `CONTENT_DENIED` → rules may restrict writes to this notebook/path; inspect rule list
-- `APPROVAL_UNAVAILABLE` → broker not running; retry with `--yes` only when safe
 
 ## Reading bundled resources
 

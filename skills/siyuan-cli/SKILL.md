@@ -192,9 +192,10 @@ Read a resource with `siyuan-cli skill read <path>`. Paths are relative to this 
 - MSYS/Git Bash rewrites leading `/` → `MSYS_NO_PATHCONV=1` or `//path`
 - `--showId true` markers are edit targets, never brute-edit search text
 - Registered endpoints > `api raw`; avoid permanent `rawApi.allow: ["*"]`
+- SiYuan's index updates asynchronously: after a write, wait 1–2s (e.g. `sleep 1`) before index-sensitive reads (SQL, refs, frontmatter), or they may return stale data
 
 ## Last resort
 
-The published package is unbundled ESM, so its code can be read when nothing else answers a question. Treat it as a fallback, not a habit: only after command output, structured errors, and the routed resource have failed, and only for the specific blocking question. Paths are in `cli-usage/read-source.md`. Never edit installed files.
+The published package is unbundled ESM; its code can answer questions nothing else does — read it only after command output, structured errors, and the routed resource have failed, and only for the specific blocking question. Paths: `cli-usage/read-source.md`. Never edit installed files.
 
 GitHub: [siyuan-cli](https://github.com/frostime/siyuan-cli) · [SiYuan kernel API](https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go)

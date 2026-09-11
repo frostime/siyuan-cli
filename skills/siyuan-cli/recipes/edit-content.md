@@ -35,7 +35,7 @@ Direct-entry checklist: confirm workspace · stabilize target id · inspect befo
 | Broad document-level rewrite | `brute-edit --check` → `--dry-run` → `--yes` | Only if SAFE. Regenerates child ids. |
 | Whole-document overwrite | `brute-edit --overwrite` | Same safety checks as brute-edit. |
 | Create new document | `filetree.createDocWithMd` | `--notebook`, `--path`, `--markdown`. |
-| Move a block | `block.moveBlock` | `--id`, `--previousID`, `--parentID`. |
+| Move a block | `block.moveBlock` | Omit `--previousID` = first child; end of parent = last child as anchor. |
 | Move a document | `filetree.moveDocsByID` | hpath changes; id preserved. |
 | Delete a document | `filetree.removeDocByID` | Prefer over deleting document block. |
 
@@ -61,44 +61,23 @@ Run `siyuan-cli api <command> --help` for parameters and INPUT SOURCES.
 
 ## Append content
 
-Fast path for append-only operations.
-
-```bash
-siyuan-cli api block.appendBlock --parentID <id> --data @stdin --yes <<'EOF'
-## New section
-Content.
-EOF
-```
-
-`dataType` defaults to `markdown`. Use `--dry-run` if parent id was just resolved. For multi-line content, prefer `@stdin` (heredoc / here-string) or `@file:` over inline `--data`; shell does not interpret `\n` as a newline inside quoted strings.
+Fast path: `siyuan-cli api block.appendBlock --parentID <id> --data @stdin --yes` (example in SKILL §Hot paths). `dataType` defaults to `markdown`. Use `--dry-run` if parent id was just resolved. For multi-line content, prefer `@stdin` (heredoc / here-string) or `@file:` over inline `--data`; shell does not interpret `\n` as a newline inside quoted strings.
 
 Daily notes are per-notebook: `block.appendDailyNoteBlock --notebook <id>`. If notebook id is unknown, run `notebook.lsNotebooks`; if multiple plausible notebooks, ask.
 
 ## Replace one or multiple blocks
 
 ```bash
-# Single block via heredoc
 siyuan-cli tool update-block --blocks @stdin --yes <<'EOF'
 [{"id":"<block-id>","data":"Replacement content."}]
 EOF
-
-# Multiple blocks from file
-siyuan-cli tool update-block --blocks @file:./updates.json --yes
 ```
 
-`updates.json`: `[{"id":"...","data":"..."}, ...]`. dataType is always markdown.
+`--blocks` accepts literal, `@file:path`, or `@stdin`; array items are `{"id","data"}`; dataType is always markdown.
 
 ## Insert before or after
 
-```bash
-# Insert after a sibling
-siyuan-cli api block.insertBlock --parentID <parent-id> --previousID <sibling-id> \
-  --dataType markdown --data @stdin --yes <<'EOF'
-Inserted content.
-EOF
-```
-
-Use `--nextID` to insert before. Full params: `block.insertBlock --help`.
+After a sibling: `block.insertBlock --parentID <parent-id> --previousID <sibling-id> --data @stdin --yes`; use `--nextID` to insert before. Full params: `block.insertBlock --help`.
 
 ## Create a document
 
@@ -106,8 +85,6 @@ Use `--nextID` to insert before. Full params: `block.insertBlock --help`.
 siyuan-cli api filetree.createDocWithMd --notebook <notebook-id> --path "/path/to/doc" \
   --markdown @file:./content.md
 ```
-
-⚠️ Git Bash/MSYS may rewrite leading `/`; use `MSYS_NO_PATHCONV=1` or `//path`.
 
 ## Broad document-level rewrite (brute-edit)
 
@@ -135,10 +112,9 @@ and emit a warning.
 
 ## Whole-document overwrite
 
+Same preflight as the replacements flow: `--check true` → if SAFE, `checkpoint-doc` once → then:
+
 ```bash
-siyuan-cli tool brute-edit <doc-id> --check true --print json
-# If SAFE, checkpoint once before this high-risk edit group:
-siyuan-cli tool checkpoint-doc <doc-id>
 siyuan-cli tool get-block-content <doc-id> --range children --limit=-1 --bodyOnly true > ./doc.md
 # ... edit ./doc.md locally ...
 siyuan-cli tool brute-edit <doc-id> --overwrite @file:./doc.md --dry-run
@@ -152,9 +128,11 @@ Never overwrite from `--showId true` output; markers are not source text.
 ## Move a block
 
 ```bash
-siyuan-cli api block.moveBlock --id <block-id> --previousID <sibling-id> --parentID <parent-id>
-# Move to first child: --previousID ""
+siyuan-cli api block.moveBlock --id <block-id> --parentID <parent-id>                                      # first child (omit anchor)
+siyuan-cli api block.moveBlock --id <block-id> --previousID <sibling-id> --parentID <parent-id>  # after sibling; end of parent → <sibling-id> = last child (block.getTailChildBlocks)
 ```
+
+Position semantics: `block.moveBlock --help`.
 
 ## Move a document
 
@@ -166,9 +144,10 @@ siyuan-cli api filetree.moveDocsByID --fromIDs '["<doc-id>"]' --toID <target-par
 
 # Verification
 
-After writing:
+SiYuan updates its search index asynchronously. Immediately after a write, index-sensitive reads (SQL, refs, export frontmatter) may still return the pre-write state. Wait 1–2s first:
 
 ```bash
+sleep 1
 siyuan-cli tool get-block-content <id> --range context --limit 7 --showId true
 ```
 
