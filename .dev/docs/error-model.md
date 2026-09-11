@@ -1,13 +1,15 @@
 ---
 name: error-model
 description: "Process-level error contract for structured stderr output, exit categories, agent handling, and framework warnings."
-updated: 2026-09-08
+updated: 2026-09-11
 scope:
   - /src/shared/errors.ts
   - /src/shared/permission.ts
   - /src/workspace/**
   - /src/api/guard.ts
   - /src/api/command.ts
+  - /src/cli.ts
+  - /src/approval/broker.ts
   - /src/tool/**
   - /src/approval/errors.ts
 deprecated: false
@@ -27,6 +29,12 @@ A failed CLI invocation writes one structured JSON object to stderr and exits no
 `error` is the machine-readable category, `message` is human-readable, `hint` is optional recovery guidance, and `details` carries structured context when the caller needs it. `CliError` in `src/shared/errors.ts` is the construction boundary; callers must not infer meaning from the human message.
 
 Approval and warning events may also be emitted as JSON lines on stderr during an otherwise valid invocation. They do not replace the final result or final error.
+
+## Exit mechanics
+
+The CLI main process terminates only by event-loop drain: code that needs a specific exit status sets `process.exitCode` and returns. `process.exit()` is restricted to standalone helper processes that must terminate immediately regardless of open connections (currently the approval broker); every such call must carry a comment justifying the forced exit.
+
+Rationale: on Windows, a forced exit while a pooled keep-alive socket is closing aborts the process with a libuv assertion before the exit code and buffered output are delivered.
 
 ## Exit categories
 
