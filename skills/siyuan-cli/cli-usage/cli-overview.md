@@ -25,11 +25,11 @@ Discovery: `siyuan-cli api list` · `siyuan-cli api list --group block` · `siyu
 behavior:
   rawApi:
     enabled: true
-    allow: ["asset.getDocAssets"]
+    allow: ["asset.getUnusedAssets"]
 ```
 
 ```bash
-siyuan-cli api raw asset.getDocAssets -j '{"id":"20240922152051-7dpjfpv"}'
+siyuan-cli api raw asset.getUnusedAssets -j '{}'
 ```
 
 Raw stdout is pure JSON `data` (pipe to `jq`); warnings go to stderr. Bypasses schema validation, guards, response filtering, and compact formatting. → `workspace-config.md` §Raw API fallback.

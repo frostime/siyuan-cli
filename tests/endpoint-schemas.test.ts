@@ -26,6 +26,10 @@ import { schema as blockGetDocsInfo } from '../src/api/endpoints/block/getDocsIn
 import { schema as blockGetTailChildBlocks } from '../src/api/endpoints/block/getTailChildBlocks.ts';
 import { schema as blockGetBlockSiblingID } from '../src/api/endpoints/block/getBlockSiblingID.ts';
 import { schema as filetreeDuplicateDoc } from '../src/api/endpoints/filetree/duplicateDoc.ts';
+import { schema as assetStatAsset } from '../src/api/endpoints/asset/statAsset.ts';
+import { schema as assetResolveAssetPath } from '../src/api/endpoints/asset/resolveAssetPath.ts';
+import { schema as assetGetDocAssets } from '../src/api/endpoints/asset/getDocAssets.ts';
+import { schema as assetGetDocImageAssets } from '../src/api/endpoints/asset/getDocImageAssets.ts';
 
 function makeConfig(permission?: PermissionConfig): AppConfig {
     return {
@@ -477,4 +481,44 @@ test('new single-object and sibling response filters hide denied IDs', async () 
     assert.deepEqual(siblingsExtra.warnings, [
         { warning: 'CONTENT_FILTERED', removed: 1, reasons: '1x: rule #0' }
     ]);
+});
+
+test('asset read endpoints guard document ids and workspace asset paths', () => {
+    for (const schema of [
+        assetStatAsset,
+        assetResolveAssetPath,
+        assetGetDocAssets,
+        assetGetDocImageAssets
+    ]) {
+        const entry = registerOne(schema);
+        assert.equal(entry.group, 'asset');
+        assert.deepEqual(entry.meta.classification, {
+            action: 'read',
+            domain: 'storage',
+            cardinality: 'single'
+        });
+    }
+
+    assert.deepEqual(assetGetDocAssets.guard?.payloadTargets, [
+        { path: 'id', kind: 'id', access: 'read' }
+    ]);
+    assert.deepEqual(assetGetDocImageAssets.guard?.payloadTargets, [
+        { path: 'id', kind: 'id', access: 'read' }
+    ]);
+    assert.deepEqual(assetStatAsset.guard?.payloadTargets, [
+        { path: 'path', kind: 'workspace-path', access: 'read' }
+    ]);
+    assert.deepEqual(assetResolveAssetPath.guard?.payloadTargets, [
+        { path: 'path', kind: 'workspace-path', access: 'read' }
+    ]);
+
+    // The kernel keeps query strings — which carry the encrypted-box hint — unless asked otherwise.
+    assert.equal(
+        assetGetDocAssets.payload.properties.retainQueryStr.default,
+        true
+    );
+    assert.equal(
+        assetGetDocImageAssets.payload.properties.retainQueryStr,
+        undefined
+    );
 });

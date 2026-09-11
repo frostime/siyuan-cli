@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Experimental caller-process workspace binding: `current bind <workspace>` plus a separate `current confirm <nonce>` selects the nearest reliable common process scope. Pending confirmation can be retried without extending its expiry or removed with `current cancel <nonce>`; `current unbind` releases confirmed bindings only. Windows native, MSYS2, and Git Bash observation preserves uncertainty and fails before a request rather than silently choosing another workspace. A conflicting project workspace remains an error.
 - `siyuan-cli skill install` records its global install locations, so a bare `skill install` refreshes every install on the machine after a CLI upgrade. Project-scope installs (`--project`) are not recorded.
 - `siyuan-cli skill targets` lists each known agent, where it loads skills from in project and global scope, and what is installed there.
+- Asset endpoints: `asset.statAsset` (size and timestamps), `asset.resolveAssetPath` (`assets/...` → absolute path), `asset.getDocAssets` (every asset a document references) and `asset.getDocImageAssets` (image destinations only). They run through the normal payload validation and permission guard path, so asset work no longer needs `api raw`.
 
 ### Changed
 
