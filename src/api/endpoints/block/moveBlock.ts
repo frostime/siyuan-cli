@@ -13,7 +13,7 @@ export const schema: EndpointSchema = {
     summary: 'Move a block',
     payload: {
         type: 'object',
-        required: ['id', 'previousID', 'parentID'],
+        required: ['id', 'parentID'],
         additionalProperties: false,
         properties: {
             id: {
@@ -24,12 +24,13 @@ export const schema: EndpointSchema = {
             previousID: {
                 type: 'string',
                 description:
-                    'Previous block ID; empty string moves block to first child of parentID',
-                pattern: '^(\\d{14}-[0-9a-z]{7})?$'
+                    'Optional anchor: the block is placed directly AFTER this block inside parentID. Omit it to insert as the FIRST child of parentID. To move to the END of a parent, pass its current last child (query it with block.getTailChildBlocks). An empty string is rejected by the kernel — omit the flag instead.',
+                pattern: '^\\d{14}-[0-9a-z]{7}$'
             },
             parentID: {
                 type: 'string',
-                description: 'Parent block ID',
+                description:
+                    'Target parent container block ID; fixes the destination together with previousID.',
                 pattern: '^\\d{14}-[0-9a-z]{7}$'
             }
         }

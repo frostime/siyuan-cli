@@ -393,7 +393,8 @@ const verifyCommand = defineCommand({
                 process.stderr.write(
                     JSON.stringify({ error: 'VERIFY_FAILED', ...result }) + '\n'
                 );
-                process.exit(ExitCode.NETWORK);
+                process.exitCode = ExitCode.NETWORK;
+                return;
             }
 
             out(result);

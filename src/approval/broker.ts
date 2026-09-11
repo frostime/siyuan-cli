@@ -106,6 +106,9 @@ export async function startApprovalBroker(port = 0): Promise<void> {
         // or accept accumulation if audit persistence is intentional.
         cleanupApprovalBrokerState();
         server.close(() => {
+            // Deliberate process.exit(): the broker is a standalone child process and
+            // must die even with client sockets still open; draining could leave an
+            // orphaned broker behind. Do not switch to process.exitCode.
             process.exit(0);
         });
     }

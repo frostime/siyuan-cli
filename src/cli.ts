@@ -164,7 +164,7 @@ async function runCli(): Promise<void> {
     try {
         if (rawArgs.includes('--help') || rawArgs.includes('-h')) {
             await customShowUsage(...(await resolveCommandForArgs(main, rawArgs)));
-            process.exit(0);
+            return;
         }
 
         if (rawArgs.length === 1 && rawArgs[0] === '--version') {
@@ -186,7 +186,7 @@ async function runCli(): Promise<void> {
         if (hint) {
             process.stderr.write(hint + '\n');
         }
-        process.exit(1);
+        process.exitCode = 1;
     }
 }
 

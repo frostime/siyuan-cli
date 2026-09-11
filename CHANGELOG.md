@@ -19,11 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking:** `workspace verify` now verifies named catalog entries (`workspace verify <name>` / `--all`). Checking the workspace a call actually resolves to is `current verify`.
 - **Breaking:** `siyuan-cli skill install` / `skill uninstall` choose a location with `--agent <id>` plus `--global` / `--project` instead of `--target <dir-name>` plus `--local`. Agent ids come from a fixed table matching the mapping used by the `skills` installer, so an unknown name is rejected instead of creating a directory.
 - The installed-skill version check reports every recorded install location and names the path it checked.
+- Bundled skill: write→verify guidance now advises waiting 1–2s before index-sensitive reads; edit recipes trimmed, with command semantics delegated to `--help`.
 
 ### Removed
 
 - **Breaking:** the built-in `doc` command. All guidance ships inside the bundled agent skill: `siyuan-cli skill read` prints the skill with a manifest of its resources, `siyuan-cli skill read <path>` prints one resource, and `siyuan-cli skill list` enumerates them.
 - `workspace verify --global-current`. Use `current verify`.
+
+### Fixed
+
+- Windows: structured errors after a kernel round trip no longer abort with a libuv assertion (exit 127) — error exits drain via `process.exitCode` instead of an immediate `process.exit()`.
+- `tool brute-edit`: `--check true` + `--replacements`/`--overwrite` → parameter-conflict error instead of silent apply.
+- `block.moveBlock`: `previousID` optional — omit it for first child of `parentID`. The old schema required it and advertised `""`, which the kernel rejects, so first-child moves were impossible. `--help` documents all positions.
+- `tool get-block-info`: unresolved ids → explicit NOT FOUND line + trailing summary; exit stays 0.
 
 ## [0.16.0] - 2026-08-10
 
