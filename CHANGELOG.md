@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-09-12
+
 ### Added
 
 - Experimental caller-process workspace binding: `current bind <workspace>` plus a separate `current confirm <nonce>` selects the nearest reliable common process scope. Pending confirmation can be retried without extending its expiry or removed with `current cancel <nonce>`; `current unbind` releases confirmed bindings only. Windows native, MSYS2, and Git Bash observation preserves uncertainty and fails before a request rather than silently choosing another workspace. A conflicting project workspace remains an error.
@@ -124,7 +126,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial feature set: workspace management, Kernel API proxying, workflow tools, and Agent SKILL installation.
 
-[Unreleased]: https://github.com/frostime/siyuan-cli/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/frostime/siyuan-cli/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/frostime/siyuan-cli/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/frostime/siyuan-cli/compare/v0.15.4...v0.16.0
 [0.15.4]: https://github.com/frostime/siyuan-cli/compare/v0.15.3...v0.15.4
 [0.12.3]: https://github.com/frostime/siyuan-cli/compare/v0.12.0...v0.12.3
