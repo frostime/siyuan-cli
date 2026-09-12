@@ -321,6 +321,15 @@ export function buildEndpointHelp(endpoint: {
         lines.push('');
     }
 
+    if (schema.transport) {
+        lines.push('DOWNLOAD OUTPUT');
+        lines.push('  --outFile <path>  Save output to this file (overwrite requires --yes).');
+        lines.push('        Without it: textual content prints to stdout, binary content is');
+        lines.push('        written to a temp file and the path is printed.');
+        lines.push('  --print json: stdout prints { ok, data: { savedTo|content, size, contentType, sha256 }, extra }.');
+        lines.push('');
+    }
+
     lines.push('PAYLOAD MODES');
     lines.push('  -j, --json <json>   Pass JSON payload inline');
     lines.push('  -f, --file <path>   Load JSON payload from file (- = stdin)');

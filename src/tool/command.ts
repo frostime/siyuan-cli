@@ -238,7 +238,9 @@ function buildToolSubCommand(tool: ToolSchema) {
             ...Object.fromEntries(
                 Object.entries(tool.input.properties).map(([field, prop]) => [
                     field,
-                    { type: 'string', description: prop.description ?? field }
+                    prop.type === 'boolean'
+                        ? { type: 'boolean', description: prop.description ?? field, default: false }
+                        : { type: 'string', description: prop.description ?? field }
                 ])
             )
         },

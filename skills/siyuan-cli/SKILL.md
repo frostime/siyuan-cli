@@ -7,16 +7,35 @@ metadata:
 
 # SiYuan CLI
 
-Agent-first CLI for SiYuan Note. This SKILL is the entry point; built-in docs provide task playbooks (`siyuan-cli doc list/read`).
+Agent-first CLI for SiYuan Note. This SKILL is the entry point; the bundled resources listed under Routing hold task playbooks and reference detail.
+
+## Shipped skill, matching version
+
+`siyuan-cli skill read` always serves the skill bundled with the running CLI. An installed copy can lag behind it: the skill version is on every `skill read` envelope, `siyuan-cli --help` prints the CLI version and warns when an installed copy differs. On a mismatch, run `siyuan-cli skill install`, then re-read before trusting any detail.
 
 ## Bootstrap
 
 ```bash
 siyuan-cli --help
-siyuan-cli workspace which
+siyuan-cli current which
 ```
 
-If `siyuan-cli` is missing: `npm install -g @frostime/siyuan-cli`. Always invoke this package as `siyuan-cli`; on SiYuan 3.7.0 or later, `siyuan` may resolve to SiYuan's native CLI instead. If skill version differs from CLI version: `siyuan-cli skill install`, then `siyuan-cli skill read`. If no workspace is configured: `siyuan-cli doc read recipes/connect-workspace.md`. If URL/token/workspace are unknown: stop and ask user.
+If `siyuan-cli` is missing: `npm install -g @frostime/siyuan-cli`. Always invoke as `siyuan-cli` (on SiYuan ≥3.7.0, bare `siyuan` may resolve to SiYuan's own CLI). No workspace configured → `recipes/workspace.md`.
+
+## Workspace selection
+
+```text
+┌─ one/few calls?         → --workspace <name>
+├─ project directory?     → .siyuan-cli.yaml with workspace: <name>
+├─ long-lived caller?     → process binding (cli-usage/process-binding.md)
+└─ change machine default → current global <name>
+```
+
+Before content work: `siyuan-cli current which`. Writing to `config.current` only (`source: global-current`) when user never named that target? → ask.
+
+Binding: read `cli-usage/process-binding.md` first.
+Bind and confirm must be two separate tool/CLI calls from the same long-lived caller, not one shell block. And it anchors to the nearest process common to both calls (the harness process).
+Cancel with the exact command bind printed; unbind after work completes. Project file + binding disagreement → use one-call `--workspace` exception or fix the conflict.
 
 ## Command discovery
 
@@ -27,10 +46,9 @@ siyuan-cli api <id> --help       # params, INPUT SOURCES, examples
 siyuan-cli tool <id> --help      # params, examples, behavior
 siyuan-cli api list              # endpoints + classification/severity labels
 siyuan-cli tool list             # tools
-siyuan-cli doc list              # docs + real paths
 ```
 
-Before using `@file:`/`@stdin`/`@env:` on a parameter, check `--help` → `INPUT SOURCES`. If absent, use literal or whole-payload `-j`/`-f`. Doc paths here are read via `siyuan-cli doc read <path>`.
+Input sources: check `--help` INPUT SOURCES per parameter. When absent, use literal value or whole-payload `-j <json>` / `-f <file>`.
 
 ## Safety anchors
 
@@ -44,21 +62,6 @@ Before using `@file:`/`@stdin`/`@env:` on a parameter, check `--help` → `INPUT
 | 6 | `--yes` is not a safety check; use only after target verified + action intended. |
 | 7 | `api raw` bypasses schema/resource guards/response filtering; one-off only. |
 | 8 | Approval browser auto-open may be debounced; parse every `APPROVAL_PENDING` stderr event, not browser opens. |
-
-```text
-Small localized edit with known block ids
-  → tool update-block (preserves custom attrs)
-
-Broad/complex/text-level edit
-  → brute-edit <doc-id> --check true
-    SAFE   → checkpoint-doc once → --dry-run → inspect → --yes
-    UNSAFE → block-level fallback
-
-Before a group of high-risk edits, call checkpoint-doc explicitly once. Do not
-repeat it for later edits in the same group; brute-edit never creates a
-checkpoint automatically. A checkpoint is recovery material, not permission
-to bypass an unsafe check.
-```
 
 Ask user when: no token/URL · wrong workspace · multiple plausible write targets · destructive operation lacks confirmation · daily-note notebook unknown.
 
@@ -90,39 +93,59 @@ siyuan-cli api attr.batchSetBlockAttrs -f ./attrs.json --yes
 
 ## Hot paths
 
-### Append
+Top goals with command choice and key flags. Full syntax: `<command> --help`.
 
-Use `block.appendBlock` with §Canonical input patterns. Daily note example:
-
+**Append to known target:**
 ```bash
-# Notebook id must be known; if unknown, list notebooks or ask.
-siyuan-cli api block.appendDailyNoteBlock --notebook <notebook-id> --data @stdin --yes <<'EOF'
-Entry.
+siyuan-cli block.appendBlock --parentID <id> --data @stdin <<'EOF'
+...
 EOF
 ```
+Daily note: use `block.appendDailyNoteBlock --notebook <id> --atDate <date>` instead.
 
-### Search/read
-
+**Insert a local file as asset into a doc:**
 ```bash
-siyuan-cli api filetree.searchDocs --k "<keyword>"    # candidates; verify before writing
-siyuan-cli tool get-block-info <id>                   # identity, meta data (ref, toc, child etc.)
-siyuan-cli tool search-backlinks <target-id>          # inbound refs; redirects first-block hits by default
-siyuan-cli tool get-block-content <id> --range children --limit 50
-siyuan-cli tool get-block-content <id> --range context --limit 7 --showId true
-siyuan-cli tool locate-block --id <doc-id> --pattern "%keyword%"  # SQL LIKE, not regex
+siyuan-cli tool insert-asset --assetFile ./photo.png --afterBlockId <block-id>
+```
+File type will be mapped to the right markdown form, `--asIframe` embeds any file as iframe block.
+
+**Find document by title/keyword:**
+- known exact/substring → `filetree.searchDocs --k "..."`
+- have doc ID, want details → `block.getBlockByRootID --rootID <id>` or `tool get-block-info <id>`
+- browse notebook tree → `tool list-doc-tree --entry <notebook-id> --depth <n>`
+- complex filter → `api query.sql "SELECT ... FROM blocks WHERE type='d' AND ... LIMIT 50"`
+
+**Find blocks by content phrase:**
+```bash
+siyuan-cli tool locate-block --pattern "%phrase%" [--id <doc> | --box <notebook>]
 ```
 
-### Update known block
-
-Fast command, slow pre-flight. Required: workspace confirmed; stable block id; current content inspected; user intent maps exactly to block. Else read `recipes/edit-content.md`.
-
+**Read document/block:**
 ```bash
-siyuan-cli tool update-block --blocks @stdin --yes <<'EOF'
-[{"id":"<block-id>","data":"Replacement."}]
-EOF
+siyuan-cli tool get-block-content <id> [--range children] [--limit=-1]
 ```
+Default `--limit` exists for safety; use `--limit=-1` for full read. `--showId true` injects block IDs for edit targeting.
 
-> ⚠️ Do NOT use raw `block.updateBlock` / `block.batchUpdateBlock` — they erase custom attributes. Always use `tool update-block`.
+**Fetch a file from the workspace (assets, .sy, any workspace file):**
+```bash
+siyuan-cli api file.getFile data/assets/foo-20240922152051-7dpjfpv.png [--outFile ./foo.png]
+```
+If no `--outFile`: text content prints, binary written to a temp file and its path is printed.
+An overwrite `--outFile` needs `--yes`.
+
+**Download an asset from the workspace:**
+```bash
+siyuan-cli tool get-asset --assetPath assets/foo-20240922152051-7dpjfpv.png [--outFile ./foo.png]
+```
+Same output behavior as `file.getFile`, but accepts asset paths (`assets/` prefix).
+
+**Update block:****
+```bash
+siyuan-cli tool update-block <id> --markdown "..." [--dry-run] [--yes]
+```
+Preserves `custom-*` attributes. Never use raw `block.updateBlock` (it erases them).
+
+All: use `@stdin` / `@file:path` for multiline or special-char content to avoid shell escaping.
 
 ## Error triage
 
@@ -130,28 +153,32 @@ EOF
 |------|---------|--------|
 | 0 | success | parse stdout |
 | 1 | general/kernel/approval/not found | read stderr JSON |
-| 2 | config/workspace | `siyuan-cli workspace which` |
+| 2 | config/workspace | `siyuan-cli current which` |
 | 3 | network/kernel down | ask user to start SiYuan |
 | 4 | auth/token | ask user for token |
-| 5 | permission denied | `siyuan-cli workspace which` |
+| 5 | permission denied | `siyuan-cli current which` |
 
 stderr = diagnostics; stdout = result.
 
 ## Routing
 
-| Need | Read / do |
-|------|-----------|
-| workspace connect/debug | `siyuan-cli doc read recipes/connect-workspace.md` |
-| config schema (behavior, rawApi, defaults, project-file) | `siyuan-cli doc read cli-usage/workspace-config.md` |
-| locate user-named doc/block | `siyuan-cli doc read recipes/find-target.md` |
-| read content ranges/paging/ids | `siyuan-cli doc read recipes/read-content.md` |
-| reference/backlink navigation | `siyuan-cli doc read recipes/read-content.md` + `siyuan-cli doc read siyuan-guide/sql-query-guide.md` |
-| edit/move/delete/batch/create | `siyuan-cli doc read recipes/edit-content.md` |
-| daily notes | `siyuan-cli doc read siyuan-guide/dailynote-model.md` |
-| block/path/sql model | `siyuan-cli doc read siyuan-guide/siyuan-block.md` |
-| permissions/approval config | `siyuan-cli doc read cli-usage/permission.md` |
-| custom API/tool extension | `siyuan-cli doc read cli-usage/extension.md` |
-| deep CLI mechanics: flags, input-source edge cases, stdout/stderr, Approval Center, MSYS | `siyuan-cli doc read cli-usage/cli-overview.md` |
+Read a resource with `siyuan-cli skill read <path>`. Paths are relative to this skill; a bare `siyuan-cli skill read` also prints them as a manifest.
+
+| Need | Read |
+|------|------|
+| workspace unconfigured, wrong, unreachable, or scope must be chosen | `recipes/workspace.md` |
+| workspace binding chosen there | `cli-usage/process-binding.md` |
+| config schema (behavior, rawApi, defaults, project-file) | `cli-usage/workspace-config.md` |
+| locate user-named doc/block | `recipes/find-target.md` |
+| read content ranges/paging/ids | `recipes/read-content.md` |
+| reference/backlink navigation | `recipes/read-content.md` + `siyuan-guide/sql-query-guide.md` |
+| edit/move/delete/batch/create | `recipes/edit-content.md` |
+| daily notes | `siyuan-guide/dailynote-model.md` |
+| block/path/sql model | `siyuan-guide/siyuan-block.md` |
+| permissions/approval config | `cli-usage/permission.md` |
+| custom API/tool extension | `cli-usage/extension.md` |
+| deep CLI mechanics: flags, input-source edge cases, stdout/stderr, Approval Center, MSYS | `cli-usage/cli-overview.md` |
+| **blocked** after `--help` / `--print json` / `--debug`: behaviour contradicts docs, or an exact runtime shape is required | `cli-usage/read-source.md` |
 
 ## Layer choice
 
@@ -181,12 +208,13 @@ stderr = diagnostics; stdout = result.
 
 ## Gotchas
 
-- Windows Git Bash/MSYS rewrites leading `/` paths → `MSYS_NO_PATHCONV=1 ...` or `//path`.
-- `--showId true` injects `@@id@@type` markers; never use them as brute-edit source/search text.
-- Endpoint choice: registered > `api raw`; avoid long-lived `rawApi.allow: ["*"]`.
+- MSYS/Git Bash rewrites leading `/` → `MSYS_NO_PATHCONV=1` or `//path`
+- `--showId true` markers are edit targets, never brute-edit search text
+- Registered endpoints > `api raw`; avoid permanent `rawApi.allow: ["*"]`
+- SiYuan's index updates asynchronously: after a write, wait 1–2s (e.g. `sleep 1`) before index-sensitive reads (SQL, refs, frontmatter), or they may return stale data
 
-## Internals
+## Last resort
 
-For extension typing: `siyuan-cli doc read cli-usage/extension.md`, then inspect installed `dist/shared/schema.d.mts`.
+The published package is unbundled ESM; its code can answer questions nothing else does — read it only after command output, structured errors, and the routed resource have failed, and only for the specific blocking question. Paths: `cli-usage/read-source.md`. Never edit installed files.
 
 GitHub: [siyuan-cli](https://github.com/frostime/siyuan-cli) · [SiYuan kernel API](https://github.com/siyuan-note/siyuan/blob/master/kernel/api/router.go)

@@ -89,6 +89,10 @@ import { schema as exportExportResources } from './export/exportResources.js';
 
 // Asset APIs
 import { schema as assetUpload } from './asset/upload.js';
+import { schema as assetStatAsset } from './asset/statAsset.js';
+import { schema as assetResolveAssetPath } from './asset/resolveAssetPath.js';
+import { schema as assetGetDocAssets } from './asset/getDocAssets.js';
+import { schema as assetGetDocImageAssets } from './asset/getDocImageAssets.js';
 
 // Notification APIs
 import { schema as notificationPushMsg } from './notification/pushMsg.js';
@@ -196,6 +200,10 @@ const schemas: EndpointSchema<any>[] = [
     exportExportResources,
     // Asset
     assetUpload,
+    assetStatAsset,
+    assetResolveAssetPath,
+    assetGetDocAssets,
+    assetGetDocImageAssets,
     // Notification
     notificationPushMsg,
     notificationPushErrMsg,

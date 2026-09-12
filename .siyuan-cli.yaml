@@ -16,3 +16,8 @@ permission:
       action: write
       effect: approval
       note: "Test resource-level approval for notebook Test"
+behavior:
+  rawApi:
+    enabled: true
+    allow:
+      - "*"

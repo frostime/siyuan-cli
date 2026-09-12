@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-09-12
+
+### Added
+
+- Experimental caller-process workspace binding: `current bind <workspace>` plus a separate `current confirm <nonce>` selects the nearest reliable common process scope. Pending confirmation can be retried without extending its expiry or removed with `current cancel <nonce>`; `current unbind` releases confirmed bindings only. Windows native, MSYS2, and Git Bash observation preserves uncertainty and fails before a request rather than silently choosing another workspace. A conflicting project workspace remains an error.
+- `siyuan-cli skill install` records its global install locations, so a bare `skill install` refreshes every install on the machine after a CLI upgrade. Project-scope installs (`--project`) are not recorded.
+- `siyuan-cli skill targets` lists each known agent, where it loads skills from in project and global scope, and what is installed there.
+- Asset endpoints: `asset.statAsset` (size and timestamps), `asset.resolveAssetPath` (`assets/...` → absolute path), `asset.getDocAssets` (every asset a document references) and `asset.getDocImageAssets` (image destinations only). They run through the normal payload validation and permission guard path, so asset work no longer needs `api raw`.
+- `tool insert-asset`: upload a local file to assets and insert it after a block. Image/audio/video files become embedded media blocks, other files a paragraph link; `--asIframe` forces an inline iframe block. `assetsDirPath` is constrained to subdirectories of `data/assets`.
+- `tool get-asset`: download a workspace asset to a local file, accepting asset paths as they appear in documents (incl. a `?box=` suffix). Same output behavior as `file.getFile`.
+
+### Changed
+
+- **Breaking:** workspace selection moved out of `workspace` into a new top-level `current` command (`bind` / `confirm` / `unbind` / `global` / `which` / `verify`). `workspace` now covers only the catalog, and `workspace use` / `workspace which` remain as deprecated aliases.
+- **Breaking:** `workspace verify` now verifies named catalog entries (`workspace verify <name>` / `--all`). Checking the workspace a call actually resolves to is `current verify`.
+- **Breaking:** `siyuan-cli skill install` / `skill uninstall` choose a location with `--agent <id>` plus `--global` / `--project` instead of `--target <dir-name>` plus `--local`. Agent ids come from a fixed table matching the mapping used by the `skills` installer, so an unknown name is rejected instead of creating a directory.
+- The installed-skill version check reports every recorded install location and names the path it checked.
+- Bundled skill: write→verify guidance now advises waiting 1–2s before index-sensitive reads; edit recipes trimmed, with command semantics delegated to `--help`.
+
+### Removed
+
+- **Breaking:** the built-in `doc` command. All guidance ships inside the bundled agent skill: `siyuan-cli skill read` prints the skill with a manifest of its resources, `siyuan-cli skill read <path>` prints one resource, and `siyuan-cli skill list` enumerates them.
+- `workspace verify --global-current`. Use `current verify`.
+
+### Fixed
+
+- `api file.getFile` crashed on every successful download ("is not valid JSON") because the kernel answers raw file bytes, not the JSON envelope. It now routes content by type: text prints, binary goes to a temp file (path and sha256 printed), `--outFile` chooses the destination (overwrite requires `--yes`), `--print json` returns metadata. Error behavior is unchanged; `path` is workspace-root relative and needs the `data/` prefix.
+- Windows: structured errors after a kernel round trip no longer abort with a libuv assertion (exit 127) — error exits drain via `process.exitCode` instead of an immediate `process.exit()`.
+- `tool brute-edit`: `--check true` + `--replacements`/`--overwrite` → parameter-conflict error instead of silent apply.
+- `block.moveBlock`: `previousID` optional — omit it for first child of `parentID`. The old schema required it and advertised `""`, which the kernel rejects, so first-child moves were impossible. `--help` documents all positions.
+- `tool get-block-info`: unresolved ids → explicit NOT FOUND line + trailing summary; exit stays 0.
+
 ## [0.16.0] - 2026-08-10
 
 ### Added
@@ -94,7 +126,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial feature set: workspace management, Kernel API proxying, workflow tools, and Agent SKILL installation.
 
-[Unreleased]: https://github.com/frostime/siyuan-cli/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/frostime/siyuan-cli/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/frostime/siyuan-cli/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/frostime/siyuan-cli/compare/v0.15.4...v0.16.0
 [0.15.4]: https://github.com/frostime/siyuan-cli/compare/v0.15.3...v0.15.4
 [0.12.3]: https://github.com/frostime/siyuan-cli/compare/v0.12.0...v0.12.3

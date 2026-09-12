@@ -192,7 +192,7 @@ export function renderExtensionHelp(version?: string): string {
     lines.push('');
     lines.push(colors.underline(colors.bold('DOCS')));
     lines.push('');
-    lines.push(`  ${colors.cyan('siyuan-cli doc read extension.md')}`);
+    lines.push(`  ${colors.cyan('siyuan-cli skill read cli-usage/extension.md')}`);
     return lines.join('\n');
 }
 

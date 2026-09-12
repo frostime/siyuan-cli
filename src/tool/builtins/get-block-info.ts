@@ -425,7 +425,7 @@ export const tool: ToolSchema = {
         const lines: string[] = [];
         for (const entry of results) {
             if (!entry.found) {
-                lines.push(`[${entry.id}] NOT FOUND`);
+                lines.push(`[${entry.id}] NOT FOUND — no block with this id exists`);
                 lines.push('');
                 continue;
             }
@@ -461,6 +461,15 @@ export const tool: ToolSchema = {
             }
 
             lines.push('');
+        }
+
+        const missingIds = results
+            .filter((r) => r.found === false)
+            .map((r) => r.id as string);
+        if (missingIds.length > 0) {
+            lines.push(
+                `SUMMARY: ${results.length - missingIds.length}/${results.length} found; not found: ${missingIds.join(', ')}`
+            );
         }
 
         return {

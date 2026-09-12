@@ -66,10 +66,18 @@ export class CliError extends Error {
     }
 }
 
-/** Write error JSON to stderr and exit. */
-export function fatalError(err: CliError): never {
+/** Write error JSON to stderr and schedule exit with the typed code.
+ *
+ * Sets `process.exitCode` and returns instead of calling `process.exit()`:
+ * by error time a command that reached the network always has an undici
+ * keep-alive socket open, and on Windows `process.exit()` racing that
+ * socket's teardown aborts with a libuv assertion (`UV_HANDLE_CLOSING`,
+ * exit 127). Draining the loop exits cleanly (~300ms) with the same code.
+ * Call sites treat this as terminal even though it returns.
+ */
+export function fatalError(err: CliError): void {
     process.stderr.write(JSON.stringify(err.toJson()) + '\n');
-    process.exit(err.code);
+    process.exitCode = err.code;
 }
 
 /** Wrap unknown thrown values into a CliError. */

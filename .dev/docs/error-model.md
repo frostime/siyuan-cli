@@ -1,13 +1,15 @@
 ---
 name: error-model
 description: "Process-level error contract for structured stderr output, exit categories, agent handling, and framework warnings."
-updated: 2026-08-10
+updated: 2026-09-11
 scope:
   - /src/shared/errors.ts
   - /src/shared/permission.ts
   - /src/workspace/**
   - /src/api/guard.ts
   - /src/api/command.ts
+  - /src/cli.ts
+  - /src/approval/broker.ts
   - /src/tool/**
   - /src/approval/errors.ts
 deprecated: false
@@ -27,6 +29,12 @@ A failed CLI invocation writes one structured JSON object to stderr and exits no
 `error` is the machine-readable category, `message` is human-readable, `hint` is optional recovery guidance, and `details` carries structured context when the caller needs it. `CliError` in `src/shared/errors.ts` is the construction boundary; callers must not infer meaning from the human message.
 
 Approval and warning events may also be emitted as JSON lines on stderr during an otherwise valid invocation. They do not replace the final result or final error.
+
+## Exit mechanics
+
+The CLI main process terminates only by event-loop drain: code that needs a specific exit status sets `process.exitCode` and returns. `process.exit()` is restricted to standalone helper processes that must terminate immediately regardless of open connections (currently the approval broker); every such call must carry a comment justifying the forced exit.
+
+Rationale: on Windows, a forced exit while a pooled keep-alive socket is closing aborts the process with a libuv assertion before the exit code and buffered output are delivered.
 
 ## Exit categories
 
@@ -48,7 +56,8 @@ The complete set of codes is owned by their source call sites; this document rec
 | Family | Representative codes | Recovery meaning |
 |---|---|---|
 | Input and transport | `INVALID_JSON`, `PAYLOAD_INVALID`, `STDIN_CONFLICT`, `STDIN_IS_TTY`, `ENV_NOT_SET`, `FILE_READ_ERROR` | Fix invocation input before retrying. |
-| Workspace/config | `NO_WORKSPACE`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_MISSING_CONNECTION`, `CONF_JSON_UNREADABLE`, `PORT_NOT_FOUND`, `WORKSPACE_VERIFY_FAILED`, `PROJECT_CONFIG_*`, `TOKEN_MODE_CONFLICT`, `VERIFY_MODE_CONFLICT` | Correct local configuration or make the target explicit. |
+| Workspace/config | `NO_WORKSPACE`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_MISSING_CONNECTION`, `CONF_JSON_UNREADABLE`, `PORT_NOT_FOUND`, `WORKSPACE_VERIFY_FAILED`, `PROJECT_CONFIG_*`, `TOKEN_MODE_CONFLICT`, `VERIFY_MODE_CONFLICT`, `CURRENT_SELECTION_CONFLICT` | Correct local configuration or make the target explicit. |
+| Process binding | `PROCESS_TREE_UNSUPPORTED`, `PROCESS_TREE_UNAVAILABLE`, `PROCESS_BINDING_NONCE_INVALID`, `PROCESS_BINDING_PENDING_*`, `PROCESS_BINDING_SAME_CALL`, `PROCESS_BINDING_NO_COMMON_ANCESTOR`, `PROCESS_BINDING_OBSERVATION_*`, `PROCESS_BINDING_STATE_UNAVAILABLE`, `PROCESS_BINDING_PERSISTENCE_FAILED` | Follow the structured retry/cancel details when pending state survives. Use a project file or explicit `--workspace` when implicit caller scope cannot be established; do not treat unknown state as absent. |
 | Endpoint/compatibility | `ENDPOINT_NOT_FOUND`, `UNSUPPORTED_KERNEL_VERSION`, `KERNEL_VERSION_UNRECOGNIZED`, `RAW_API_*` | Use a registered/allowed endpoint or a compatible Kernel. |
 | Permission | `ENDPOINT_DENIED`, `CONTENT_DENIED`, `BLOCK_NOT_FOUND` | Follow the configured policy or choose an allowed target. |
 | Approval | `APPROVAL_UNAVAILABLE`, `APPROVAL_BROKER_UNAVAILABLE`, `APPROVAL_REJECTED`, `APPROVAL_TIMEOUT`, `APPROVAL_CANCELLED` | Inspect the broker, retry, or surface the human decision. |
@@ -69,6 +78,9 @@ When adding a new user-visible code, assign it to the appropriate exit category,
 | exit `1` + `CHECKPOINT_PARTIAL_FAILURE` | Preserve the successful layer reported in `details`; inspect before retrying. |
 | exit `1` + `PAYLOAD_INVALID` | Fix the payload; retrying unchanged input is not useful. |
 | exit `1` + `KERNEL_ERROR` | Surface the Kernel message as a data-level failure. |
+| Process-binding error with `pendingRetained: true` and `canRetry: true` | Use the exact `retryCommand` before the original expiry, or the exact `cancelCommand`; do not start parallel retries with invented nonces. |
+| `PROCESS_BINDING_OBSERVATION_INSUFFICIENT` with `bindingExists: true` | Do not delete the retained record or assume it belongs to another caller. Use explicit `--workspace` for the intended call. |
+| Process-binding error with `requestSent: false` | Treat the target request as not sent; resolve the binding/configuration problem before deciding whether to retry. |
 
 ## Framework warnings
 

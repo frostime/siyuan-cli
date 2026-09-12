@@ -25,6 +25,16 @@ export interface PingResult {
     message?: string;
 }
 
+/** Result of SiyuanClient.download() — raw file bytes plus file metadata. */
+export interface DownloadResult {
+    /** Raw Content-Type header value (may include charset), or a fallback. */
+    contentType: string;
+    /** Raw response body stream; null only for empty responses. */
+    body: ReadableStream<Uint8Array> | null;
+    /** Convenience full read for small content (e.g. text printing). */
+    arrayBuffer(): Promise<Uint8Array>;
+}
+
 // ─── Client ──────────────────────────────────────────────────────────────────
 
 export class SiyuanClient {
@@ -169,6 +179,86 @@ export class SiyuanClient {
             headers,
             body: form
         });
+    }
+
+    /**
+     * Download a file via a raw-byte endpoint (e.g. /api/file/getFile).
+     * On success the kernel answers HTTP 200 with the raw file bytes and a
+     * file-describing Content-Type; on failure with the standard JSON error
+     * envelope (HTTP 202). The timeout covers only the headers — body
+     * streaming is not capped, so large files can take as long as they need.
+     */
+    async download(
+        endpoint: string,
+        payload: unknown
+    ): Promise<DownloadResult> {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+
+        let res: Response;
+        try {
+            res = await fetch(this.url(endpoint), {
+                method: 'POST',
+                headers: this.buildHeaders(),
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            });
+        } catch (e) {
+            // Same fetch-failure mapping as fetchJson
+            if (e instanceof Error && e.name === 'AbortError') {
+                throw new CliError(
+                    ExitCode.NETWORK,
+                    'ETIMEDOUT',
+                    `Request to ${this.url(endpoint)} timed out after ${this.timeoutMs}ms`,
+                    'Check your baseUrl or network.'
+                );
+            }
+            const cause = e instanceof Error ? e : new Error(String(e));
+            throw new CliError(
+                ExitCode.NETWORK,
+                'ECONNREFUSED',
+                `Cannot connect to ${this.baseUrl}: ${cause.message}`,
+                'Is SiYuan running?'
+            );
+        } finally {
+            // Headers-only timeout: a slow but steady body transfer is normal for files.
+            clearTimeout(timer);
+        }
+
+        if (res.status === 401) {
+            throw new CliError(
+                ExitCode.AUTH,
+                'UNAUTHORIZED',
+                `Authentication failed for ${this.baseUrl}`,
+                'Check your token with `siyuan-cli workspace show --reveal-token`.'
+            );
+        }
+
+        if (res.status !== 200) {
+            // Kernel error paths answer with the standard JSON envelope.
+            let code: number | string = res.status;
+            let msg: string = res.statusText;
+            try {
+                const envelope = (await res.json()) as KernelResponse<unknown>;
+                if (envelope && typeof envelope.code === 'number') {
+                    code = envelope.code;
+                    msg = envelope.msg;
+                }
+            } catch {
+                // Non-JSON error body — fall back to status text.
+            }
+            throw new CliError(
+                ExitCode.GENERAL,
+                'KERNEL_ERROR',
+                `Kernel returned error (status ${res.status}, code ${code}): ${msg}`
+            );
+        }
+
+        return {
+            contentType: res.headers.get('content-type') ?? 'application/octet-stream',
+            body: res.body,
+            arrayBuffer: async () => new Uint8Array(await res.arrayBuffer())
+        };
     }
 
     /**

@@ -1,6 +1,7 @@
 /**
- * `siyuan-cli workspace` subcommands.
- * See design.md §5 for output formats.
+ * `siyuan-cli workspace` subcommands — the global catalog and named-connection
+ * checks. Selection operations live under `siyuan-cli current`; `use` and
+ * `which` remain only as deprecated aliases.
  */
 import { defineCommand } from 'citty';
 import {
@@ -9,13 +10,13 @@ import {
     resolveWorkspace,
     resolveEffectiveWorkspace,
     materializeWorkspace,
+    type ResolvedWorkspace,
     type WorkspaceEntry
 } from './config.js';
-import { cascadePermission } from '../shared/permission.js';
 import { SiyuanClient } from '../shared/client.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
 import { diagnoseConnection } from './diagnostics.js';
-import { getConfigDir, getConfigPath } from './paths.js';
+import { getConfigPath } from './paths.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -27,6 +28,24 @@ function tryRun(fn: () => Promise<void>): Promise<void> {
     return fn().catch((e) => {
         fatalError(toCliError(e));
     });
+}
+
+function emitDeprecatedWarning(message: string): void {
+    process.stderr.write(JSON.stringify({ warning: 'DEPRECATED', message }) + '\n');
+}
+
+function bindingDiagnostics(resolved: ResolvedWorkspace) {
+    if (!resolved.binding) return null;
+    return {
+        workspace: resolved.name,
+        pid: resolved.binding.anchor.pid,
+        name: resolved.binding.anchor.name ?? null,
+        startId: resolved.binding.anchor.startId ?? null,
+        strength: resolved.binding.strength,
+        commandSummary: resolved.binding.anchor.commandSummary ?? null,
+        boundAt: resolved.binding.boundAt,
+        boundCwd: resolved.binding.cwd ?? null
+    };
 }
 
 // ─── add ─────────────────────────────────────────────────────────────────────
@@ -239,12 +258,12 @@ const listCommand = defineCommand({
         })
 });
 
-// ─── use ──────────────────────────────────────────────────────────────────────
+// ─── use (deprecated alias of current global) ────────────────────────────────
 
 const useCommand = defineCommand({
     meta: {
         name: 'use',
-        description: 'Set the active workspace.'
+        description: 'Deprecated: use `siyuan-cli current global <name>`.'
     },
     args: {
         name: {
@@ -255,21 +274,25 @@ const useCommand = defineCommand({
     },
     run: ({ args }) =>
         tryRun(async () => {
+            emitDeprecatedWarning(
+                '`workspace use` is deprecated; use `siyuan-cli current global <name>` instead.'
+            );
             const config = loadConfig();
-
             if (!config.workspaces[args.name]) {
                 throw new CliError(
                     ExitCode.CONFIG,
                     'WORKSPACE_NOT_FOUND',
-                    `Workspace "${args.name}" not found.`,
-                    `Run \`siyuan-cli workspace list\` to see available workspaces.`
+                    `Workspace "${args.name}" not found in config.`,
+                    'Run `siyuan-cli workspace list` to see available workspaces.'
                 );
             }
-
             config.current = args.name;
             saveConfig(config);
-
-            out({ current: args.name });
+            out({
+                status: 'current-set',
+                current: args.name,
+                note: 'Global default updated. This is machine-wide; prefer `siyuan-cli current bind` for caller-scoped selection.'
+            });
         })
 });
 
@@ -278,30 +301,34 @@ const useCommand = defineCommand({
 const verifyCommand = defineCommand({
     meta: {
         name: 'verify',
-        description: 'Verify connectivity to a workspace.'
+        description: 'Verify named workspace connections from the global catalog.'
     },
     args: {
         name: {
             type: 'positional',
-            description:
-                'Workspace name (defaults to effective workspace in current directory)',
+            description: 'Workspace name to verify',
             required: false
         },
         all: {
             type: 'boolean',
             description: 'Verify all workspaces',
             default: false
-        },
-        'global-current': {
-            type: 'boolean',
-            description:
-                'Force verify against global config.current (ignore env/project-file resolution)',
-            default: false
         }
     },
     run: ({ args }) =>
         tryRun(async () => {
             const config = loadConfig();
+
+            // Catalog verification only. The selection chain for the current
+            // call is checked by `siyuan-cli current verify`.
+            if (!args.all && !args.name) {
+                throw new CliError(
+                    ExitCode.CONFIG,
+                    'VERIFY_MODE_CONFLICT',
+                    'Specify a workspace name or use --all.',
+                    'Use `siyuan-cli current verify` to check the effective selection for this call.'
+                );
+            }
 
             if (args.all) {
                 const results: unknown[] = [];
@@ -341,35 +368,7 @@ const verifyCommand = defineCommand({
                 return;
             }
 
-            if (args.name && args['global-current']) {
-                throw new CliError(
-                    ExitCode.CONFIG,
-                    'VERIFY_MODE_CONFLICT',
-                    'Use either <name> or --global-current, not both.'
-                );
-            }
-
-            const resolved = args.name
-                ? resolveWorkspace(config, { workspace: args.name })
-                : args['global-current']
-                  ? (() => {
-                        if (!config.current) {
-                            throw new CliError(
-                                ExitCode.CONFIG,
-                                'NO_WORKSPACE',
-                                'No active workspace. Run `siyuan-cli workspace add <name> --url <url>` first.',
-                                'Or pass --workspace <name> to specify one explicitly.'
-                            );
-                        }
-                        const forced = resolveWorkspace(config, {
-                            workspace: config.current
-                        });
-                        return {
-                            ...forced,
-                            source: 'global-current' as const
-                        };
-                    })()
-                  : resolveEffectiveWorkspace(config, {}, process.cwd());
+            const resolved = resolveWorkspace(config, { workspace: args.name });
 
             const materialized = await materializeWorkspace(resolved);
             const t0 = Date.now();
@@ -394,7 +393,8 @@ const verifyCommand = defineCommand({
                 process.stderr.write(
                     JSON.stringify({ error: 'VERIFY_FAILED', ...result }) + '\n'
                 );
-                process.exit(ExitCode.NETWORK);
+                process.exitCode = ExitCode.NETWORK;
+                return;
             }
 
             out(result);
@@ -484,13 +484,12 @@ const removeCommand = defineCommand({
         })
 });
 
-// ─── which ────────────────────────────────────────────────────────────────────
+// ─── which (deprecated alias of current which) ───────────────────────────────
 
 const whichCommand = defineCommand({
     meta: {
         name: 'which',
-        description:
-            'Show how workspace resolution works in the current directory.'
+        description: 'Deprecated: use `siyuan-cli current which`.'
     },
     args: {
         cwd: {
@@ -501,30 +500,39 @@ const whichCommand = defineCommand({
     },
     run: ({ args }) =>
         tryRun(async () => {
-            const config = loadConfig();
-            const resolved = resolveEffectiveWorkspace(
-                config,
-                {},
-                args.cwd ?? process.cwd()
+            emitDeprecatedWarning(
+                '`workspace which` is deprecated; use `siyuan-cli current which` instead.'
             );
-            const effectivePerm = cascadePermission(config, resolved.name, resolved.effectivePermission);
+            const config = loadConfig();
+            let resolved: ResolvedWorkspace;
+            try {
+                resolved = resolveEffectiveWorkspace(
+                    config,
+                    {},
+                    args.cwd ?? process.cwd()
+                );
+            } catch (error) {
+                if (error instanceof CliError && error.errorType === 'NO_WORKSPACE') {
+                    out({
+                        status: 'none',
+                        workspace: null,
+                        source: 'none',
+                        projectConfigPath: null,
+                        binding: null,
+                        hint: error.hint ?? error.message
+                    });
+                    return;
+                }
+                throw error;
+            }
             out({
-                configDir: getConfigDir(),
+                status: 'resolved',
                 workspace: resolved.name,
                 source: resolved.source,
                 baseUrl: resolved.baseUrl ?? null,
                 workspaceDir: resolved.workspaceDir ?? null,
-                hasToken: !!resolved.token,
                 projectConfigPath: resolved.projectConfigPath ?? null,
-                permissionOverriddenByProject: !!resolved.effectivePermission,
-                permission: {
-                    default: effectivePerm.defaultEffect,
-                    ruleCount: effectivePerm.rules.length,
-                    rules: effectivePerm.rules.map((r, i) => ({
-                        index: i,
-                        ...r
-                    }))
-                }
+                binding: bindingDiagnostics(resolved)
             });
         })
 });

@@ -53,7 +53,7 @@ Uses global --dry-run to preview without writing.`,
             },
             check: {
                 type: 'boolean',
-                description: 'Only check whether the document is safe for brute-edit; does not require replacements.',
+                description: 'Only check whether the document is safe for brute-edit. Cannot be combined with --replacements or --overwrite.',
                 default: false
             },
             maxSize: {
@@ -111,6 +111,12 @@ Uses global --dry-run to preview without writing.`,
 
         if (overwriteMode && replaceMode) {
             throw new Error('--overwrite and --replacements are mutually exclusive.');
+        }
+
+        if (checkOnly && (overwriteMode || replaceMode)) {
+            throw new Error(
+                '--check true cannot be combined with --replacements or --overwrite. Run `--check true` alone to audit, then re-run with `--dry-run` to preview or without `--check` to apply.'
+            );
         }
 
         let mode: 'audit' | 'replace' | 'overwrite';

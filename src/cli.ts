@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'pathe';
 import { workspaceCommand } from './workspace/command.js';
+import { currentCommand } from './workspace/current-command.js';
 import { apiCommand, getEndpointHelpEntry, renderGroupedApiHelp } from './api/command.js';
 import { toolCommand, getToolHelpText, renderGroupedToolHelp } from './tool/command.js';
 import { skillCommand } from './skill/command.js';
-import { checkInstalledSkillVersion } from './skill/runtime.js';
-import { docCommand, formatDocsHint } from './doc/command.js';
+import { checkInstalledSkillVersion, formatSkillHint } from './skill/runtime.js';
 import { approvalCommand } from './approval/command.js';
 import {
     extensionCommand,
@@ -35,10 +35,10 @@ const main = defineCommand({
         description: 'Agent-first CLI for SiYuan Note'
     },
     subCommands: {
+        current: currentCommand,
         workspace: workspaceCommand,
         api: apiCommand,
         tool: toolCommand,
-        doc: docCommand,
         skill: skillCommand,
         approval: approvalCommand,
         extension: extensionCommand
@@ -95,8 +95,8 @@ async function customShowUsage<T extends Record<string, unknown>>(
 
     await showUsage(cmd, parent);
 
-    if (!parent || meta?.name === 'doc' || parentMeta?.name === 'doc') {
-        process.stdout.write(formatDocsHint());
+    if (!parent || meta?.name === 'skill' || parentMeta?.name === 'skill') {
+        process.stdout.write(formatSkillHint());
     }
 
     // Append SKILL version warning if the installed skill is missing or outdated.
@@ -164,7 +164,7 @@ async function runCli(): Promise<void> {
     try {
         if (rawArgs.includes('--help') || rawArgs.includes('-h')) {
             await customShowUsage(...(await resolveCommandForArgs(main, rawArgs)));
-            process.exit(0);
+            return;
         }
 
         if (rawArgs.length === 1 && rawArgs[0] === '--version') {
@@ -186,7 +186,7 @@ async function runCli(): Promise<void> {
         if (hint) {
             process.stderr.write(hint + '\n');
         }
-        process.exit(1);
+        process.exitCode = 1;
     }
 }
 
