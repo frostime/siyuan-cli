@@ -107,9 +107,7 @@ Daily note: use `block.appendDailyNoteBlock --notebook <id> --atDate <date>` ins
 ```bash
 siyuan-cli tool insert-asset --assetFile ./photo.png --afterBlockId <block-id>
 ```
-Upload a local file to assets and insert it as a block; file type is mapped to
-the right markdown form (image/audio/video → embed, others → link).
-`--asIframe` embeds any file inline instead (html page, image, PDF preview).
+File type will be mapped to the right markdown form, `--asIframe` embeds any file as iframe block.
 
 **Find document by title/keyword:**
 - known exact/substring → `filetree.searchDocs --k "..."`
@@ -128,7 +126,20 @@ siyuan-cli tool get-block-content <id> [--range children] [--limit=-1]
 ```
 Default `--limit` exists for safety; use `--limit=-1` for full read. `--showId true` injects block IDs for edit targeting.
 
-**Update block:**
+**Fetch a file from the workspace (assets, .sy, any workspace file):**
+```bash
+siyuan-cli api file.getFile data/assets/foo-20240922152051-7dpjfpv.png [--outFile ./foo.png]
+```
+If no `--outFile`: text content prints, binary written to a temp file and its path is printed.
+An overwrite `--outFile` needs `--yes`.
+
+**Download an asset from the workspace:**
+```bash
+siyuan-cli tool get-asset --assetPath assets/foo-20240922152051-7dpjfpv.png [--outFile ./foo.png]
+```
+Same output behavior as `file.getFile`, but accepts asset paths (`assets/` prefix).
+
+**Update block:****
 ```bash
 siyuan-cli tool update-block <id> --markdown "..." [--dry-run] [--yes]
 ```

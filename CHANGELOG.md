@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `siyuan-cli skill install` records its global install locations, so a bare `skill install` refreshes every install on the machine after a CLI upgrade. Project-scope installs (`--project`) are not recorded.
 - `siyuan-cli skill targets` lists each known agent, where it loads skills from in project and global scope, and what is installed there.
 - Asset endpoints: `asset.statAsset` (size and timestamps), `asset.resolveAssetPath` (`assets/...` → absolute path), `asset.getDocAssets` (every asset a document references) and `asset.getDocImageAssets` (image destinations only). They run through the normal payload validation and permission guard path, so asset work no longer needs `api raw`.
+- `tool insert-asset`: upload a local file to assets and insert it after a block. Image/audio/video files become embedded media blocks, other files a paragraph link; `--asIframe` forces an inline iframe block. `assetsDirPath` is constrained to subdirectories of `data/assets`.
+- `tool get-asset`: download a workspace asset to a local file, accepting asset paths as they appear in documents (incl. a `?box=` suffix). Same output behavior as `file.getFile`.
 
 ### Changed
 
@@ -29,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `api file.getFile` crashed on every successful download ("is not valid JSON") because the kernel answers raw file bytes, not the JSON envelope. It now routes content by type: text prints, binary goes to a temp file (path and sha256 printed), `--outFile` chooses the destination (overwrite requires `--yes`), `--print json` returns metadata. Error behavior is unchanged; `path` is workspace-root relative and needs the `data/` prefix.
 - Windows: structured errors after a kernel round trip no longer abort with a libuv assertion (exit 127) — error exits drain via `process.exitCode` instead of an immediate `process.exit()`.
 - `tool brute-edit`: `--check true` + `--replacements`/`--overwrite` → parameter-conflict error instead of silent apply.
 - `block.moveBlock`: `previousID` optional — omit it for first child of `parentID`. The old schema required it and advertised `""`, which the kernel rejects, so first-child moves were impossible. `--help` documents all positions.

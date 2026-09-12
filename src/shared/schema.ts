@@ -7,6 +7,7 @@
  */
 
 import type { PointerPath } from './pointer-path.js';
+import type { JsonPrintExtra } from './output.js';
 
 export type InputSource = 'literal' | 'file' | 'stdin' | 'env';
 
@@ -425,6 +426,17 @@ export interface PermissionEngineLike {
     evaluate(ctx: PermissionContext): PermissionEffect;
 }
 
+/** Context handed to a custom transport strategy. */
+export interface TransportContext {
+    endpoint: RegisteredEndpoint;
+    client: unknown;
+    payload: unknown;
+    effectiveYes: boolean;
+    jsonExtra?: JsonPrintExtra;
+}
+
+export type TransportStrategy = (ctx: TransportContext) => Promise<unknown>;
+
 // ————— EndpointSchema —————
 export interface EndpointSchema<TResponseData = unknown> {
     /** The only authoritative identity — e.g. "/api/query/sql". */
@@ -440,6 +452,15 @@ export interface EndpointSchema<TResponseData = unknown> {
     deprecated?: { replacement?: string; removeAt?: string; reason?: string };
     /** For endpoints that use multipart/form-data instead of JSON body. */
     multipart?: { fileFields: string[] };
+    /**
+     * Custom transport strategy replacing the default JSON-envelope call step
+     * (`client.call`). Used when an endpoint answers differently — currently
+     * `file/getFile`, which returns raw file bytes (HTTP 200) on success and
+     * the JSON error envelope (HTTP 202) on failure. Permission checks,
+     * approval, dry-run, payload validation and response filtering still run
+     * through the normal pipeline; only the call step is replaced.
+     */
+    transport?: TransportStrategy;
     cli?: CliBehavior;
     guard?: FilterSpec;
     /** Pre-built compact format strategy. Ignored when `format` is present. */
