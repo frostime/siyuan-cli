@@ -243,7 +243,15 @@ test('file.getFile uses workspace.read and ignores content deny', async () => {
             actualCalls++;
             return 'content';
         },
-        upload: async () => ({ ok: true })
+        upload: async () => ({ ok: true }),
+        download: async () => {
+            actualCalls++;
+            return {
+                contentType: 'text/plain',
+                body: null,
+                arrayBuffer: async () => new TextEncoder().encode('content')
+            };
+        }
     } as any;
     const entry = registerOne(fileGetFile);
 
@@ -273,7 +281,10 @@ test('file.getFile uses workspace.read and ignores content deny', async () => {
         engine: allowEngine,
         config: allowConfig
     });
-    assert.equal(res, 'content');
+    assert.equal(
+        new TextDecoder().decode(await (res as { arrayBuffer(): Promise<Uint8Array> }).arrayBuffer()),
+        'content'
+    );
     assert.equal(actualCalls, 1);
 });
 

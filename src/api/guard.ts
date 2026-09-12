@@ -287,7 +287,7 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
         ruleEffect === 'approval' ||
         phase2NeedsApproval;
 
-    if (dryRun && isWriteLike(entry)) {
+    if (dryRun && (isWriteLike(entry) || schema.transport)) {
         return {
             dryRun: true,
             endpoint: schema.endpoint,
@@ -305,7 +305,7 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
         workspace?.effectiveBehavior
     );
     const allowYes = behavior.allowYes;
-    const effectiveYes = yes && allowYes;
+    const effectiveYes = Boolean(yes && allowYes);
 
     if (wouldRequestApproval && !effectiveYes) {
         // Notify when --yes was passed but ignored
@@ -349,7 +349,18 @@ export async function executeEndpoint(opts: ExecuteOptions): Promise<unknown> {
     }
 
     let response: unknown;
-    if (schema.multipart) {
+    if (schema.transport) {
+        // Custom transport declared by the endpoint (e.g. raw-byte download):
+        // replaces the default JSON-envelope call step; everything else in the
+        // pipeline (permission, approval, dry-run, filters) stays shared.
+        response = await schema.transport({
+            endpoint: entry,
+            client,
+            payload,
+            effectiveYes,
+            jsonExtra
+        });
+    } else if (schema.multipart) {
         const files = (schema.multipart.fileFields || []).flatMap((field) => {
             const val = (payload as Record<string, unknown>)[field];
             const paths = Array.isArray(val) ? val : [val];

@@ -128,6 +128,13 @@ siyuan-cli tool get-block-content <id> [--range children] [--limit=-1]
 ```
 Default `--limit` exists for safety; use `--limit=-1` for full read. `--showId true` injects block IDs for edit targeting.
 
+**Fetch a file from the workspace (assets, .sy, any workspace file):**
+```bash
+siyuan-cli api file.getFile data/assets/foo-20240922152051-7dpjfpv.png [--outFile ./foo.png]
+```
+Text content prints; binary is written to a temp file and its path is
+returned. `--outFile` chooses the destination (overwrite needs --yes).
+
 **Update block:**
 ```bash
 siyuan-cli tool update-block <id> --markdown "..." [--dry-run] [--yes]

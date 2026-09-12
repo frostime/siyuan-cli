@@ -12,7 +12,9 @@ import { createPermissionEngine } from '../shared/permission.js';
 import { executeEndpoint } from './guard.js';
 import { parseJsonPayload, parsePayload } from '../shared/argv.js';
 import { getMsysRootWin, normalizeMsysPath, normalizePayloadPaths } from './msys-path.js';
-import { applyFormatStrategy, createJsonPrintExtra, jsonStringify, preparePrintedOutput } from '../shared/output.js';
+import { applyFormatStrategy, createJsonPrintExtra, isRecord, jsonStringify, preparePrintedOutput } from '../shared/output.js';
+import { assertOutFileWritable, writeDownloadedFile } from '../shared/download-output.js';
+import type { DownloadResult } from '../shared/client.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
 import { getExtensionDir } from '../workspace/paths.js';
 import {
@@ -188,7 +190,8 @@ export function describeEndpoint(id: string): void {
                       : {})
               }
             : undefined,
-        ...(schema.format ? { format: '[Function]' } : {})
+        ...(schema.format ? { format: '[Function]' } : {}),
+        ...(schema.transport ? { transport: '[Function]' } : {})
     };
     out({ ...entry, schema: serializable });
 }
@@ -327,6 +330,19 @@ async function callEndpoint(
 
     normalizePayloadPaths(payload as Record<string, unknown>, entry.schema.guard?.payloadTargets);
 
+    // Download-shaped endpoints (custom transport) materialize a local file;
+    // --outFile is a CLI-only destination, never part of the kernel payload.
+    const isDownload = Boolean(entry.schema.transport);
+    const outFile = isDownload && typeof rawArgs['outFile'] === 'string' ? rawArgs['outFile'] : undefined;
+    if (isDownload) {
+        const behavior = resolveEffectiveBehavior(
+            config.defaults?.behavior,
+            workspace.behavior,
+            workspace.effectiveBehavior
+        );
+        assertOutFileWritable(outFile, Boolean(args.yes && behavior.allowYes));
+    }
+
     const result = await executeEndpoint({
         entry,
         payload,
@@ -342,17 +358,48 @@ async function callEndpoint(
     if (source) {
         writeSchemaCache(source, entry.schema);
     }
-    const rendered = preparePrintedOutput({
-        print: args.print,
-        details: result,
-        compact: entry.schema.format
-            ? () => entry.schema.format!({ endpoint: entry, payload, responseData: result, args })
-            : entry.schema.formatStrategy
-                ? () => applyFormatStrategy(entry.schema.formatStrategy!, result)
-                : undefined,
-        jsonExtra
-    });
+    // A dry-run preview short-circuits before any byte transfer — render it
+    // as plain JSON instead of routing output.
+    const isDryRunPreview = isRecord(result) && result['dryRun'] === true;
+    const rendered = isDownload && !isDryRunPreview
+        ? await renderDownloadOutput(payload, result, {
+              outFile,
+              jsonMode: args.print === 'json'
+          })
+        : preparePrintedOutput({
+              print: args.print,
+              details: result,
+              compact: entry.schema.format
+                  ? () => entry.schema.format!({ endpoint: entry, payload, responseData: result, args })
+                  : entry.schema.formatStrategy
+                      ? () => applyFormatStrategy(entry.schema.formatStrategy!, result)
+                      : undefined,
+              jsonExtra
+          });
     process.stdout.write(rendered.stdout + '\n');
+}
+
+/** Route a download endpoint's byte response to its local destination. */
+async function renderDownloadOutput(
+    payload: unknown,
+    result: unknown,
+    opts: { outFile?: string; jsonMode: boolean }
+) {
+    const kernelPath = typeof (payload as Record<string, unknown>)['path'] === 'string'
+        ? String((payload as Record<string, unknown>)['path'])
+        : undefined;
+    const output = await writeDownloadedFile({
+        download: result as DownloadResult,
+        fileName: kernelPath ?? 'download.bin',
+        kernelPath,
+        outFile: opts.outFile,
+        jsonMode: opts.jsonMode
+    });
+    return preparePrintedOutput({
+        print: opts.jsonMode ? 'json' : 'compact',
+        details: output.data,
+        compact: output.compact
+    });
 }
 
 // ————— SubCommand builders —————
@@ -433,7 +480,18 @@ function buildEndpointSubCommand(entry: RegisteredEndpoint) {
                             description: prop.description ?? field
                         }
                     ])
-            )
+            ),
+            // CLI-only destination for download-shaped endpoints; never sent
+            // to the kernel.
+            ...(entry.schema.transport
+                ? {
+                      outFile: {
+                          type: 'string',
+                          description:
+                              'Save output to this file (overwrite requires --yes); without it, binary content goes to a temp file'
+                      }
+                  }
+                : {})
         },
         run: async ({ args }) => {
             const resolved = await resolveEndpointForExecution(entry.id);
