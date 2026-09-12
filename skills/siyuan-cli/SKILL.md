@@ -103,6 +103,14 @@ EOF
 ```
 Daily note: use `block.appendDailyNoteBlock --notebook <id> --atDate <date>` instead.
 
+**Insert a local file as asset into a doc:**
+```bash
+siyuan-cli tool insert-asset --assetFile ./photo.png --afterBlockId <block-id>
+```
+Upload a local file to assets and insert it as a block; file type is mapped to
+the right markdown form (image/audio/video → embed, others → link).
+`--asIframe` embeds any file inline instead (html page, image, PDF preview).
+
 **Find document by title/keyword:**
 - known exact/substring → `filetree.searchDocs --k "..."`
 - have doc ID, want details → `block.getBlockByRootID --rootID <id>` or `tool get-block-info <id>`

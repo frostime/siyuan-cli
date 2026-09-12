@@ -8,6 +8,7 @@ import { tool as locateBlock } from './locate-block.js';
 import { tool as checkpointDoc } from './checkpoint-doc.js';
 import { tool as searchBacklinks } from './search-backlinks.js';
 import { tool as updateBlock } from './update-block.js';
+import { tool as insertAsset } from './insert-asset.js';
 
 const tools = [
     listDocTree,
@@ -18,7 +19,8 @@ const tools = [
     locateBlock,
     checkpointDoc,
     searchBacklinks,
-    updateBlock
+    updateBlock,
+    insertAsset
 ];
 for (const tool of tools) {
     toolRegistry.register(tool);
