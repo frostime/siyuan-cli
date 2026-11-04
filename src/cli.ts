@@ -16,7 +16,7 @@ import {
 } from './extension/command.js';
 import { buildEndpointHelp } from './shared/argv.js';
 import { CliError, fatalError, toCliError } from './shared/errors.js';
-import { assertPrintModeSupported } from './shared/output.js';
+import { assertPrintModeSupported, readPrintRequest, setPrintRequest } from './shared/output.js';
 
 const CLI_NAME = 'siyuan-cli';
 
@@ -146,17 +146,23 @@ async function resolveCommandForArgs(
 
 /** Longest leading command path in rawArgs that resolves to a real subcommand. */
 async function resolveCommandPath(rawArgs: string[]): Promise<string[]> {
-    const path: string[] = [];
-    let cmd: any = main;
-    for (const arg of rawArgs) {
-        if (arg.startsWith('-')) continue;
-        const subCommands = await resolveValue(cmd.subCommands);
-        const next = subCommands?.[arg];
-        if (!next) break;
-        cmd = await resolveValue(next);
-        path.push(arg);
+    try {
+        const path: string[] = [];
+        let cmd: any = main;
+        for (const arg of rawArgs) {
+            if (arg.startsWith('-')) continue;
+            const subCommands = await resolveValue(cmd.subCommands);
+            const next = subCommands?.[arg];
+            if (!next) break;
+            cmd = await resolveValue(next);
+            path.push(arg);
+        }
+        return path;
+    } catch {
+        // A broken command definition (e.g. an invalid cached extension) must not
+        // break error reporting itself; fall back to the root usage hint.
+        return [];
     }
-    return path;
 }
 
 function getUnknownCommandHint(rawArgs: string[], error: unknown): string | undefined {
@@ -179,11 +185,14 @@ async function runCli(): Promise<void> {
     const rawArgs = process.argv.slice(2);
 
     try {
+        // `--print` is invocation-scoped: citty only forwards options that follow
+        // the leaf command name, so parse it here once for every command.
+        setPrintRequest(readPrintRequest(rawArgs));
+
         if (rawArgs.includes('--help') || rawArgs.includes('-h')) {
             // Help is text; a JSON request here can only be a caller mistake.
             assertPrintModeSupported(
-                `siyuan-cli ${[...(await resolveCommandPath(rawArgs)), '--help'].join(' ')}`,
-                rawArgs
+                `siyuan-cli ${[...(await resolveCommandPath(rawArgs)), '--help'].join(' ')}`
             );
             await customShowUsage(...(await resolveCommandForArgs(main, rawArgs)));
             return;

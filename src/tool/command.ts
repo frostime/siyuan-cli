@@ -2,7 +2,7 @@ import { defineCommand } from 'citty';
 import { colors } from 'consola/utils';
 import { join } from 'pathe';
 import { parsePayload } from '../shared/argv.js';
-import { createJsonPrintExtra, parsePrintMode } from '../shared/output.js';
+import { createJsonPrintExtra, resolvePrintMode } from '../shared/output.js';
 import { applyPayloadGuard } from '../api/guard.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
 import { getExtensionDir } from '../workspace/paths.js';
@@ -130,8 +130,7 @@ async function runTool(
     args: Record<string, unknown>,
     positional?: string
 ): Promise<void> {
-    // Reject typo'd print modes before any tool resolution or extension load.
-    parsePrintMode(args['print']);
+    const print = resolvePrintMode();
     const resolved = await resolveToolForExecution(id);
     if (!resolved) {
         throw new CliError(
@@ -161,8 +160,12 @@ async function runTool(
         );
     }
 
-    const jsonExtra = args.print === 'json' ? createJsonPrintExtra() : undefined;
-    const ctx = await createToolContext(args as any, resolved.tool.id, jsonExtra);
+    const jsonExtra = print === 'json' ? createJsonPrintExtra() : undefined;
+    const ctx = await createToolContext(
+        { ...args, print } as any,
+        resolved.tool.id,
+        jsonExtra
+    );
 
     // Apply payload guard before run() — early rejection with clear error
     if (resolved.tool.guard?.payloadTargets?.length) {

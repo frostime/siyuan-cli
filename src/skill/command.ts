@@ -70,8 +70,8 @@ const listCommand = defineCommand({
         name: 'list',
         description: 'List the bundled skill resources with summaries.'
     },
-    run: ({ rawArgs }) => {
-        assertPrintModeSupported('skill list', rawArgs);
+    run: () => {
+        assertPrintModeSupported('skill list');
         process.stdout.write(formatSkillList() + '\n');
     }
 });
@@ -90,9 +90,9 @@ const readCommand = defineCommand({
             required: false
         }
     },
-    run: ({ args, rawArgs }) => {
+    run: ({ args }) => {
         try {
-            assertPrintModeSupported('skill read', rawArgs);
+            assertPrintModeSupported('skill read');
             process.stdout.write(renderSkillRead(args.path));
         } catch (e) {
             fatalError(toCliError(e));
@@ -185,8 +185,8 @@ const targetsCommand = defineCommand({
         name: 'targets',
         description: 'Show where each known agent loads skills from, and what is installed.'
     },
-    run: ({ rawArgs }) => {
-        assertPrintModeSupported('skill targets', rawArgs);
+    run: () => {
+        assertPrintModeSupported('skill targets');
         process.stdout.write(formatSkillTargets() + '\n');
     }
 });

@@ -105,8 +105,8 @@ export function getPendingExtensionCount(
 
 const initCommand = defineCommand({
     meta: { name: 'init', description: 'Scaffold the extensions directory.' },
-    run: ({ rawArgs }) => {
-        assertPrintModeSupported('extension init', rawArgs);
+    run: () => {
+        assertPrintModeSupported('extension init');
         const root = getExtensionDir();
         mkdirSync(root, { recursive: true });
         out(scaffoldExtensionDir(root));
@@ -115,8 +115,8 @@ const initCommand = defineCommand({
 
 const listCommand = defineCommand({
     meta: { name: 'list', description: 'List discovered extensions.' },
-    run: ({ rawArgs }) => {
-        assertPrintModeSupported('extension list', rawArgs);
+    run: () => {
+        assertPrintModeSupported('extension list');
         process.stdout.write(renderList(getExtensionDir()) + '\n');
     }
 });
@@ -126,8 +126,8 @@ const cacheCommand = defineCommand({
         name: 'cache',
         description: 'Load extensions and write schema cache files.'
     },
-    run: async ({ rawArgs }) => {
-        assertPrintModeSupported('extension cache', rawArgs);
+    run: async () => {
+        assertPrintModeSupported('extension cache');
         const root = getExtensionDir();
         const toolDir = join(root, 'tools');
         const apiDir = join(root, 'apis');

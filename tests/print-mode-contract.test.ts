@@ -44,7 +44,9 @@ test('failure keeps stdout empty and reports one JSON object on stderr', () => {
         [['api', 'no.such.endpoint', '--print', 'json'], 'Unknown command'],
         [['no.such.command', '--print', 'json'], 'Unknown command'],
         [['api', 'query.sql', '--print', 'xml'], 'Unknown print mode'],
-        [['api', 'query.sql', '--print', 'JSON'], 'Unknown print mode']
+        [['api', 'query.sql', '--print', 'JSON'], 'Unknown print mode'],
+        [['api', 'query.sql', '--print'], 'Missing value'],
+        [['api', '--print=xml', 'query.sql'], 'Unknown print mode']
     ];
 
     for (const [args, expectedMessage] of cases) {
@@ -66,17 +68,21 @@ test('print-mode errors are machine-readable', () => {
 });
 
 test('commands with fixed output reject --print instead of ignoring it', () => {
-    const cases = [
-        ['skill', 'list'],
-        ['skill', 'targets'],
-        ['extension', 'list'],
-        ['extension', 'cache'],
-        ['extension', 'init'],
-        ['api', 'list', '--help']
+    const cases: Array<[string[], string[]]> = [
+        [['skill', 'list'], ['--print', 'json']],
+        [['skill', 'targets'], ['--print', 'json']],
+        [['extension', 'list'], ['--print', 'json']],
+        [['extension', 'cache'], ['--print', 'json']],
+        [['extension', 'init'], ['--print', 'json']],
+        [['api', 'list', '--help'], ['--print', 'json']],
+        // citty drops options that precede the leaf command; the invocation-level
+        // guard must still see them.
+        [['skill', '--print=json', 'list'], []],
+        [['--print=json', 'skill', 'list'], []],
     ];
 
-    for (const args of cases) {
-        const result = runCli(...args, '--print', 'json');
+    for (const [args, printArgs] of cases) {
+        const result = runCli(...args, ...printArgs);
         assert.notEqual(result.status, 0, args.join(' '));
         assert.equal(result.stdout, '', `${args.join(' ')}: stdout must stay empty`);
         assert.equal(stderrError(result).error, 'PRINT_MODE_UNSUPPORTED');
@@ -89,6 +95,40 @@ test('plain-JSON commands accept --print and keep their shape', () => {
     const parsed = JSON.parse(result.stdout) as unknown;
     assert.ok(Array.isArray(parsed));
     assert.ok((parsed as unknown[]).length > 0);
+});
+
+test('--print placement does not change a dual-mode command result', () => {
+    // A write endpoint with --dry-run short-circuits before any Kernel request,
+    // so this stays kernel-free.
+    const envelope = runCli(
+        'api', '--print=json',
+        'notebook.createNotebook',
+        '--name', 'contract-test',
+        '--dry-run',
+        '--baseUrl', 'http://127.0.0.1:1'
+    );
+    assert.equal(envelope.status, 0, envelope.stderr);
+    const parsed = JSON.parse(envelope.stdout) as {
+        ok: boolean;
+        data: { dryRun: boolean };
+    };
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.data.dryRun, true);
+
+    const compact = runCli(
+        'api',
+        'notebook.createNotebook',
+        '--name', 'contract-test',
+        '--dry-run',
+        '--baseUrl', 'http://127.0.0.1:1'
+    );
+    assert.equal(compact.status, 0, compact.stderr);
+    assert.throws(() => JSON.parse(compact.stdout));
+});
+
+test('tokens after -- are positional and never read as --print', () => {
+    const result = runCli('skill', 'read', '--', '--print=json');
+    assert.notEqual(stderrError(result).error, 'PRINT_MODE_UNSUPPORTED');
 });
 
 test('same command without --print still writes its text output', () => {

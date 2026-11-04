@@ -25,7 +25,7 @@ import {
     fatalError,
     toCliError
 } from '../shared/errors.js';
-import { parsePrintMode, preparePrintedOutput, type PrintMode } from '../shared/output.js';
+import { preparePrintedOutput, resolvePrintMode, type PrintMode } from '../shared/output.js';
 import { diagnoseConnection } from './diagnostics.js';
 
 const printArg = {
@@ -119,7 +119,7 @@ const bindCommand = defineCommand({
     },
     run: ({ args }) =>
         tryRun(async () => {
-            const print = parsePrintMode(args.print);
+            const print = resolvePrintMode();
             const config = loadConfig();
             assertWorkspaceExists(config, args.name);
             const projectConfigPath = assertProjectCompatible(
@@ -172,7 +172,7 @@ const confirmCommand = defineCommand({
     },
     run: ({ args }) =>
         tryRun(async () => {
-            const print = parsePrintMode(args.print);
+            const print = resolvePrintMode();
             const probe = getPendingProbe(args.nonce);
             let projectConfigPath: string | undefined;
             try {
@@ -235,7 +235,7 @@ const cancelCommand = defineCommand({
     },
     run: ({ args }) =>
         tryRun(async () => {
-            const print = parsePrintMode(args.print);
+            const print = resolvePrintMode();
             const result = cancelPendingProbe(args.nonce);
             const details = {
                 status: 'pending-cancelled',
@@ -261,7 +261,7 @@ const unbindCommand = defineCommand({
     args: { print: printArg },
     run: ({ args }) =>
         tryRun(async () => {
-            const print = parsePrintMode(args.print);
+            const print = resolvePrintMode();
             const result = unbindProcessScope();
             const details = {
                 status: result.removed > 0 ? 'unbound' : 'nothing-bound',
@@ -293,7 +293,7 @@ const globalCommand = defineCommand({
     },
     run: ({ args }) =>
         tryRun(async () => {
-            const print = parsePrintMode(args.print);
+            const print = resolvePrintMode();
             const config = loadConfig();
             assertWorkspaceExists(config, args.name);
             config.current = args.name;
@@ -327,7 +327,7 @@ const whichCommand = defineCommand({
     },
     run: ({ args }) =>
         tryRun(async () => {
-            const print = parsePrintMode(args.print);
+            const print = resolvePrintMode();
             const config = loadConfig();
             let resolved: ResolvedWorkspace;
             try {
@@ -402,7 +402,7 @@ const verifyCommand = defineCommand({
     },
     run: ({ args }) =>
         tryRun(async () => {
-            const print = parsePrintMode(args.print);
+            const print = resolvePrintMode();
             if (args.name) {
                 throw new CliError(
                     ExitCode.CONFIG,

@@ -34,7 +34,7 @@ Approval and warning events may also be emitted as JSON lines on stderr during a
 
 `--print json` promises JSON on stdout or a failure; it never degrades to text.
 
-- `api <endpoint>`, `tool <id>`, and `current *` implement both modes. The mode is validated before the payload, so a typo'd value fails as `PRINT_MODE_INVALID` with empty stdout.
+- `api <endpoint>`, `tool <id>`, and `current *` implement both modes. The mode is parsed once from the full argv at the entry point (`--` excludes positional tokens), so `--print=json` behaves the same before or after the command name; a typo'd or valueless flag fails as `PRINT_MODE_INVALID` with empty stdout.
 - Commands with one fixed JSON shape (`api list`/`describe`, `tool list`/`describe`, `workspace *`, `approval *`, `skill install`/`uninstall`) accept `--print` and ignore it.
 - Commands whose output is text (`skill list`/`read`/`targets`, `extension *`, `--help`) reject `--print` with `PRINT_MODE_UNSUPPORTED`, because they cannot honour a JSON request.
 

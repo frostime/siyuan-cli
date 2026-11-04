@@ -12,7 +12,7 @@ import { createPermissionEngine } from '../shared/permission.js';
 import { executeEndpoint } from './guard.js';
 import { parseJsonPayload, parsePayload } from '../shared/argv.js';
 import { getMsysRootWin, normalizeMsysPath, normalizePayloadPaths } from './msys-path.js';
-import { applyFormatStrategy, createJsonPrintExtra, isRecord, jsonStringify, parsePrintMode, preparePrintedOutput, type JsonPrintExtra } from '../shared/output.js';
+import { applyFormatStrategy, createJsonPrintExtra, isRecord, jsonStringify, preparePrintedOutput, resolvePrintMode, type JsonPrintExtra } from '../shared/output.js';
 import { assertOutFileWritable, writeDownloadedFile } from '../shared/download-output.js';
 import type { DownloadResult } from '../shared/client.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
@@ -300,9 +300,8 @@ async function callEndpoint(
     positional?: string,
     source?: string
 ): Promise<void> {
-    // Validate the output mode before reading the payload: a typo'd mode must
-    // fail as such, not hide behind a payload error.
-    const print = parsePrintMode(rawArgs['print']);
+    // The mode itself is validated at the CLI entry; see readPrintRequest.
+    const print = resolvePrintMode();
     const payload = parsePayload({
         schema: entry.schema,
         args: rawArgs,

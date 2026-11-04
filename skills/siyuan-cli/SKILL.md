@@ -158,7 +158,7 @@ All: use `@stdin` / `@file:path` for multiline or special-char content to avoid 
 | 4 | auth/token | ask user for token |
 | 5 | permission denied | `siyuan-cli current which` |
 
-stderr = diagnostics; stdout = result. With `--print json`, stdout is the `{ ok, data, extra }` envelope; on failure stdout is empty.
+stderr = diagnostics; stdout = result; on failure stdout is empty. `--print json` applies to `api <endpoint>`, `tool <id>`, and `current *` (envelope `{ ok, data, extra }`); other commands either print fixed JSON or reject `--print`.
 
 ## Routing
 

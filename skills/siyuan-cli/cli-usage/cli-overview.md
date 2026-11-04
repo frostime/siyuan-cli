@@ -63,6 +63,8 @@ Output shape is fixed per command, and `--print json` is a promise: stdout is JS
 <command> ... --print json      # envelope JSON (machine-readable)
 ```
 
+`--print` is invocation-scoped: `--print=json` works before or after the command name, and tokens after `--` are positional input. A command that cannot honour a JSON request fails with `PRINT_MODE_INVALID` or `PRINT_MODE_UNSUPPORTED`; it never falls back to text.
+
 `api raw` always prints raw JSON `data` (ignores `--print`).
 
 ## Global flags
