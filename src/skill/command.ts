@@ -10,6 +10,7 @@ import {
     type SkillScope
 } from './runtime.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
+import { assertPrintModeSupported } from '../shared/output.js';
 
 /** `--agent a --agent b` and `--agent a,b` both mean two agents. */
 function parseSkillAgents(value: unknown): SkillAgentId[] | undefined {
@@ -69,7 +70,8 @@ const listCommand = defineCommand({
         name: 'list',
         description: 'List the bundled skill resources with summaries.'
     },
-    run: () => {
+    run: ({ rawArgs }) => {
+        assertPrintModeSupported('skill list', rawArgs);
         process.stdout.write(formatSkillList() + '\n');
     }
 });
@@ -88,8 +90,9 @@ const readCommand = defineCommand({
             required: false
         }
     },
-    run: ({ args }) => {
+    run: ({ args, rawArgs }) => {
         try {
+            assertPrintModeSupported('skill read', rawArgs);
             process.stdout.write(renderSkillRead(args.path));
         } catch (e) {
             fatalError(toCliError(e));
@@ -182,7 +185,8 @@ const targetsCommand = defineCommand({
         name: 'targets',
         description: 'Show where each known agent loads skills from, and what is installed.'
     },
-    run: () => {
+    run: ({ rawArgs }) => {
+        assertPrintModeSupported('skill targets', rawArgs);
         process.stdout.write(formatSkillTargets() + '\n');
     }
 });

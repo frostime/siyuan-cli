@@ -1,7 +1,7 @@
 ---
 name: error-model
 description: "Process-level error contract for structured stderr output, exit categories, agent handling, and framework warnings."
-updated: 2026-09-11
+updated: 2026-11-04
 scope:
   - /src/shared/errors.ts
   - /src/shared/permission.ts
@@ -30,6 +30,14 @@ A failed CLI invocation writes one structured JSON object to stderr and exits no
 
 Approval and warning events may also be emitted as JSON lines on stderr during an otherwise valid invocation. They do not replace the final result or final error.
 
+## Output-mode contract
+
+`--print json` promises JSON on stdout or a failure; it never degrades to text.
+
+- `api <endpoint>`, `tool <id>`, and `current *` implement both modes. The mode is validated before the payload, so a typo'd value fails as `PRINT_MODE_INVALID` with empty stdout.
+- Commands with one fixed JSON shape (`api list`/`describe`, `tool list`/`describe`, `workspace *`, `approval *`, `skill install`/`uninstall`) accept `--print` and ignore it.
+- Commands whose output is text (`skill list`/`read`/`targets`, `extension *`, `--help`) reject `--print` with `PRINT_MODE_UNSUPPORTED`, because they cannot honour a JSON request.
+
 ## Exit mechanics
 
 The CLI main process terminates only by event-loop drain: code that needs a specific exit status sets `process.exitCode` and returns. `process.exit()` is restricted to standalone helper processes that must terminate immediately regardless of open connections (currently the approval broker); every such call must carry a comment justifying the forced exit.
@@ -55,7 +63,7 @@ The complete set of codes is owned by their source call sites; this document rec
 
 | Family | Representative codes | Recovery meaning |
 |---|---|---|
-| Input and transport | `INVALID_JSON`, `PAYLOAD_INVALID`, `STDIN_CONFLICT`, `STDIN_IS_TTY`, `ENV_NOT_SET`, `FILE_READ_ERROR` | Fix invocation input before retrying. |
+| Input and transport | `INVALID_JSON`, `PAYLOAD_INVALID`, `STDIN_CONFLICT`, `STDIN_IS_TTY`, `ENV_NOT_SET`, `FILE_READ_ERROR`, `PRINT_MODE_INVALID`, `PRINT_MODE_UNSUPPORTED` | Fix invocation input before retrying. |
 | Workspace/config | `NO_WORKSPACE`, `WORKSPACE_NOT_FOUND`, `WORKSPACE_MISSING_CONNECTION`, `CONF_JSON_UNREADABLE`, `PORT_NOT_FOUND`, `WORKSPACE_VERIFY_FAILED`, `PROJECT_CONFIG_*`, `TOKEN_MODE_CONFLICT`, `VERIFY_MODE_CONFLICT`, `CURRENT_SELECTION_CONFLICT` | Correct local configuration or make the target explicit. |
 | Process binding | `PROCESS_TREE_UNSUPPORTED`, `PROCESS_TREE_UNAVAILABLE`, `PROCESS_BINDING_NONCE_INVALID`, `PROCESS_BINDING_PENDING_*`, `PROCESS_BINDING_SAME_CALL`, `PROCESS_BINDING_NO_COMMON_ANCESTOR`, `PROCESS_BINDING_OBSERVATION_*`, `PROCESS_BINDING_STATE_UNAVAILABLE`, `PROCESS_BINDING_PERSISTENCE_FAILED` | Follow the structured retry/cancel details when pending state survives. Use a project file or explicit `--workspace` when implicit caller scope cannot be established; do not treat unknown state as absent. |
 | Endpoint/compatibility | `ENDPOINT_NOT_FOUND`, `UNSUPPORTED_KERNEL_VERSION`, `KERNEL_VERSION_UNRECOGNIZED`, `RAW_API_*` | Use a registered/allowed endpoint or a compatible Kernel. |

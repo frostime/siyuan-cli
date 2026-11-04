@@ -1,4 +1,7 @@
+import { CliError, ExitCode } from './errors.js';
 import type { FormatStrategy, GlobalArgs } from './schema.js';
+
+export type PrintMode = NonNullable<GlobalArgs['print']>;
 
 export interface JsonPrintExtra {
     warnings: unknown[];
@@ -59,6 +62,46 @@ export function preparePrintedOutput(
         throw new Error('Compact renderer must return a string.');
     }
     return { stdout: rendered };
+}
+
+/**
+ * Parse the `--print` value for dual-mode commands (compact text or JSON).
+ *
+ * Unknown values are rejected instead of falling back to compact: a caller
+ * that asked for JSON must never receive text because of a typo.
+ */
+export function parsePrintMode(value: unknown): PrintMode {
+    if (value === undefined || value === null) return 'compact';
+    if (value === 'compact' || value === 'json') return value;
+    throw new CliError(
+        ExitCode.GENERAL,
+        'PRINT_MODE_INVALID',
+        `Unknown print mode "${String(value)}".`,
+        'Use --print compact or --print json.'
+    );
+}
+
+const PRINT_FLAG = /^--print(=|$)/;
+
+/**
+ * Reject `--print` on commands whose stdout is prose for humans and agent
+ * context (`skill list`, `extension cache`, `--help`).
+ *
+ * Such commands cannot honour a JSON request, so they fail loudly instead of
+ * letting the caller mistake text for a JSON result. citty does not validate
+ * unknown flags, hence the raw-argv check.
+ */
+export function assertPrintModeSupported(
+    command: string,
+    rawArgs: string[]
+): void {
+    if (!rawArgs.some((arg) => PRINT_FLAG.test(arg))) return;
+    throw new CliError(
+        ExitCode.GENERAL,
+        'PRINT_MODE_UNSUPPORTED',
+        `\`--print\` is not supported by ${command}; it writes text to stdout.`,
+        'Read stdout as text, or use a command that supports --print json: api <endpoint>, tool <id>, current *.'
+    );
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {

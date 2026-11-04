@@ -12,7 +12,7 @@ import { createPermissionEngine } from '../shared/permission.js';
 import { executeEndpoint } from './guard.js';
 import { parseJsonPayload, parsePayload } from '../shared/argv.js';
 import { getMsysRootWin, normalizeMsysPath, normalizePayloadPaths } from './msys-path.js';
-import { applyFormatStrategy, createJsonPrintExtra, isRecord, jsonStringify, preparePrintedOutput } from '../shared/output.js';
+import { applyFormatStrategy, createJsonPrintExtra, isRecord, jsonStringify, parsePrintMode, preparePrintedOutput, type JsonPrintExtra } from '../shared/output.js';
 import { assertOutFileWritable, writeDownloadedFile } from '../shared/download-output.js';
 import type { DownloadResult } from '../shared/client.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
@@ -300,6 +300,9 @@ async function callEndpoint(
     positional?: string,
     source?: string
 ): Promise<void> {
+    // Validate the output mode before reading the payload: a typo'd mode must
+    // fail as such, not hide behind a payload error.
+    const print = parsePrintMode(rawArgs['print']);
     const payload = parsePayload({
         schema: entry.schema,
         args: rawArgs,
@@ -313,7 +316,7 @@ async function callEndpoint(
         dryRun: rawArgs['dry-run'] as boolean | undefined,
         yes: rawArgs['yes'] as boolean | undefined,
         debug: rawArgs['debug'] as boolean | undefined,
-        print: (rawArgs['print'] as GlobalArgs['print'] | undefined) ?? 'compact'
+        print
     } satisfies GlobalArgs;
     const jsonExtra = args.print === 'json' ? createJsonPrintExtra() : undefined;
 
@@ -364,7 +367,8 @@ async function callEndpoint(
     const rendered = isDownload && !isDryRunPreview
         ? await renderDownloadOutput(payload, result, {
               outFile,
-              jsonMode: args.print === 'json'
+              jsonMode: args.print === 'json',
+              jsonExtra
           })
         : preparePrintedOutput({
               print: args.print,
@@ -383,7 +387,7 @@ async function callEndpoint(
 async function renderDownloadOutput(
     payload: unknown,
     result: unknown,
-    opts: { outFile?: string; jsonMode: boolean }
+    opts: { outFile?: string; jsonMode: boolean; jsonExtra?: JsonPrintExtra }
 ) {
     const kernelPath = typeof (payload as Record<string, unknown>)['path'] === 'string'
         ? String((payload as Record<string, unknown>)['path'])
@@ -398,7 +402,8 @@ async function renderDownloadOutput(
     return preparePrintedOutput({
         print: opts.jsonMode ? 'json' : 'compact',
         details: output.data,
-        compact: output.compact
+        compact: output.compact,
+        jsonExtra: opts.jsonExtra
     });
 }
 

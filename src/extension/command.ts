@@ -4,6 +4,7 @@ import { mkdirSync } from 'node:fs';
 import { basename, join, relative } from 'pathe';
 import { registry } from '../api/registry.js';
 import { fatalError, toCliError } from '../shared/errors.js';
+import { assertPrintModeSupported } from '../shared/output.js';
 import { toolRegistry } from '../tool/registry.js';
 import { getExtensionDir } from '../workspace/paths.js';
 import {
@@ -104,7 +105,8 @@ export function getPendingExtensionCount(
 
 const initCommand = defineCommand({
     meta: { name: 'init', description: 'Scaffold the extensions directory.' },
-    run: () => {
+    run: ({ rawArgs }) => {
+        assertPrintModeSupported('extension init', rawArgs);
         const root = getExtensionDir();
         mkdirSync(root, { recursive: true });
         out(scaffoldExtensionDir(root));
@@ -113,7 +115,8 @@ const initCommand = defineCommand({
 
 const listCommand = defineCommand({
     meta: { name: 'list', description: 'List discovered extensions.' },
-    run: () => {
+    run: ({ rawArgs }) => {
+        assertPrintModeSupported('extension list', rawArgs);
         process.stdout.write(renderList(getExtensionDir()) + '\n');
     }
 });
@@ -123,7 +126,8 @@ const cacheCommand = defineCommand({
         name: 'cache',
         description: 'Load extensions and write schema cache files.'
     },
-    run: async () => {
+    run: async ({ rawArgs }) => {
+        assertPrintModeSupported('extension cache', rawArgs);
         const root = getExtensionDir();
         const toolDir = join(root, 'tools');
         const apiDir = join(root, 'apis');

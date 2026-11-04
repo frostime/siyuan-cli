@@ -25,7 +25,7 @@ import {
     fatalError,
     toCliError
 } from '../shared/errors.js';
-import { preparePrintedOutput } from '../shared/output.js';
+import { parsePrintMode, preparePrintedOutput, type PrintMode } from '../shared/output.js';
 import { diagnoseConnection } from './diagnostics.js';
 
 const printArg = {
@@ -34,29 +34,17 @@ const printArg = {
     default: 'compact'
 };
 
-type CurrentPrintMode = 'compact' | 'json';
-
 function tryRun(fn: () => Promise<void>): Promise<void> {
     return fn().catch((error) => fatalError(toCliError(error)));
 }
 
 function printSuccess(
-    print: CurrentPrintMode,
+    print: PrintMode,
     details: unknown,
     compact: string | (() => string)
 ): void {
     const rendered = preparePrintedOutput({ print, details, compact });
     process.stdout.write(rendered.stdout + '\n');
-}
-
-function parsePrintMode(value: string): CurrentPrintMode {
-    if (value === 'compact' || value === 'json') return value;
-    throw new CliError(
-        ExitCode.GENERAL,
-        'PRINT_MODE_INVALID',
-        `Unknown print mode "${value}".`,
-        'Use --print compact or --print json.'
-    );
 }
 
 function assertWorkspaceExists(config: AppConfig, name: string): void {

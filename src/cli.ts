@@ -15,6 +15,8 @@ import {
     renderExtensionHelp
 } from './extension/command.js';
 import { buildEndpointHelp } from './shared/argv.js';
+import { CliError, fatalError, toCliError } from './shared/errors.js';
+import { assertPrintModeSupported } from './shared/output.js';
 
 const CLI_NAME = 'siyuan-cli';
 
@@ -142,6 +144,21 @@ async function resolveCommandForArgs(
     return [cmd, parent];
 }
 
+/** Longest leading command path in rawArgs that resolves to a real subcommand. */
+async function resolveCommandPath(rawArgs: string[]): Promise<string[]> {
+    const path: string[] = [];
+    let cmd: any = main;
+    for (const arg of rawArgs) {
+        if (arg.startsWith('-')) continue;
+        const subCommands = await resolveValue(cmd.subCommands);
+        const next = subCommands?.[arg];
+        if (!next) break;
+        cmd = await resolveValue(next);
+        path.push(arg);
+    }
+    return path;
+}
+
 function getUnknownCommandHint(rawArgs: string[], error: unknown): string | undefined {
     if (!error || typeof error !== 'object' || (error as { code?: string }).code !== 'E_UNKNOWN_COMMAND') {
         return undefined;
@@ -163,6 +180,11 @@ async function runCli(): Promise<void> {
 
     try {
         if (rawArgs.includes('--help') || rawArgs.includes('-h')) {
+            // Help is text; a JSON request here can only be a caller mistake.
+            assertPrintModeSupported(
+                `siyuan-cli ${[...(await resolveCommandPath(rawArgs)), '--help'].join(' ')}`,
+                rawArgs
+            );
             await customShowUsage(...(await resolveCommandForArgs(main, rawArgs)));
             return;
         }
@@ -179,14 +201,21 @@ async function runCli(): Promise<void> {
 
         await runCommand(main, { rawArgs });
     } catch (error) {
-        await customShowUsage(...(await resolveCommandForArgs(main, rawArgs)));
-        const hint = getUnknownCommandHint(rawArgs, error);
-        const message = error instanceof Error ? error.message : String(error);
-        process.stderr.write(message + '\n');
-        if (hint) {
-            process.stderr.write(hint + '\n');
-        }
-        process.exitCode = 1;
+        // Failure keeps stdout empty: usage hints belong on stderr, and callers
+        // parse stdout as the command result.
+        const cliError = toCliError(error);
+        const hint =
+            getUnknownCommandHint(rawArgs, error) ??
+            `Run \`siyuan-cli ${[...(await resolveCommandPath(rawArgs)), '--help'].join(' ')}\` for usage.`;
+        fatalError(
+            new CliError(
+                cliError.code,
+                cliError.errorType,
+                cliError.message,
+                cliError.hint ?? hint,
+                cliError.details
+            )
+        );
     }
 }
 

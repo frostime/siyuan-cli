@@ -2,7 +2,7 @@ import { defineCommand } from 'citty';
 import { colors } from 'consola/utils';
 import { join } from 'pathe';
 import { parsePayload } from '../shared/argv.js';
-import { createJsonPrintExtra } from '../shared/output.js';
+import { createJsonPrintExtra, parsePrintMode } from '../shared/output.js';
 import { applyPayloadGuard } from '../api/guard.js';
 import { CliError, ExitCode, fatalError, toCliError } from '../shared/errors.js';
 import { getExtensionDir } from '../workspace/paths.js';
@@ -130,6 +130,8 @@ async function runTool(
     args: Record<string, unknown>,
     positional?: string
 ): Promise<void> {
+    // Reject typo'd print modes before any tool resolution or extension load.
+    parsePrintMode(args['print']);
     const resolved = await resolveToolForExecution(id);
     if (!resolved) {
         throw new CliError(
