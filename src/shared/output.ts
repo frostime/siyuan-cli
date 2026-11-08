@@ -1,4 +1,7 @@
+import { CliError, ExitCode } from './errors.js';
 import type { FormatStrategy, GlobalArgs } from './schema.js';
+
+export type PrintMode = NonNullable<GlobalArgs['print']>;
 
 export interface JsonPrintExtra {
     warnings: unknown[];
@@ -59,6 +62,97 @@ export function preparePrintedOutput(
         throw new Error('Compact renderer must return a string.');
     }
     return { stdout: rendered };
+}
+
+/**
+ * Parse the `--print` value for dual-mode commands (compact text or JSON).
+ *
+ * Unknown values are rejected instead of falling back to compact: a caller
+ * that asked for JSON must never receive text because of a typo.
+ */
+export function parsePrintMode(value: unknown): PrintMode {
+    if (value === undefined || value === null) return 'compact';
+    if (value === 'compact' || value === 'json') return value;
+    throw new CliError(
+        ExitCode.GENERAL,
+        'PRINT_MODE_INVALID',
+        `Unknown print mode "${String(value)}".`,
+        'Use --print compact or --print json.'
+    );
+}
+
+export interface PrintRequest {
+    /** The invocation asked for an explicit output mode. */
+    requested: boolean;
+    mode: PrintMode;
+}
+
+const NO_PRINT_REQUEST: PrintRequest = { requested: false, mode: 'compact' };
+
+let invocationPrint: PrintRequest = NO_PRINT_REQUEST;
+
+/**
+ * Read the invocation-scoped `--print` request from the raw argv.
+ *
+ * citty forwards only the options that follow the leaf command name, so a flag
+ * placed before it (`siyuan-cli api --print=json system.version`) would
+ * otherwise be dropped and the command would silently print compact text.
+ * Tokens after `--` are positional input and never count. The last occurrence
+ * wins.
+ */
+export function readPrintRequest(rawArgs: string[]): PrintRequest {
+    let request = NO_PRINT_REQUEST;
+    for (let index = 0; index < rawArgs.length; index++) {
+        const arg = rawArgs[index]!;
+        if (arg === '--') break;
+        if (arg.startsWith('--print=')) {
+            request = {
+                requested: true,
+                mode: parsePrintMode(arg.slice('--print='.length))
+            };
+            continue;
+        }
+        if (arg !== '--print') continue;
+        const value = rawArgs[index + 1];
+        if (value === undefined || value.startsWith('-')) {
+            throw new CliError(
+                ExitCode.GENERAL,
+                'PRINT_MODE_INVALID',
+                'Missing value for --print.',
+                'Use --print compact or --print json.'
+            );
+        }
+        request = { requested: true, mode: parsePrintMode(value) };
+        index++;
+    }
+    return request;
+}
+
+/** Record the invocation's print request. Called once by the CLI entry point. */
+export function setPrintRequest(request: PrintRequest): void {
+    invocationPrint = request;
+}
+
+/** Output mode for dual-mode commands; `compact` unless the invocation asked for json. */
+export function resolvePrintMode(): PrintMode {
+    return invocationPrint.mode;
+}
+
+/**
+ * Reject `--print` on commands whose stdout is prose for humans and agent
+ * context (`skill list`, `extension cache`, `--help`).
+ *
+ * Such commands cannot honour a JSON request, so they fail loudly instead of
+ * letting the caller mistake text for a JSON result.
+ */
+export function assertPrintModeSupported(command: string): void {
+    if (!invocationPrint.requested) return;
+    throw new CliError(
+        ExitCode.GENERAL,
+        'PRINT_MODE_UNSUPPORTED',
+        `\`--print\` is not supported by ${command}; it writes text to stdout.`,
+        'Read stdout as text, or use a command that supports --print json: api <endpoint>, tool <id>, current *.'
+    );
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {

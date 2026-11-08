@@ -1,9 +1,10 @@
+import { Console } from 'node:console';
 import { registry as endpointRegistry } from '../api/registry.js';
 import { loadConfig, materializeWorkspace, resolveEffectiveWorkspace } from '../workspace/config.js';
 import { SiyuanClient } from '../shared/client.js';
 import { createPermissionEngine } from '../shared/permission.js';
 import { executeEndpoint } from '../api/guard.js';
-import { createJsonPrintExtra, preparePrintedOutput, type JsonPrintExtra } from '../shared/output.js';
+import { createJsonPrintExtra, preparePrintedOutput, resolvePrintMode, type JsonPrintExtra } from '../shared/output.js';
 import type {
     GlobalArgs,
     ToolContext,
@@ -53,6 +54,13 @@ export class ToolRegistry {
 }
 
 export const toolRegistry = new ToolRegistry();
+
+/**
+ * Tool logs are diagnostics. They go to stderr so `--print json` stdout stays a
+ * single parseable document, whatever a tool chooses to log.
+ */
+const TOOL_LOGGER = new Console(process.stderr, process.stderr);
+
 
 export async function createToolContext(
     args: GlobalArgs,
@@ -122,7 +130,7 @@ export async function createToolContext(
         permission,
         callEndpoint,
         callEndpointRaw,
-        logger: console,
+        logger: TOOL_LOGGER,
         args
     };
 }
@@ -130,7 +138,7 @@ export async function createToolContext(
 export function renderToolResult(
     result: ToolResult,
     args: GlobalArgs,
-    jsonExtra = args.print === 'json' ? createJsonPrintExtra() : undefined
+    jsonExtra = resolvePrintMode() === 'json' ? createJsonPrintExtra() : undefined
 ): void {
     for (const warning of result.warnings ?? []) {
         if (jsonExtra) {
@@ -145,7 +153,7 @@ export function renderToolResult(
         process.stderr.write(JSON.stringify({ meta: result.meta }) + '\n');
     }
     const rendered = preparePrintedOutput({
-        print: args.print,
+        print: resolvePrintMode(),
         details: result.details ?? null,
         compact: result.content,
         jsonExtra

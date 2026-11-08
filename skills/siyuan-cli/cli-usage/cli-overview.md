@@ -50,12 +50,20 @@ Discovery: `siyuan-cli tool list` · `siyuan-cli tool describe <id>` · `<id> --
 
 ### Output modes
 
-Both `api` and `tool` default to compact human-readable text. Override with:
+Output shape is fixed per command, and `--print json` is a promise: stdout is JSON or the command fails. A failure never writes to stdout.
+
+| Command | stdout | `--print` |
+|---------|--------|-----------|
+| `api <endpoint>`, `tool <id>`, `current *` | compact text by default | `compact` or `json`; `json` → `{ ok, data, extra }` envelope. Any other value fails with `PRINT_MODE_INVALID` |
+| `api list`/`describe`, `tool list`/`describe`, `workspace *`, `approval *`, `skill install`/`uninstall` | plain JSON, always the same shape | accepted and ignored |
+| `skill list`/`read`/`targets`, `extension init`/`list`/`cache`, any `--help` | fixed output (text; `extension init` prints plain JSON) | rejected with `PRINT_MODE_UNSUPPORTED` |
 
 ```bash
 <command> ... --print compact   # explicit compact text
 <command> ... --print json      # envelope JSON (machine-readable)
 ```
+
+`--print` is invocation-scoped: `--print=json` works before or after the command name, and tokens after `--` are positional input. A command that cannot honour a JSON request fails with `PRINT_MODE_INVALID` or `PRINT_MODE_UNSUPPORTED`; it never falls back to text.
 
 `api raw` always prints raw JSON `data` (ignores `--print`).
 
@@ -74,7 +82,7 @@ All `siyuan-cli api <id>` and `siyuan-cli tool <id>` commands accept:
 | `--debug` | | Print intended request (curl-equivalent) to stderr |
 | `--json` | `-j` | Entire payload as inline JSON |
 | `--file` | `-f` | Entire payload from JSON file; `-f -` reads stdin |
-| `--print compact\|json` | | Output mode: compact text or envelope JSON; defaults to compact. `api raw` ignores this and always prints raw JSON `data`. |
+| `--print compact\|json` | | Output mode: compact text or envelope JSON; defaults to compact. Unknown values fail with `PRINT_MODE_INVALID`. `api raw` ignores this and always prints raw JSON `data`. |
 
 ## Input sources
 
@@ -161,6 +169,8 @@ Warnings and errors are written to stderr as single-line JSON, stdout remains cl
 | `error` field | Exit | Action |
 |---------------|------|--------|
 | `PAYLOAD_INVALID` | 1 | Fix input, retry |
+| `PRINT_MODE_INVALID` | 1 | Use `--print compact` or `--print json` |
+| `PRINT_MODE_UNSUPPORTED` | 1 | This command writes text; drop `--print` and read stdout as text |
 | `APPROVAL_REJECTED` | 1 | Review the pending action and retry only if intended |
 | `APPROVAL_TIMEOUT` | 1 | Re-run the command or approve it faster next time |
 | `APPROVAL_CANCELLED` | 1 | Re-run if the write is still intended |

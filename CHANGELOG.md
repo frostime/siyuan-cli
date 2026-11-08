@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-11-08
+
+### Fixed
+
+- `--print json` is now JSON-only: a failing invocation writes one JSON object to stderr with a `hint` and leaves stdout empty, instead of dumping usage help to stdout. A command that honours JSON never falls back to compact text.
+- Unknown `--print` values (`--print xml`, `--print JSON`) and a missing value fail with `PRINT_MODE_INVALID` instead of silently printing compact text.
+- Commands whose stdout is text (`skill list|read|targets`, `extension init|list|cache`, `--help`) reject `--print` with `PRINT_MODE_UNSUPPORTED` instead of ignoring it.
+- `--print` placed before the command name (`siyuan-cli api --print=json <id>`) is honoured; it was silently dropped, so the command printed compact text.
+- `--print json` envelopes for download endpoints (`api file.getFile`, `tool get-asset`) now carry the collected `extra.warnings|notices|approvals|debug`; they were dropped, so `--debug` produced an empty `extra`.
+- Tool logs (`ctx.logger`) go to stderr, so a tool cannot corrupt the JSON document on stdout.
+
 ## [0.17.0] - 2026-09-12
 
 ### Added
@@ -126,7 +137,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial feature set: workspace management, Kernel API proxying, workflow tools, and Agent SKILL installation.
 
-[Unreleased]: https://github.com/frostime/siyuan-cli/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/frostime/siyuan-cli/compare/v0.17.1...HEAD
+[0.17.1]: https://github.com/frostime/siyuan-cli/compare/v0.17.0...v0.17.1
 [0.17.0]: https://github.com/frostime/siyuan-cli/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/frostime/siyuan-cli/compare/v0.15.4...v0.16.0
 [0.15.4]: https://github.com/frostime/siyuan-cli/compare/v0.15.3...v0.15.4

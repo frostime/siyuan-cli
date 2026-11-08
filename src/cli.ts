@@ -15,6 +15,8 @@ import {
     renderExtensionHelp
 } from './extension/command.js';
 import { buildEndpointHelp } from './shared/argv.js';
+import { CliError, fatalError, toCliError } from './shared/errors.js';
+import { assertPrintModeSupported, readPrintRequest, setPrintRequest } from './shared/output.js';
 
 const CLI_NAME = 'siyuan-cli';
 
@@ -142,6 +144,27 @@ async function resolveCommandForArgs(
     return [cmd, parent];
 }
 
+/** Longest leading command path in rawArgs that resolves to a real subcommand. */
+async function resolveCommandPath(rawArgs: string[]): Promise<string[]> {
+    try {
+        const path: string[] = [];
+        let cmd: any = main;
+        for (const arg of rawArgs) {
+            if (arg.startsWith('-')) continue;
+            const subCommands = await resolveValue(cmd.subCommands);
+            const next = subCommands?.[arg];
+            if (!next) break;
+            cmd = await resolveValue(next);
+            path.push(arg);
+        }
+        return path;
+    } catch {
+        // A broken command definition (e.g. an invalid cached extension) must not
+        // break error reporting itself; fall back to the root usage hint.
+        return [];
+    }
+}
+
 function getUnknownCommandHint(rawArgs: string[], error: unknown): string | undefined {
     if (!error || typeof error !== 'object' || (error as { code?: string }).code !== 'E_UNKNOWN_COMMAND') {
         return undefined;
@@ -162,7 +185,15 @@ async function runCli(): Promise<void> {
     const rawArgs = process.argv.slice(2);
 
     try {
+        // `--print` is invocation-scoped: citty only forwards options that follow
+        // the leaf command name, so parse it here once for every command.
+        setPrintRequest(readPrintRequest(rawArgs));
+
         if (rawArgs.includes('--help') || rawArgs.includes('-h')) {
+            // Help is text; a JSON request here can only be a caller mistake.
+            assertPrintModeSupported(
+                `siyuan-cli ${[...(await resolveCommandPath(rawArgs)), '--help'].join(' ')}`
+            );
             await customShowUsage(...(await resolveCommandForArgs(main, rawArgs)));
             return;
         }
@@ -179,14 +210,21 @@ async function runCli(): Promise<void> {
 
         await runCommand(main, { rawArgs });
     } catch (error) {
-        await customShowUsage(...(await resolveCommandForArgs(main, rawArgs)));
-        const hint = getUnknownCommandHint(rawArgs, error);
-        const message = error instanceof Error ? error.message : String(error);
-        process.stderr.write(message + '\n');
-        if (hint) {
-            process.stderr.write(hint + '\n');
-        }
-        process.exitCode = 1;
+        // Failure keeps stdout empty: usage hints belong on stderr, and callers
+        // parse stdout as the command result.
+        const cliError = toCliError(error);
+        const hint =
+            getUnknownCommandHint(rawArgs, error) ??
+            `Run \`siyuan-cli ${[...(await resolveCommandPath(rawArgs)), '--help'].join(' ')}\` for usage.`;
+        fatalError(
+            new CliError(
+                cliError.code,
+                cliError.errorType,
+                cliError.message,
+                cliError.hint ?? hint,
+                cliError.details
+            )
+        );
     }
 }
 
